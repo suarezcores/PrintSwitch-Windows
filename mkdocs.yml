@@ -1,0 +1,15 @@
+site_name: PrintSwitch
+site_description: Base de conocimiento y documentación técnica de PrintSwitch
+site_author: PrintSwitch Project
+
+docs_dir: docs
+
+theme:
+  name: mkdocs
+
+nav:
+  - Inicio: index.md
+  - Metodología: Methodology.md
+  - Base de conocimiento: Knowledge.md
+  - Arquitectura observada: Architecture_Observed.md
+  - Roadmap: Roadmap.md
