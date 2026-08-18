@@ -1,15 +1,16 @@
 ﻿$ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - ConnectivityAnalyzer v0.1
-# Diagnostico no intrusivo
+# PrintSwitch - ConnectivityAnalyzer v0.2
+# Diagnostico no intrusivo + clasificacion provisional
 # ============================================================
 
-$PrinterName = "L365 Series(Red)"
-$PrinterIP   = "192.168.1.108"
+$PrinterName  = "L365 Series(Red)"
+$PrinterIP    = "192.168.1.108"
+$RequiredSSID = "suarezcores"
 
 Write-Host ""
-Write-Host "PrintSwitch - ConnectivityAnalyzer v0.1" -ForegroundColor Cyan
+Write-Host "PrintSwitch - ConnectivityAnalyzer v0.2" -ForegroundColor Cyan
 Write-Host "Modo: DIAGNOSTICO NO INTRUSIVO" -ForegroundColor Yellow
 Write-Host "Se realizaran consultas y pruebas de conectividad, sin modificar configuraciones."
 Write-Host ""
@@ -25,7 +26,17 @@ Write-Host "========================================"
 $WlanInfo = netsh wlan show interfaces
 
 $WlanInfo | Select-String `
-    "Name|Nombre|State|Estado|SSID|BSSID|Signal|SeÃ±al|Radio"
+    "Name|Nombre|State|Estado|SSID|BSSID|Signal|Señal|Radio"
+
+# Obtener SSID actual para utilizarlo posteriormente
+$CurrentSSID = (
+    $WlanInfo |
+    Select-String '^\s*SSID\s*:' |
+    Select-Object -First 1 |
+    ForEach-Object {
+        ($_.ToString().Split(":", 2)[1]).Trim()
+    }
+)
 
 # ============================================================
 # 2. INFORMACION DE IMPRESORA - Get-Printer
@@ -143,6 +154,8 @@ Write-Host "IP objetivo: $PrinterIP"
 Write-Host ""
 Write-Host "Prueba ICMP / Ping"
 
+$PingResult = $false
+
 try {
 
     $PingResult = Test-Connection `
@@ -166,6 +179,8 @@ catch {
 Write-Host ""
 Write-Host "Prueba TCP puerto 9100"
 
+$Tcp9100Succeeded = $false
+
 try {
 
     $Tcp9100 = Test-NetConnection `
@@ -173,7 +188,9 @@ try {
         -Port 9100 `
         -WarningAction SilentlyContinue
 
-    Write-Host "Tcp9100Succeeded : $($Tcp9100.TcpTestSucceeded)"
+    $Tcp9100Succeeded = $Tcp9100.TcpTestSucceeded
+
+    Write-Host "Tcp9100Succeeded : $Tcp9100Succeeded"
 
 }
 catch {
@@ -188,6 +205,8 @@ catch {
 Write-Host ""
 Write-Host "Prueba HTTP puerto 80"
 
+$Tcp80Succeeded = $false
+
 try {
 
     $Tcp80 = Test-NetConnection `
@@ -195,7 +214,9 @@ try {
         -Port 80 `
         -WarningAction SilentlyContinue
 
-    Write-Host "Tcp80Succeeded : $($Tcp80.TcpTestSucceeded)"
+    $Tcp80Succeeded = $Tcp80.TcpTestSucceeded
+
+    Write-Host "Tcp80Succeeded : $Tcp80Succeeded"
 
 }
 catch {
@@ -204,10 +225,47 @@ catch {
 }
 
 # ============================================================
+# 6. CLASIFICACION PROVISIONAL
+# ============================================================
+
+Write-Host ""
+Write-Host "========================================"
+Write-Host "6. CLASIFICACION PROVISIONAL"
+Write-Host "========================================"
+
+$AnyPositiveNetworkEvidence =
+    $PingResult -or
+    $Tcp9100Succeeded -or
+    $Tcp80Succeeded
+
+if ($CurrentSSID -ne $RequiredSSID) {
+
+    $Classification = "NETWORK_MISMATCH"
+
+}
+elseif ($AnyPositiveNetworkEvidence) {
+
+    $Classification = "PRINTER_REACHABLE"
+
+}
+else {
+
+    $Classification = "PRINTER_UNREACHABLE_ON_TARGET_NETWORK"
+}
+
+Write-Host "SSID actual    : $CurrentSSID"
+Write-Host "SSID requerido : $RequiredSSID"
+Write-Host "Ping           : $PingResult"
+Write-Host "TCP 9100       : $Tcp9100Succeeded"
+Write-Host "HTTP 80        : $Tcp80Succeeded"
+Write-Host ""
+Write-Host "Resultado      : $Classification" -ForegroundColor Green
+
+# ============================================================
 # FIN
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "FIN DEL INVENTARIO"
+Write-Host "FIN DEL ANALISIS"
 Write-Host "========================================"

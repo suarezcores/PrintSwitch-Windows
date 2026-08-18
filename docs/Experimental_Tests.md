@@ -897,3 +897,20 @@ RESPONDE
 sí constituye evidencia positiva de que existe un dispositivo activo capaz de comunicarse mediante la capa probada.
 
 Este principio deberá orientar el diseño de `ConnectivityAnalyzer`, `DecisionEngine`, `PrinterDiscovery` y los futuros mecanismos de recuperación de PrintSwitch.
+# 19. Validación de ConnectivityAnalyzer v0.2
+
+## Objetivo
+
+Validar que una misma lógica de clasificación pueda distinguir correctamente tres escenarios distintos sin modificar la red ni la impresora.
+
+## Estados evaluados
+
+### Escenario A — Red incorrecta
+
+```text
+PC              Claro640
+Epson           ON
+SSID esperado   suarezcores
+Ping            False
+TCP 9100        False
+HTTP 80         False
