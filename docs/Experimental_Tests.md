@@ -1226,3 +1226,347 @@ NetworkManager
 ```
 
 Inicialmente deberá operar también en modo no destructivo / DRY-RUN.
+
+# 21. Validación de NetworkManager v0.1
+
+## Objetivo
+
+Validar que PrintSwitch pueda analizar el estado de conectividad Wi-Fi de Windows y determinar si un cambio hacia una red objetivo parece posible, sin modificar todavía ninguna configuración.
+
+NetworkManager v0.1 opera completamente en:
+
+```text
+DRY-RUN
+```
+
+y responde cuatro preguntas:
+
+```text
+¿A qué SSID está conectada la PC?
+¿Windows conoce el perfil de la red objetivo?
+¿La red objetivo está actualmente visible?
+¿El cambio de red parece posible?
+```
+
+---
+
+## Arquitectura probada
+
+```text
+Windows Wi-Fi
+    │
+    ├── SSID actual
+    ├── perfiles conocidos
+    └── redes visibles
+          │
+          ▼
+   NetworkManager v0.1
+          │
+          ▼
+     clasificación
+          │
+          ▼
+   decisión propuesta
+          │
+          ▼
+        DRY-RUN
+```
+
+NetworkManager no ejecuta todavía:
+
+```text
+netsh wlan connect
+```
+
+ni modifica perfiles Wi-Fi.
+
+---
+
+# 21.1 Caso A — Ya conectado a la red objetivo
+
+## Condiciones
+
+```text
+SSID actual      suarezcores
+SSID objetivo    suarezcores
+Perfil conocido  True
+Red visible      True
+```
+
+## Resultado
+
+```text
+ALREADY_ON_TARGET_NETWORK
+```
+
+## Decisión
+
+```text
+ACCION PROPUESTA: ninguna.
+La PC ya esta conectada a 'suarezcores'.
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+NetworkManager reconoció correctamente que no era necesario realizar ningún cambio de red.
+
+---
+
+# 21.2 Caso B — Cambio disponible
+
+## Condiciones
+
+```text
+SSID actual           Claro640
+SSID objetivo         suarezcores
+Perfil conocido       True
+Red visible           True
+```
+
+## Resultado
+
+```text
+NETWORK_SWITCH_AVAILABLE
+```
+
+## Decisión
+
+```text
+ACCION PROPUESTA:
+Claro640 -> suarezcores
+
+DRY-RUN:
+El cambio parece posible, pero NO se ejecutara.
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+NetworkManager pudo distinguir una situación en la que:
+
+```text
+la PC está en otra red
++
+Windows conoce el perfil objetivo
++
+la red objetivo está visible
+```
+
+y clasificó correctamente que un cambio parece disponible.
+
+---
+
+# 21.3 Caso C — Perfil inexistente
+
+Para validar esta rama sin modificar perfiles reales se utilizó temporalmente:
+
+```text
+PrintSwitch_Red_Inexistente
+```
+
+## Condiciones
+
+```text
+SSID actual           Claro640
+SSID objetivo         PrintSwitch_Red_Inexistente
+Perfil conocido       False
+Red visible           False
+```
+
+## Resultado
+
+```text
+TARGET_PROFILE_NOT_FOUND
+```
+
+## Decisión
+
+```text
+ACCION PROPUESTA: no conectar.
+Windows no posee un perfil Wi-Fi conocido para
+'PrintSwitch_Red_Inexistente'.
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+NetworkManager priorizó correctamente la ausencia de un perfil conocido.
+
+**[DECISIÓN]**
+
+PrintSwitch no deberá intentar conectarse automáticamente a una red para la cual Windows no disponga de un perfil previamente configurado.
+
+---
+
+# 21.4 Caso D — Perfil conocido pero red no visible
+
+Se utilizó:
+
+```text
+ESP32_Matriz
+```
+
+como caso experimental.
+
+Windows posee un perfil guardado para dicha red, pero durante la prueba el dispositivo que genera ese SSID se encontraba desconectado.
+
+## Condiciones
+
+```text
+SSID actual           Claro640
+SSID objetivo         ESP32_Matriz
+Perfil conocido       True
+Red visible           False
+```
+
+## Resultado
+
+```text
+TARGET_NETWORK_NOT_VISIBLE
+```
+
+## Decisión
+
+```text
+ACCION PROPUESTA: esperar / informar.
+El perfil existe, pero 'ESP32_Matriz'
+no aparece entre las redes visibles.
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+NetworkManager distinguió correctamente entre:
+
+```text
+perfil guardado
+```
+
+y:
+
+```text
+red actualmente disponible
+```
+
+**[DECISIÓN]**
+
+La existencia de un perfil no deberá interpretarse como evidencia suficiente de que el SSID puede utilizarse en ese momento.
+
+---
+
+# 21.5 Matriz validada de NetworkManager v0.1
+
+| Estado | Perfil conocido | Red visible | Clasificación |
+|---|---:|---:|---|
+| Ya conectado al objetivo | Sí | Sí | ALREADY_ON_TARGET_NETWORK |
+| Otra red + objetivo disponible | Sí | Sí | NETWORK_SWITCH_AVAILABLE |
+| Perfil inexistente | No | No / irrelevante | TARGET_PROFILE_NOT_FOUND |
+| Perfil conocido pero no visible | Sí | No | TARGET_NETWORK_NOT_VISIBLE |
+
+---
+
+# 21.6 Árbol de decisión validado
+
+```text
+¿SSID actual == SSID objetivo?
+        │
+   ┌────┴────┐
+   │         │
+  SÍ        NO
+   │         │
+   ▼         ▼
+ALREADY_   ¿Existe perfil?
+ON_TARGET       │
+NETWORK     ┌───┴───┐
+            │       │
+           NO      SÍ
+            │       │
+            ▼       ▼
+        TARGET_   ¿Red visible?
+        PROFILE_      │
+        NOT_FOUND ┌───┴───┐
+                  │       │
+                 NO      SÍ
+                  │       │
+                  ▼       ▼
+             TARGET_   NETWORK_
+             NETWORK_  SWITCH_
+             NOT_      AVAILABLE
+             VISIBLE
+```
+
+---
+
+# 21.7 Estado del componente
+
+A partir de estas pruebas:
+
+```text
+NetworkManager v0.1
+
+Observar red actual       ✔
+Detectar perfil conocido  ✔
+Detectar red visible      ✔
+Clasificar                ✔
+Proponer acción           ✔
+Cambiar Wi-Fi             ✘
+Verificar cambio          ✘
+```
+
+La próxima versión deberá investigar el cambio real de red de forma:
+
+```text
+aislada
+manual
+controlada
+reversible
+```
+
+antes de integrarlo con QueueWatcher y ConnectivityAnalyzer.
+
+---
+
+# 21.8 Próximo objetivo
+
+NetworkManager v0.2 deberá intentar un cambio real solamente cuando:
+
+```text
+Classification == NETWORK_SWITCH_AVAILABLE
+```
+
+El primer ensayo deberá realizarse de forma aislada, sin que QueueWatcher pueda dispararlo automáticamente.
+
+Una vez validado el cambio real, deberá desarrollarse una etapa posterior de verificación que confirme:
+
+```text
+SSID solicitado
+      ↓
+cambio ejecutado
+      ↓
+SSID realmente conectado
+```
+
+Solo después de validar ambas etapas deberá considerarse la integración completa:
+
+```text
+QueueWatcher
+      ↓
+ConnectivityAnalyzer
+      ↓
+NETWORK_MISMATCH
+      ↓
+NetworkManager
+      ↓
+cambio real
+      ↓
+verificación
+      ↓
+ConnectivityAnalyzer nuevamente
+      ↓
+PRINTER_REACHABLE
+```
