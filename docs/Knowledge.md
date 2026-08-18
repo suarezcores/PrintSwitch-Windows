@@ -350,3 +350,30 @@ La evidencia obtenida permite sostener que la cola de impresión de Windows pued
 Todavía no se ha demostrado que este comportamiento sea universal para todas las impresoras, controladores o configuraciones de red.
 
 PrintSwitch continuará desarrollándose diferenciando explícitamente los comportamientos observados de las hipótesis pendientes de validación.
+## 16. Principio de evidencia positiva
+
+PrintSwitch no deberá inferir el estado físico de una impresora a partir de una única señal negativa de conectividad.
+
+Ejemplos:
+
+- un ping fallido no demuestra que la impresora esté apagada;
+- un puerto TCP inaccesible no demuestra que la impresora esté apagada;
+- un trabajo en estado de error no demuestra que la impresora esté apagada;
+- estar conectado a una red diferente no permite determinar el estado físico de la impresora.
+
+En cambio, una evidencia positiva de comunicación permite realizar inferencias más fuertes.
+
+Ejemplos:
+
+```text
+Dispositivo identificado en la red
+        ↓
+evidencia de presencia
+
+Servicio HTTP responde
+        ↓
+dispositivo activo
+
+Servicio de impresión responde
+        ↓
+subsistema de red de la impresora activo
