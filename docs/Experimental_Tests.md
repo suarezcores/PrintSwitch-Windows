@@ -914,3 +914,315 @@ SSID esperado   suarezcores
 Ping            False
 TCP 9100        False
 HTTP 80         False
+
+# 20. Validación integrada — QueueWatcher + ConnectivityAnalyzer
+
+## Objetivo
+
+Validar que PrintSwitch pueda ejecutar de manera integrada el siguiente flujo:
+
+```text
+trabajo de impresión
+        ↓
+QueueWatcher
+        ↓
+detección de evento
+        ↓
+ConnectivityAnalyzer
+        ↓
+clasificación
+        ↓
+decisión propuesta
+        ↓
+DRY-RUN
+```
+
+La prueba no busca todavía modificar la conectividad.
+
+El objetivo es comprobar que los componentes puedan comunicarse correctamente y que la decisión resultante sea coherente con el entorno observado.
+
+---
+
+## Arquitectura probada
+
+```text
+Windows / Print Spooler
+        ↓
+trabajo nuevo
+        ↓
+QueueWatcher v0.2
+        ↓
+ConnectivityAnalyzer v0.3.1
+        ↓
+PSCustomObject
+        ↓
+Classification
+        ↓
+switch de decisión
+        ↓
+acción propuesta
+        ↓
+DRY-RUN
+```
+
+ConnectivityAnalyzer v0.3.1 devuelve un objeto estructurado que QueueWatcher puede consumir directamente.
+
+No resulta necesario interpretar texto de consola para conocer la clasificación.
+
+---
+
+# 20.1 Integración A — NETWORK_MISMATCH
+
+## Pregunta
+
+¿Puede QueueWatcher detectar automáticamente un trabajo y reconocer, mediante ConnectivityAnalyzer, que la PC está conectada a una red diferente de la requerida por la impresora?
+
+## Condiciones
+
+```text
+PC                Claro640
+SSID requerido    suarezcores
+Impresora         L365 Series(Red)
+Modo              DRY-RUN
+```
+
+El estado físico ON/OFF de la Epson no constituye una variable relevante para esta clasificación.
+
+## Flujo observado
+
+```text
+trabajo enviado
+      ↓
+QueueWatcher detecta trabajo
+      ↓
+ConnectivityAnalyzer ejecutado
+      ↓
+SSID actual = Claro640
+SSID requerido = suarezcores
+      ↓
+NETWORK_MISMATCH
+```
+
+## Decisión obtenida
+
+```text
+ACCION PROPUESTA:
+cambiar a 'suarezcores'
+
+DRY-RUN:
+NO se modifico la red
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+QueueWatcher pudo ejecutar ConnectivityAnalyzer y consumir su clasificación.
+
+**[OBSERVADO]**
+
+El programa reconoció correctamente que la PC no estaba conectada a la red esperada.
+
+**[OBSERVADO]**
+
+No se realizó ninguna modificación automática de conectividad.
+
+**[INFERIDO]**
+
+El flujo integrado puede utilizar `NETWORK_MISMATCH` como condición futura para solicitar al componente de administración de red un cambio de SSID.
+
+---
+
+# 20.2 Integración B — PRINTER_REACHABLE
+
+## Pregunta
+
+¿Puede PrintSwitch detectar que no necesita intervenir cuando la PC ya se encuentra en la red correcta y la impresora es alcanzable?
+
+## Condiciones
+
+```text
+PC                suarezcores
+SSID requerido    suarezcores
+Epson             ON
+Modo              DRY-RUN
+```
+
+Se envió un trabajo real de impresión.
+
+## Evidencia observada
+
+ConnectivityAnalyzer obtuvo:
+
+```text
+Ping           True
+TCP 9100       True
+HTTP 80        True
+```
+
+Clasificación:
+
+```text
+PRINTER_REACHABLE
+```
+
+## Decisión obtenida
+
+```text
+ACCION PROPUESTA: ninguna.
+La impresora ya resulta alcanzable.
+```
+
+El trabajo continuó mediante el subsistema normal de impresión de Windows.
+
+## Conclusión
+
+**[OBSERVADO]**
+
+QueueWatcher detectó correctamente el trabajo.
+
+**[OBSERVADO]**
+
+ConnectivityAnalyzer determinó que la impresora era alcanzable.
+
+**[OBSERVADO]**
+
+QueueWatcher interpretó correctamente `PRINTER_REACHABLE`.
+
+**[OBSERVADO]**
+
+PrintSwitch no propuso una modificación de red innecesaria.
+
+**[DECISIÓN]**
+
+Cuando la impresora ya resulta alcanzable, PrintSwitch deberá evitar modificar la conectividad.
+
+---
+
+# 20.3 Integración C — PRINTER_UNREACHABLE_ON_TARGET_NETWORK
+
+## Pregunta
+
+¿Qué decisión toma PrintSwitch cuando la PC se encuentra en la red esperada pero la impresora no puede ser alcanzada?
+
+## Condiciones
+
+```text
+PC                suarezcores
+SSID requerido    suarezcores
+Epson             OFF
+Modo              DRY-RUN
+```
+
+Se envió un trabajo de impresión.
+
+## Evidencia observada
+
+ConnectivityAnalyzer obtuvo:
+
+```text
+Ping           False
+TCP 9100       False
+HTTP 80        False
+```
+
+Clasificación:
+
+```text
+PRINTER_UNREACHABLE_ON_TARGET_NETWORK
+```
+
+## Decisión obtenida
+
+```text
+ACCION PROPUESTA: no cambiar de red.
+
+La PC ya esta en la red esperada,
+pero la impresora no responde.
+
+No se infiere la causa fisica.
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+PrintSwitch distinguió correctamente entre:
+
+```text
+red incorrecta
+```
+
+y:
+
+```text
+red correcta + impresora no alcanzable
+```
+
+**[OBSERVADO]**
+
+No propuso cambiar de red cuando la PC ya se encontraba en `suarezcores`.
+
+**[OBSERVADO]**
+
+No afirmó que la impresora estuviera apagada.
+
+**[DECISIÓN]**
+
+`PRINTER_UNREACHABLE_ON_TARGET_NETWORK` no deberá transformarse automáticamente en una acción de cambio de SSID.
+
+El siguiente paso deberá ser diagnóstico adicional, espera, descubrimiento o interacción con el usuario según la evolución futura del sistema.
+
+---
+
+# 20.4 Matriz integrada validada
+
+| Contexto | Evidencia | Clasificación | Decisión DRY-RUN |
+|---|---|---|---|
+| Red incorrecta | SSID distinto | NETWORK_MISMATCH | Proponer cambio de red |
+| Red correcta + impresora accesible | evidencia positiva | PRINTER_REACHABLE | No hacer nada |
+| Red correcta + impresora inaccesible | pruebas negativas | PRINTER_UNREACHABLE_ON_TARGET_NETWORK | No cambiar red / no inferir causa |
+
+---
+
+# 20.5 Hito alcanzado
+
+A partir de estas pruebas PrintSwitch deja de estar compuesto únicamente por herramientas experimentales independientes.
+
+El sistema ya ejecuta un flujo funcional:
+
+```text
+ESPERAR
+   ↓
+DETECTAR
+   ↓
+ANALIZAR
+   ↓
+CLASIFICAR
+   ↓
+DECIDIR
+   ↓
+INFORMAR
+   ↓
+VOLVER A ESPERAR
+```
+
+Estado actual:
+
+```text
+Percibir    ✔
+Relevar     ✔
+Clasificar  ✔
+Decidir     ✔ básico
+Actuar      ✘
+Verificar   ✘
+Recuperar   ✘
+```
+
+La próxima etapa del core será comenzar a desarrollar el componente responsable de la administración de red:
+
+```text
+NetworkManager
+```
+
+Inicialmente deberá operar también en modo no destructivo / DRY-RUN.
