@@ -1,9 +1,18 @@
+param (
+    [switch]$EnableRecovery
+)
+
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - QueueWatcher v0.2
-# Deteccion de trabajos + analisis de conectividad
-# DRY-RUN
+# PrintSwitch - QueueWatcher v0.3
+# Integracion End-to-End
+#
+# Sin -EnableRecovery:
+#   observa, analiza y NO modifica Wi-Fi.
+#
+# Con -EnableRecovery:
+#   puede solicitar a NetworkManager un cambio real de Wi-Fi.
 # ============================================================
 
 $PrinterName = "L365 Series(Red)"
@@ -13,16 +22,32 @@ $ConnectivityAnalyzerPath = Join-Path `
     $PSScriptRoot `
     "ConnectivityAnalyzer.ps1"
 
+$NetworkManagerPath = Join-Path `
+    $PSScriptRoot `
+    "NetworkManager.ps1"
+
 $KnownJobs = @{}
 
 Write-Host ""
-Write-Host "PrintSwitch - QueueWatcher v0.2" -ForegroundColor Cyan
-Write-Host "Modo: DRY-RUN" -ForegroundColor Yellow
-Write-Host "No se modificara ninguna red Wi-Fi."
+Write-Host "PrintSwitch - QueueWatcher v0.3" -ForegroundColor Cyan
+
+if ($EnableRecovery) {
+
+    Write-Host "Modo: RECUPERACION HABILITADA" -ForegroundColor Yellow
+    Write-Host "PrintSwitch puede modificar la interfaz Wi-Fi."
+
+}
+else {
+
+    Write-Host "Modo: DRY-RUN" -ForegroundColor Yellow
+    Write-Host "No se modificara ninguna red Wi-Fi."
+}
+
 Write-Host ""
 Write-Host "Impresora observada : $PrinterName"
 Write-Host "Intervalo           : $PollingMilliseconds ms"
-Write-Host "Analyzer            : $ConnectivityAnalyzerPath"
+Write-Host "ConnectivityAnalyzer: $ConnectivityAnalyzerPath"
+Write-Host "NetworkManager      : $NetworkManagerPath"
 Write-Host ""
 Write-Host "Esperando trabajos de impresion..."
 Write-Host "Ctrl+C para finalizar."
@@ -47,6 +72,61 @@ function Get-PrintJobs {
 }
 
 # ============================================================
+# FUNCION: ejecutar ConnectivityAnalyzer
+# ============================================================
+
+function Invoke-ConnectivityAnalysis {
+
+    if (-not (Test-Path $ConnectivityAnalyzerPath)) {
+
+        Write-Host `
+            "ERROR: ConnectivityAnalyzer no encontrado." `
+            -ForegroundColor Red
+
+        return $null
+    }
+
+    try {
+
+        return & $ConnectivityAnalyzerPath
+
+    }
+    catch {
+
+        Write-Host `
+            "ERROR ejecutando ConnectivityAnalyzer." `
+            -ForegroundColor Red
+
+        Write-Host $_.Exception.Message
+
+        return $null
+    }
+}
+
+# ============================================================
+# FUNCION: mostrar resumen de conectividad
+# ============================================================
+
+function Show-ConnectivitySummary {
+
+    param(
+        $Connectivity
+    )
+
+    Write-Host ""
+    Write-Host "----------------------------------------"
+    Write-Host "RESUMEN DE CONECTIVIDAD"
+    Write-Host "----------------------------------------"
+
+    Write-Host "Clasificacion : $($Connectivity.Classification)"
+    Write-Host "SSID actual   : $($Connectivity.CurrentSSID)"
+    Write-Host "SSID requerido: $($Connectivity.RequiredSSID)"
+    Write-Host "Ping          : $($Connectivity.PingSucceeded)"
+    Write-Host "TCP 9100      : $($Connectivity.Tcp9100Succeeded)"
+    Write-Host "HTTP 80       : $($Connectivity.Tcp80Succeeded)"
+}
+
+# ============================================================
 # LOOP PRINCIPAL
 # ============================================================
 
@@ -62,9 +142,9 @@ while ($true) {
 
             $KnownJobs[$JobKey] = $true
 
-            # ------------------------------------------------
-            # Evento de nuevo trabajo
-            # ------------------------------------------------
+            # =================================================
+            # NUEVO TRABAJO
+            # =================================================
 
             $Event = [PSCustomObject]@{
 
@@ -95,126 +175,297 @@ while ($true) {
             Write-Host "Estado      : $($Event.JobStatus)"
 
             # =================================================
-            # Ejecutar ConnectivityAnalyzer
+            # PRIMER ANALISIS
             # =================================================
 
             Write-Host ""
-            Write-Host "----------------------------------------"
-            Write-Host "ANALIZANDO CONECTIVIDAD"
-            Write-Host "----------------------------------------"
+            Write-Host "========================================"
+            Write-Host "FASE 1 - ANALISIS INICIAL"
+            Write-Host "========================================"
 
-            if (-not (Test-Path $ConnectivityAnalyzerPath)) {
-
-                Write-Host "ERROR: ConnectivityAnalyzer no encontrado." `
-                    -ForegroundColor Red
-
-                continue
-            }
-
-            try {
-
-                $Connectivity = & $ConnectivityAnalyzerPath
-
-            }
-            catch {
-
-                Write-Host "ERROR ejecutando ConnectivityAnalyzer." `
-                    -ForegroundColor Red
-
-                Write-Host $_.Exception.Message
-
-                continue
-            }
-
-            # =================================================
-            # Validar resultado
-            # =================================================
+            $Connectivity = Invoke-ConnectivityAnalysis
 
             if ($null -eq $Connectivity) {
 
                 Write-Host ""
-                Write-Host "ERROR: ConnectivityAnalyzer no devolvio resultado." `
+                Write-Host `
+                    "No fue posible obtener un diagnostico." `
                     -ForegroundColor Red
 
                 continue
             }
 
-            Write-Host ""
-            Write-Host "----------------------------------------"
-            Write-Host "RESULTADO DE CONECTIVIDAD"
-            Write-Host "----------------------------------------"
-
-            Write-Host "Clasificacion : $($Connectivity.Classification)"
-            Write-Host "SSID actual   : $($Connectivity.CurrentSSID)"
-            Write-Host "SSID requerido: $($Connectivity.RequiredSSID)"
-            Write-Host "Ping          : $($Connectivity.PingSucceeded)"
-            Write-Host "TCP 9100      : $($Connectivity.Tcp9100Succeeded)"
-            Write-Host "HTTP 80       : $($Connectivity.Tcp80Succeeded)"
+            Show-ConnectivitySummary `
+                -Connectivity $Connectivity
 
             # =================================================
-            # Decision DRY-RUN
+            # DECISION
             # =================================================
-
-            Write-Host ""
-            Write-Host "----------------------------------------"
-            Write-Host "DECISION PRINTSWITCH - DRY-RUN"
-            Write-Host "----------------------------------------"
 
             switch ($Connectivity.Classification) {
 
-                "NETWORK_MISMATCH" {
-
-                    Write-Host `
-                        "ACCION PROPUESTA: cambiar a '$($Connectivity.RequiredSSID)'." `
-                        -ForegroundColor Yellow
-
-                    Write-Host `
-                        "DRY-RUN: NO se modifico la red."
-                }
+                # ---------------------------------------------
+                # CASO 1: impresora ya alcanzable
+                # ---------------------------------------------
 
                 "PRINTER_REACHABLE" {
 
+                    Write-Host ""
+                    Write-Host "========================================"
+                    Write-Host "RESULTADO PRINTSWITCH"
+                    Write-Host "========================================"
+
                     Write-Host `
-                        "ACCION PROPUESTA: ninguna." `
+                        "PRINTER_REACHABLE" `
                         -ForegroundColor Green
 
                     Write-Host `
-                        "La impresora ya resulta alcanzable."
+                        "No se requiere intervencion de red."
                 }
+
+                # ---------------------------------------------
+                # CASO 2: red incorrecta
+                # ---------------------------------------------
+
+                "NETWORK_MISMATCH" {
+
+                    Write-Host ""
+                    Write-Host "========================================"
+                    Write-Host "FASE 2 - RECUPERACION DE RED"
+                    Write-Host "========================================"
+
+                    Write-Host `
+                        "La PC no esta en la red requerida."
+
+                    Write-Host `
+                        "Red requerida: $($Connectivity.RequiredSSID)"
+
+                    # -----------------------------------------
+                    # DRY-RUN
+                    # -----------------------------------------
+
+                    if (-not $EnableRecovery) {
+
+                        Write-Host ""
+                        Write-Host `
+                            "ACCION PROPUESTA: cambiar a '$($Connectivity.RequiredSSID)'." `
+                            -ForegroundColor Yellow
+
+                        Write-Host `
+                            "DRY-RUN: no se modifico la red."
+
+                        break
+                    }
+
+                    # -----------------------------------------
+                    # Validar NetworkManager
+                    # -----------------------------------------
+
+                    if (-not (Test-Path $NetworkManagerPath)) {
+
+                        Write-Host `
+                            "ERROR: NetworkManager no encontrado." `
+                            -ForegroundColor Red
+
+                        break
+                    }
+
+                    # -----------------------------------------
+                    # Ejecutar NetworkManager
+                    # -----------------------------------------
+
+                    Write-Host ""
+                    Write-Host `
+                        "Solicitando recuperacion a NetworkManager..."
+
+                    try {
+
+                        $NetworkResult = & $NetworkManagerPath `
+                            -TargetSSID $Connectivity.RequiredSSID `
+                            -AutoExecute
+
+                    }
+                    catch {
+
+                        Write-Host `
+                            "ERROR ejecutando NetworkManager." `
+                            -ForegroundColor Red
+
+                        Write-Host $_.Exception.Message
+
+                        break
+                    }
+
+                    if ($null -eq $NetworkResult) {
+
+                        Write-Host `
+                            "ERROR: NetworkManager no devolvio resultado." `
+                            -ForegroundColor Red
+
+                        break
+                    }
+
+                    Write-Host ""
+                    Write-Host "----------------------------------------"
+                    Write-Host "RESULTADO NETWORKMANAGER"
+                    Write-Host "----------------------------------------"
+
+                    Write-Host `
+                        "InitialSSID     : $($NetworkResult.InitialSSID)"
+
+                    Write-Host `
+                        "TargetSSID      : $($NetworkResult.TargetSSID)"
+
+                    Write-Host `
+                        "FinalSSID       : $($NetworkResult.FinalSSID)"
+
+                    Write-Host `
+                        "SwitchVerified  : $($NetworkResult.SwitchVerified)"
+
+                    Write-Host `
+                        "ExecutionResult : $($NetworkResult.ExecutionResult)"
+
+                    # -----------------------------------------
+                    # ¿El cambio fue realmente verificado?
+                    # -----------------------------------------
+
+                    if (-not $NetworkResult.SwitchVerified) {
+
+                        Write-Host ""
+                        Write-Host "========================================"
+                        Write-Host "RECOVERY_FAILED" -ForegroundColor Red
+                        Write-Host "========================================"
+
+                        Write-Host `
+                            "El cambio de red no pudo ser verificado."
+
+                        break
+                    }
+
+                    # =================================================
+                    # FASE 3: REVALIDAR IMPRESORA
+                    # =================================================
+
+                    Write-Host ""
+                    Write-Host "========================================"
+                    Write-Host "FASE 3 - REVALIDACION DE IMPRESORA"
+                    Write-Host "========================================"
+
+                    $ConnectivityAfterSwitch = `
+                        Invoke-ConnectivityAnalysis
+
+                    if ($null -eq $ConnectivityAfterSwitch) {
+
+                        Write-Host ""
+                        Write-Host `
+                            "RECOVERY_INDETERMINATE" `
+                            -ForegroundColor Red
+
+                        Write-Host `
+                            "La red cambio, pero no fue posible repetir el diagnostico."
+
+                        break
+                    }
+
+                    Show-ConnectivitySummary `
+                        -Connectivity $ConnectivityAfterSwitch
+
+                    # -----------------------------------------
+                    # Resultado final
+                    # -----------------------------------------
+
+                    if (
+                        $ConnectivityAfterSwitch.Classification `
+                            -eq "PRINTER_REACHABLE"
+                    ) {
+
+                        Write-Host ""
+                        Write-Host "========================================"
+                        Write-Host "RECOVERY_SUCCESS" -ForegroundColor Green
+                        Write-Host "========================================"
+
+                        Write-Host `
+                            "Cambio de red verificado."
+
+                        Write-Host `
+                            "La impresora ahora resulta alcanzable."
+
+                        Write-Host `
+                            "Windows puede continuar el trabajo pendiente."
+
+                    }
+                    else {
+
+                        Write-Host ""
+                        Write-Host "========================================"
+                        Write-Host `
+                            "NETWORK_SWITCH_OK_BUT_PRINTER_UNREACHABLE" `
+                            -ForegroundColor Yellow
+                        Write-Host "========================================"
+
+                        Write-Host `
+                            "El cambio de red fue correcto, pero la impresora sigue sin ser alcanzable."
+
+                        Write-Host `
+                            "No se infiere la causa fisica."
+                    }
+                }
+
+                # ---------------------------------------------
+                # CASO 3: ya estamos en red correcta,
+                # pero impresora no alcanzable
+                # ---------------------------------------------
 
                 "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" {
 
+                    Write-Host ""
+                    Write-Host "========================================"
+                    Write-Host "RESULTADO PRINTSWITCH"
+                    Write-Host "========================================"
+
                     Write-Host `
-                        "ACCION PROPUESTA: no cambiar de red." `
+                        "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" `
                         -ForegroundColor Yellow
 
                     Write-Host `
-                        "La PC ya esta en la red esperada, pero la impresora no responde."
+                        "No se cambiara de red."
+
+                    Write-Host `
+                        "La PC ya esta en la red esperada."
 
                     Write-Host `
                         "No se infiere la causa fisica."
                 }
 
+                # ---------------------------------------------
+                # CUALQUIER ESTADO FUTURO / DESCONOCIDO
+                # ---------------------------------------------
+
                 default {
 
+                    Write-Host ""
+                    Write-Host "========================================"
+                    Write-Host "RESULTADO PRINTSWITCH"
+                    Write-Host "========================================"
+
                     Write-Host `
-                        "ACCION PROPUESTA: ninguna." `
+                        "Clasificacion no reconocida." `
                         -ForegroundColor Yellow
 
                     Write-Host `
-                        "Clasificacion no reconocida o evidencia insuficiente."
+                        "No se realizara ninguna accion."
                 }
             }
 
             Write-Host ""
             Write-Host "========================================"
-            Write-Host "FIN DEL CICLO DRY-RUN"
+            Write-Host "FIN DEL CICLO PRINTSWITCH"
             Write-Host "========================================"
         }
     }
 
     # ========================================================
-    # Eliminar de memoria trabajos que ya desaparecieron
+    # LIMPIAR TRABAJOS DESAPARECIDOS
     # ========================================================
 
     $CurrentKeys = @(
@@ -232,7 +483,8 @@ while ($true) {
             $KnownJobs.Remove($KnownKey)
 
             Write-Host ""
-            Write-Host "Trabajo finalizado o eliminado: $KnownKey" `
+            Write-Host `
+                "Trabajo finalizado o eliminado: $KnownKey" `
                 -ForegroundColor DarkGray
         }
     }

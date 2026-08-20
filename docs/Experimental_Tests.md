@@ -1899,3 +1899,363 @@ impresión recuperada
 ```
 
 El criterio de recuperación será evidencia posterior de conectividad con el destino de impresión.
+
+# 23. Primer flujo end-to-end exitoso
+
+## Objetivo
+
+Validar el funcionamiento completo del core de PrintSwitch:
+
+```text
+trabajo de impresión
+      ↓
+QueueWatcher
+      ↓
+ConnectivityAnalyzer
+      ↓
+NETWORK_MISMATCH
+      ↓
+NetworkManager
+      ↓
+cambio automático de Wi-Fi
+      ↓
+verificación del cambio
+      ↓
+ConnectivityAnalyzer nuevamente
+      ↓
+PRINTER_REACHABLE
+```
+
+El objetivo del experimento era comprobar que PrintSwitch pudiera recuperar automáticamente el camino de red requerido por la impresora sin intervención manual posterior al envío del trabajo.
+
+---
+
+## Condiciones iniciales
+
+```text
+PC                Claro640
+Impresora         Epson L365
+Red requerida     suarezcores
+QueueWatcher      Recovery habilitado
+NetworkManager    v0.4
+ConnectivityAnalyzer v0.3.1
+```
+
+La impresora se encontraba encendida.
+
+---
+
+## Comportamiento observado
+
+Se envió un trabajo de impresión a:
+
+```text
+L365 Series(Red)
+```
+
+QueueWatcher detectó el trabajo.
+
+ConnectivityAnalyzer determinó inicialmente que el contexto de red requería recuperación.
+
+NetworkManager fue invocado programáticamente y ejecutó el cambio hacia:
+
+```text
+suarezcores
+```
+
+El cambio fue verificado.
+
+Posteriormente ConnectivityAnalyzer volvió a ejecutarse.
+
+La evidencia obtenida fue:
+
+```text
+SSID actual    : suarezcores
+SSID requerido : suarezcores
+
+Ping           : True
+TCP 9100       : True
+HTTP 80        : True
+```
+
+Clasificación:
+
+```text
+PRINTER_REACHABLE
+```
+
+Resultado del core:
+
+```text
+RECOVERY_SUCCESS
+```
+
+---
+
+## Conclusión principal
+
+**[OBSERVADO]**
+
+PrintSwitch ejecutó correctamente el flujo:
+
+```text
+detectar
+   ↓
+analizar
+   ↓
+detectar problema de red
+   ↓
+cambiar Wi-Fi
+   ↓
+verificar cambio
+   ↓
+revalidar impresora
+   ↓
+confirmar alcance
+```
+
+**[OBSERVADO]**
+
+El usuario no necesitó realizar manualmente el cambio de red.
+
+**[DECISIÓN]**
+
+El criterio de recuperación exitosa no será simplemente:
+
+```text
+SwitchVerified == True
+```
+
+sino:
+
+```text
+SwitchVerified == True
++
+ConnectivityAfterSwitch == PRINTER_REACHABLE
+```
+
+Por lo tanto:
+
+```text
+cambio de red exitoso
+        ≠
+recuperación de impresión confirmada
+```
+
+---
+
+# 23.1 Evento físico concurrente — atasco de papel
+
+Durante el experimento se produjo accidentalmente un atasco real de papel.
+
+El software de Epson informó:
+
+```text
+Error
+Code: E3
+```
+
+y solicitó retirar el papel obstruido.
+
+Al mismo tiempo PrintSwitch observó que la impresora seguía siendo alcanzable mediante red:
+
+```text
+Ping      True
+TCP 9100  True
+HTTP 80   True
+```
+
+ConnectivityAnalyzer continuó clasificando:
+
+```text
+PRINTER_REACHABLE
+```
+
+mientras Windows reportaba simultáneamente estados de error en la impresión.
+
+---
+
+## Hallazgo
+
+**[OBSERVADO]**
+
+Una impresora puede ser:
+
+```text
+PRINTER_REACHABLE
+```
+
+y simultáneamente presentar un problema físico o funcional.
+
+Por ejemplo:
+
+```text
+atasco
+falta de papel
+tapa abierta
+error del dispositivo
+```
+
+Por lo tanto:
+
+```text
+PRINTER_REACHABLE
+```
+
+no equivale necesariamente a:
+
+```text
+PRINTER_READY
+```
+
+---
+
+# 23.2 Frontera de responsabilidad de PrintSwitch
+
+A partir de este experimento se establece una decisión arquitectónica.
+
+## Responsabilidad de PrintSwitch
+
+PrintSwitch administra:
+
+```text
+conectividad necesaria hacia el destino de impresión
+```
+
+Su responsabilidad principal es determinar si existe un camino de red válido y, cuando corresponda, intentar recuperarlo.
+
+---
+
+## Fuera del dominio de PrintSwitch
+
+PrintSwitch no deberá intentar resolver directamente:
+
+```text
+atascos
+falta de papel
+tinta
+tapa abierta
+problemas mecánicos
+errores propios del firmware
+otros problemas físicos
+```
+
+Estos estados pertenecen al dominio de:
+
+```text
+Windows
+Print Spooler
+driver
+software del fabricante
+firmware de la impresora
+usuario
+```
+
+según corresponda.
+
+---
+
+## Uso de esos estados dentro de PrintSwitch
+
+Aunque PrintSwitch no sea responsable de resolverlos, puede registrar información como:
+
+```text
+PrinterStatus
+JobStatus
+DetectedErrorState
+WorkOffline
+```
+
+para proporcionar contexto y evitar decisiones incorrectas.
+
+Ejemplo:
+
+```text
+CONNECTIVITY
+PRINTER_REACHABLE
+
+WINDOWS_PRINT_STATE
+PrinterStatus : Error
+JobStatus     : Error | Imprimiendo
+
+PRINTSWITCH_DECISION
+No realizar recuperación de red
+```
+
+---
+
+## Regla primaria
+
+**[DECISIÓN]**
+
+Si existe evidencia positiva suficiente de que la impresora es alcanzable por red, un error simultáneo informado por Windows o por el software de impresión no deberá provocar por sí solo una acción de cambio de red.
+
+Conceptualmente:
+
+```text
+PRINTER_REACHABLE
+       +
+WINDOWS_PRINT_ERROR
+       ↓
+NO NETWORK RECOVERY
+```
+
+PrintSwitch podrá registrar el error, pero no deberá apropiarse de su resolución.
+
+---
+
+# 23.3 Separación de responsabilidades
+
+La arquitectura queda conceptualmente dividida así:
+
+```text
+PrintSwitch
+    ↓
+conectividad
+
+Windows / Print Spooler / driver
+    ↓
+administración del trabajo
+
+Software / firmware de impresora
+    ↓
+diagnóstico específico del dispositivo
+
+Usuario
+    ↓
+acción física cuando sea necesaria
+```
+
+Esta separación permite mantener el core de PrintSwitch pequeño, predecible y enfocado.
+
+---
+
+# 23.4 Estado alcanzado
+
+```text
+QueueWatcher
+    ✔ detecta trabajos
+
+ConnectivityAnalyzer
+    ✔ releva contexto
+    ✔ prueba conectividad
+    ✔ clasifica
+
+NetworkManager
+    ✔ evalúa cambio
+    ✔ ejecuta cambio
+    ✔ verifica cambio
+
+Core integrado
+    ✔ detecta
+    ✔ analiza
+    ✔ cambia red
+    ✔ verifica
+    ✔ revalida impresora
+
+Problemas físicos de impresora
+    ✔ registrados como contexto
+    ✘ no administrados por PrintSwitch
+```
+
+Este experimento constituye el primer flujo end-to-end funcional del core de PrintSwitch.
