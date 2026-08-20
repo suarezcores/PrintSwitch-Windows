@@ -1,15 +1,26 @@
+param (
+    [string]$TargetSSID = "suarezcores",
+
+    [switch]$AutoExecute
+)
+
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - NetworkManager v0.3
-# Cambio real de Wi-Fi + verificacion
+# PrintSwitch - NetworkManager v0.4
+# Cambio Wi-Fi manual o programatico + verificacion
 # ============================================================
 
-$TargetSSID = "suarezcores"
-
 Write-Host ""
-Write-Host "PrintSwitch - NetworkManager v0.3" -ForegroundColor Cyan
-Write-Host "Modo: CAMBIO CONTROLADO + VERIFICACION" -ForegroundColor Yellow
+Write-Host "PrintSwitch - NetworkManager v0.4" -ForegroundColor Cyan
+
+if ($AutoExecute) {
+    Write-Host "Modo: EJECUCION PROGRAMATICA" -ForegroundColor Yellow
+}
+else {
+    Write-Host "Modo: EJECUCION MANUAL CONTROLADA" -ForegroundColor Yellow
+}
+
 Write-Host ""
 
 # ============================================================
@@ -32,6 +43,31 @@ function Get-CurrentSSID {
     }
 
     return $null
+}
+
+# ============================================================
+# FUNCION: obtener redes visibles
+# ============================================================
+
+function Get-VisibleSSIDs {
+
+    $VisibleNetworksOutput = netsh wlan show networks mode=bssid
+
+    $VisibleSSIDs = @()
+
+    foreach ($Line in $VisibleNetworksOutput) {
+
+        if ($Line -match '^\s*SSID\s+\d+\s*:\s*(.*)$') {
+
+            $VisibleSSID = $Matches[1].Trim()
+
+            if ($VisibleSSID) {
+                $VisibleSSIDs += $VisibleSSID
+            }
+        }
+    }
+
+    return $VisibleSSIDs
 }
 
 # ============================================================
@@ -64,28 +100,41 @@ foreach ($Line in $ProfilesOutput) {
 
 $TargetProfileKnown = $KnownProfiles -contains $TargetSSID
 
+Write-Host "Perfil conocido : $TargetProfileKnown"
+
 # ============================================================
 # 3. RED OBJETIVO VISIBLE
+# Varios intentos para tolerar estados transitorios
 # ============================================================
 
-$VisibleNetworksOutput = netsh wlan show networks mode=bssid
-$VisibleSSIDs = @()
+$TargetNetworkVisible = $false
 
-foreach ($Line in $VisibleNetworksOutput) {
+$VisibilityAttempts = 3
+$VisibilityDelaySeconds = 1
 
-    if ($Line -match '^\s*SSID\s+\d+\s*:\s*(.*)$') {
+for (
+    $Attempt = 1;
+    $Attempt -le $VisibilityAttempts;
+    $Attempt++
+) {
 
-        $VisibleSSID = $Matches[1].Trim()
+    $VisibleSSIDs = Get-VisibleSSIDs
 
-        if ($VisibleSSID) {
-            $VisibleSSIDs += $VisibleSSID
-        }
+    if ($VisibleSSIDs -contains $TargetSSID) {
+
+        $TargetNetworkVisible = $true
+        break
+    }
+
+    if ($Attempt -lt $VisibilityAttempts) {
+
+        Write-Host `
+            "Red objetivo no detectada. Reintentando $Attempt/$VisibilityAttempts..."
+
+        Start-Sleep -Seconds $VisibilityDelaySeconds
     }
 }
 
-$TargetNetworkVisible = $VisibleSSIDs -contains $TargetSSID
-
-Write-Host "Perfil conocido : $TargetProfileKnown"
 Write-Host "Red visible     : $TargetNetworkVisible"
 
 # ============================================================
@@ -113,16 +162,23 @@ else {
 }
 
 Write-Host ""
-Write-Host "Clasificacion inicial : $Classification" -ForegroundColor Green
+Write-Host "Clasificacion inicial : $Classification" `
+    -ForegroundColor Green
 
 # ============================================================
-# 5. CAMBIO DE RED
+# 5. VARIABLES DE RESULTADO
 # ============================================================
 
+$SwitchAuthorized = $false
 $SwitchRequested = $false
 $CommandIssued = $false
 $SwitchVerified = $false
+
 $FinalSSID = $InitialSSID
+
+# ============================================================
+# 6. DECISION DE EJECUCION
+# ============================================================
 
 if ($Classification -eq "NETWORK_SWITCH_AVAILABLE") {
 
@@ -134,9 +190,28 @@ if ($Classification -eq "NETWORK_SWITCH_AVAILABLE") {
     Write-Host "$InitialSSID -> $TargetSSID"
     Write-Host ""
 
-    $Confirmation = Read-Host "Escriba SI para autorizar el cambio"
+    if ($AutoExecute) {
 
-    if ($Confirmation -eq "SI") {
+        $SwitchAuthorized = $true
+
+        Write-Host "Cambio autorizado por componente llamador."
+
+    }
+    else {
+
+        $Confirmation = Read-Host `
+            "Escriba SI para autorizar el cambio"
+
+        if ($Confirmation -eq "SI") {
+            $SwitchAuthorized = $true
+        }
+    }
+
+    # ========================================================
+    # 7. EJECUCION
+    # ========================================================
+
+    if ($SwitchAuthorized) {
 
         $SwitchRequested = $true
 
@@ -157,7 +232,7 @@ if ($Classification -eq "NETWORK_SWITCH_AVAILABLE") {
         }
 
         # ====================================================
-        # 6. VERIFICACION
+        # 8. VERIFICACION
         # ====================================================
 
         Write-Host ""
@@ -166,13 +241,18 @@ if ($Classification -eq "NETWORK_SWITCH_AVAILABLE") {
         $MaximumAttempts = 10
         $DelaySeconds = 1
 
-        for ($Attempt = 1; $Attempt -le $MaximumAttempts; $Attempt++) {
+        for (
+            $Attempt = 1;
+            $Attempt -le $MaximumAttempts;
+            $Attempt++
+        ) {
 
             Start-Sleep -Seconds $DelaySeconds
 
             $FinalSSID = Get-CurrentSSID
 
-            Write-Host "Intento $Attempt/$MaximumAttempts - SSID detectado: $FinalSSID"
+            Write-Host `
+                "Intento $Attempt/$MaximumAttempts - SSID detectado: $FinalSSID"
 
             if ($FinalSSID -eq $TargetSSID) {
 
@@ -181,41 +261,18 @@ if ($Classification -eq "NETWORK_SWITCH_AVAILABLE") {
             }
         }
 
-        Write-Host ""
-        Write-Host "========================================"
-        Write-Host "VERIFICACION"
-        Write-Host "========================================"
-
-        Write-Host "SSID inicial    : $InitialSSID"
-        Write-Host "SSID solicitado : $TargetSSID"
-        Write-Host "SSID final      : $FinalSSID"
-        Write-Host "Cambio verificado: $SwitchVerified"
-
-        if ($SwitchVerified) {
-
-            Write-Host ""
-            Write-Host "RESULTADO: NETWORK_SWITCH_VERIFIED" `
-                -ForegroundColor Green
-
-        }
-        else {
-
-            Write-Host ""
-            Write-Host "RESULTADO: NETWORK_SWITCH_NOT_VERIFIED" `
-                -ForegroundColor Red
-        }
     }
     else {
 
         Write-Host ""
-        Write-Host "Cambio cancelado por el usuario."
+        Write-Host "Cambio cancelado. No se modifico la red."
     }
 
 }
 elseif ($Classification -eq "ALREADY_ON_TARGET_NETWORK") {
 
-    $SwitchVerified = $true
     $FinalSSID = $InitialSSID
+    $SwitchVerified = $true
 
     Write-Host ""
     Write-Host "No se requiere cambio."
@@ -236,13 +293,46 @@ elseif ($Classification -eq "TARGET_NETWORK_NOT_VISIBLE") {
 }
 
 # ============================================================
-# 7. RESULTADO ESTRUCTURADO
+# 9. RESULTADO FINAL
+# ============================================================
+
+if ($SwitchRequested) {
+
+    if ($SwitchVerified) {
+
+        $ExecutionResult = "NETWORK_SWITCH_VERIFIED"
+
+    }
+    else {
+
+        $ExecutionResult = "NETWORK_SWITCH_NOT_VERIFIED"
+    }
+
+}
+elseif ($Classification -eq "ALREADY_ON_TARGET_NETWORK") {
+
+    $ExecutionResult = "NO_SWITCH_REQUIRED"
+
+}
+elseif (-not $SwitchAuthorized -and
+        $Classification -eq "NETWORK_SWITCH_AVAILABLE") {
+
+    $ExecutionResult = "SWITCH_NOT_AUTHORIZED"
+
+}
+else {
+
+    $ExecutionResult = "SWITCH_NOT_AVAILABLE"
+}
+
+# ============================================================
+# 10. RESULTADO ESTRUCTURADO
 # ============================================================
 
 $NetworkResult = [PSCustomObject]@{
 
     Component            = "NetworkManager"
-    Version              = "0.3"
+    Version              = "0.4"
 
     Timestamp            = Get-Date
 
@@ -255,9 +345,13 @@ $NetworkResult = [PSCustomObject]@{
 
     Classification       = $Classification
 
+    AutoExecute          = [bool]$AutoExecute
+    SwitchAuthorized     = $SwitchAuthorized
     SwitchRequested      = $SwitchRequested
     CommandIssued        = $CommandIssued
     SwitchVerified       = $SwitchVerified
+
+    ExecutionResult      = $ExecutionResult
 }
 
 Write-Host ""
@@ -273,13 +367,16 @@ Write-Host "FinalSSID             : $($NetworkResult.FinalSSID)"
 Write-Host "TargetProfileKnown    : $($NetworkResult.TargetProfileKnown)"
 Write-Host "TargetNetworkVisible  : $($NetworkResult.TargetNetworkVisible)"
 Write-Host "Classification        : $($NetworkResult.Classification)"
+Write-Host "AutoExecute           : $($NetworkResult.AutoExecute)"
+Write-Host "SwitchAuthorized      : $($NetworkResult.SwitchAuthorized)"
 Write-Host "SwitchRequested       : $($NetworkResult.SwitchRequested)"
 Write-Host "CommandIssued         : $($NetworkResult.CommandIssued)"
 Write-Host "SwitchVerified        : $($NetworkResult.SwitchVerified)"
+Write-Host "ExecutionResult       : $($NetworkResult.ExecutionResult)"
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "FIN NETWORKMANAGER v0.3"
+Write-Host "FIN NETWORKMANAGER v0.4"
 Write-Host "========================================"
 
 $NetworkResult
