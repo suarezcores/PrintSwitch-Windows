@@ -1,63 +1,53 @@
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - NetworkManager v0.1
-# Inspeccion de redes + decision DRY-RUN
-# NO modifica la conectividad
+# PrintSwitch - NetworkManager v0.3
+# Cambio real de Wi-Fi + verificacion
 # ============================================================
 
 $TargetSSID = "suarezcores"
 
 Write-Host ""
-Write-Host "PrintSwitch - NetworkManager v0.1" -ForegroundColor Cyan
-Write-Host "Modo: DRY-RUN" -ForegroundColor Yellow
-Write-Host "No se realizaran cambios de red."
+Write-Host "PrintSwitch - NetworkManager v0.3" -ForegroundColor Cyan
+Write-Host "Modo: CAMBIO CONTROLADO + VERIFICACION" -ForegroundColor Yellow
 Write-Host ""
 
 # ============================================================
-# 1. SSID ACTUAL
+# FUNCION: obtener SSID actual
 # ============================================================
 
-Write-Host "========================================"
-Write-Host "1. RED ACTUAL"
-Write-Host "========================================"
+function Get-CurrentSSID {
 
-$InterfaceInfo = netsh wlan show interfaces
+    $InterfaceInfo = netsh wlan show interfaces
 
-$CurrentSSIDMatch = $InterfaceInfo |
-    Select-String '^\s*SSID\s*:' |
-    Select-Object -First 1
+    $CurrentSSIDMatch = $InterfaceInfo |
+        Select-String '^\s*SSID\s*:' |
+        Select-Object -First 1
 
-$CurrentSSID = $null
+    if ($CurrentSSIDMatch) {
 
-if ($CurrentSSIDMatch) {
+        return (
+            $CurrentSSIDMatch.ToString().Split(":", 2)[1]
+        ).Trim()
+    }
 
-    $CurrentSSID = (
-        $CurrentSSIDMatch.ToString().Split(":", 2)[1]
-    ).Trim()
-}
-
-if ($CurrentSSID) {
-
-    Write-Host "SSID actual : $CurrentSSID"
-
-}
-else {
-
-    Write-Host "SSID actual : NO DETECTADO" -ForegroundColor Yellow
+    return $null
 }
 
 # ============================================================
-# 2. PERFILES WIFI CONOCIDOS POR WINDOWS
+# 1. ESTADO INICIAL
 # ============================================================
 
-Write-Host ""
-Write-Host "========================================"
-Write-Host "2. PERFIL WIFI OBJETIVO"
-Write-Host "========================================"
+$InitialSSID = Get-CurrentSSID
+
+Write-Host "SSID inicial  : $InitialSSID"
+Write-Host "SSID objetivo : $TargetSSID"
+
+# ============================================================
+# 2. PERFIL OBJETIVO
+# ============================================================
 
 $ProfilesOutput = netsh wlan show profiles
-
 $KnownProfiles = @()
 
 foreach ($Line in $ProfilesOutput) {
@@ -67,7 +57,6 @@ foreach ($Line in $ProfilesOutput) {
         $PossibleProfile = $Matches[1].Trim()
 
         if ($PossibleProfile) {
-
             $KnownProfiles += $PossibleProfile
         }
     }
@@ -75,20 +64,11 @@ foreach ($Line in $ProfilesOutput) {
 
 $TargetProfileKnown = $KnownProfiles -contains $TargetSSID
 
-Write-Host "SSID objetivo   : $TargetSSID"
-Write-Host "Perfil conocido : $TargetProfileKnown"
-
 # ============================================================
-# 3. REDES WIFI VISIBLES
+# 3. RED OBJETIVO VISIBLE
 # ============================================================
-
-Write-Host ""
-Write-Host "========================================"
-Write-Host "3. RED OBJETIVO VISIBLE"
-Write-Host "========================================"
 
 $VisibleNetworksOutput = netsh wlan show networks mode=bssid
-
 $VisibleSSIDs = @()
 
 foreach ($Line in $VisibleNetworksOutput) {
@@ -98,7 +78,6 @@ foreach ($Line in $VisibleNetworksOutput) {
         $VisibleSSID = $Matches[1].Trim()
 
         if ($VisibleSSID) {
-
             $VisibleSSIDs += $VisibleSSID
         }
     }
@@ -106,19 +85,14 @@ foreach ($Line in $VisibleNetworksOutput) {
 
 $TargetNetworkVisible = $VisibleSSIDs -contains $TargetSSID
 
-Write-Host "SSID objetivo : $TargetSSID"
-Write-Host "Red visible   : $TargetNetworkVisible"
+Write-Host "Perfil conocido : $TargetProfileKnown"
+Write-Host "Red visible     : $TargetNetworkVisible"
 
 # ============================================================
-# 4. CLASIFICACION
+# 4. CLASIFICACION PREVIA
 # ============================================================
 
-Write-Host ""
-Write-Host "========================================"
-Write-Host "4. CLASIFICACION"
-Write-Host "========================================"
-
-if ($CurrentSSID -eq $TargetSSID) {
+if ($InitialSSID -eq $TargetSSID) {
 
     $Classification = "ALREADY_ON_TARGET_NETWORK"
 
@@ -138,94 +112,174 @@ else {
     $Classification = "NETWORK_SWITCH_AVAILABLE"
 }
 
-Write-Host "Resultado : $Classification" -ForegroundColor Green
-
-# ============================================================
-# 5. DECISION DRY-RUN
-# ============================================================
-
 Write-Host ""
-Write-Host "========================================"
-Write-Host "5. DECISION PRINTSWITCH - DRY-RUN"
-Write-Host "========================================"
+Write-Host "Clasificacion inicial : $Classification" -ForegroundColor Green
 
-switch ($Classification) {
+# ============================================================
+# 5. CAMBIO DE RED
+# ============================================================
 
-    "ALREADY_ON_TARGET_NETWORK" {
+$SwitchRequested = $false
+$CommandIssued = $false
+$SwitchVerified = $false
+$FinalSSID = $InitialSSID
 
-        Write-Host "ACCION PROPUESTA: ninguna." -ForegroundColor Green
-        Write-Host "La PC ya esta conectada a '$TargetSSID'."
-    }
+if ($Classification -eq "NETWORK_SWITCH_AVAILABLE") {
 
-    "TARGET_PROFILE_NOT_FOUND" {
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "CAMBIO DE RED DISPONIBLE"
+    Write-Host "========================================"
 
-        Write-Host "ACCION PROPUESTA: no conectar." -ForegroundColor Yellow
-        Write-Host "Windows no posee un perfil Wi-Fi conocido para '$TargetSSID'."
-    }
+    Write-Host "$InitialSSID -> $TargetSSID"
+    Write-Host ""
 
-    "TARGET_NETWORK_NOT_VISIBLE" {
+    $Confirmation = Read-Host "Escriba SI para autorizar el cambio"
 
-        Write-Host "ACCION PROPUESTA: esperar / informar." -ForegroundColor Yellow
-        Write-Host "El perfil existe, pero '$TargetSSID' no aparece entre las redes visibles."
-    }
+    if ($Confirmation -eq "SI") {
 
-    "NETWORK_SWITCH_AVAILABLE" {
-
-        Write-Host "ACCION PROPUESTA:" -ForegroundColor Yellow
-        Write-Host "$CurrentSSID -> $TargetSSID"
+        $SwitchRequested = $true
 
         Write-Host ""
-        Write-Host "DRY-RUN:"
-        Write-Host "El cambio parece posible, pero NO se ejecutara."
+        Write-Host "Solicitando conexion a '$TargetSSID'..."
+
+        $ConnectOutput = netsh wlan connect `
+            name="$TargetSSID" `
+            ssid="$TargetSSID"
+
+        $CommandIssued = $true
+
+        Write-Host ""
+        Write-Host "Respuesta de Windows:"
+
+        foreach ($Line in $ConnectOutput) {
+            Write-Host $Line
+        }
+
+        # ====================================================
+        # 6. VERIFICACION
+        # ====================================================
+
+        Write-Host ""
+        Write-Host "Esperando estabilizacion de Wi-Fi..."
+
+        $MaximumAttempts = 10
+        $DelaySeconds = 1
+
+        for ($Attempt = 1; $Attempt -le $MaximumAttempts; $Attempt++) {
+
+            Start-Sleep -Seconds $DelaySeconds
+
+            $FinalSSID = Get-CurrentSSID
+
+            Write-Host "Intento $Attempt/$MaximumAttempts - SSID detectado: $FinalSSID"
+
+            if ($FinalSSID -eq $TargetSSID) {
+
+                $SwitchVerified = $true
+                break
+            }
+        }
+
+        Write-Host ""
+        Write-Host "========================================"
+        Write-Host "VERIFICACION"
+        Write-Host "========================================"
+
+        Write-Host "SSID inicial    : $InitialSSID"
+        Write-Host "SSID solicitado : $TargetSSID"
+        Write-Host "SSID final      : $FinalSSID"
+        Write-Host "Cambio verificado: $SwitchVerified"
+
+        if ($SwitchVerified) {
+
+            Write-Host ""
+            Write-Host "RESULTADO: NETWORK_SWITCH_VERIFIED" `
+                -ForegroundColor Green
+
+        }
+        else {
+
+            Write-Host ""
+            Write-Host "RESULTADO: NETWORK_SWITCH_NOT_VERIFIED" `
+                -ForegroundColor Red
+        }
+    }
+    else {
+
+        Write-Host ""
+        Write-Host "Cambio cancelado por el usuario."
     }
 
-    default {
+}
+elseif ($Classification -eq "ALREADY_ON_TARGET_NETWORK") {
 
-        Write-Host "ACCION PROPUESTA: ninguna." -ForegroundColor Yellow
-        Write-Host "No existe evidencia suficiente para decidir."
-    }
+    $SwitchVerified = $true
+    $FinalSSID = $InitialSSID
+
+    Write-Host ""
+    Write-Host "No se requiere cambio."
+
+}
+elseif ($Classification -eq "TARGET_PROFILE_NOT_FOUND") {
+
+    Write-Host ""
+    Write-Host "No se intentara conexion."
+    Write-Host "Windows no posee el perfil '$TargetSSID'."
+
+}
+elseif ($Classification -eq "TARGET_NETWORK_NOT_VISIBLE") {
+
+    Write-Host ""
+    Write-Host "No se intentara conexion."
+    Write-Host "La red '$TargetSSID' no esta visible."
 }
 
 # ============================================================
-# 6. RESULTADO ESTRUCTURADO
+# 7. RESULTADO ESTRUCTURADO
 # ============================================================
 
 $NetworkResult = [PSCustomObject]@{
 
     Component            = "NetworkManager"
-    Version              = "0.1"
+    Version              = "0.3"
 
     Timestamp            = Get-Date
 
-    CurrentSSID          = $CurrentSSID
+    InitialSSID          = $InitialSSID
     TargetSSID           = $TargetSSID
+    FinalSSID            = $FinalSSID
 
     TargetProfileKnown   = $TargetProfileKnown
     TargetNetworkVisible = $TargetNetworkVisible
 
     Classification       = $Classification
 
-    DryRun               = $true
+    SwitchRequested      = $SwitchRequested
+    CommandIssued        = $CommandIssued
+    SwitchVerified       = $SwitchVerified
 }
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "6. RESULTADO ESTRUCTURADO"
+Write-Host "RESULTADO ESTRUCTURADO"
 Write-Host "========================================"
 
 Write-Host "Component             : $($NetworkResult.Component)"
 Write-Host "Version               : $($NetworkResult.Version)"
-Write-Host "CurrentSSID           : $($NetworkResult.CurrentSSID)"
+Write-Host "InitialSSID           : $($NetworkResult.InitialSSID)"
 Write-Host "TargetSSID            : $($NetworkResult.TargetSSID)"
+Write-Host "FinalSSID             : $($NetworkResult.FinalSSID)"
 Write-Host "TargetProfileKnown    : $($NetworkResult.TargetProfileKnown)"
 Write-Host "TargetNetworkVisible  : $($NetworkResult.TargetNetworkVisible)"
 Write-Host "Classification        : $($NetworkResult.Classification)"
-Write-Host "DryRun                : $($NetworkResult.DryRun)"
+Write-Host "SwitchRequested       : $($NetworkResult.SwitchRequested)"
+Write-Host "CommandIssued         : $($NetworkResult.CommandIssued)"
+Write-Host "SwitchVerified        : $($NetworkResult.SwitchVerified)"
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "FIN DEL ANALISIS DE RED"
+Write-Host "FIN NETWORKMANAGER v0.3"
 Write-Host "========================================"
 
-# Unica salida programatica
 $NetworkResult

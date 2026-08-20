@@ -1570,3 +1570,332 @@ ConnectivityAnalyzer nuevamente
       ↓
 PRINTER_REACHABLE
 ```
+# 22. Validación de NetworkManager v0.2 y v0.3
+
+## Objetivo
+
+Validar experimentalmente que NetworkManager pueda:
+
+1. solicitar un cambio real de red Wi-Fi;
+2. utilizar exclusivamente un perfil previamente conocido por Windows;
+3. esperar durante la transición de la interfaz;
+4. verificar que el SSID final sea efectivamente el solicitado.
+
+Estas pruebas se realizaron todavía de forma aislada.
+
+QueueWatcher y ConnectivityAnalyzer no participaron en la ejecución del cambio.
+
+---
+
+# 22.1 NetworkManager v0.2 — Primer cambio real
+
+## Condiciones iniciales
+
+```text
+SSID inicial       Claro640
+SSID objetivo      suarezcores
+Perfil conocido    True
+Red visible        True
+```
+
+NetworkManager clasificó:
+
+```text
+NETWORK_SWITCH_AVAILABLE
+```
+
+Antes de ejecutar la acción solicitó autorización explícita:
+
+```text
+Escriba SI para autorizar el cambio
+```
+
+La autorización fue concedida manualmente.
+
+## Acción ejecutada
+
+NetworkManager solicitó a Windows la conexión al perfil:
+
+```text
+suarezcores
+```
+
+Windows respondió:
+
+```text
+La solicitud de conexión se completó correctamente.
+```
+
+Durante el cambio se observó una breve interrupción de conectividad, consistente con la transición de la interfaz Wi-Fi entre ambos puntos de acceso.
+
+La PC terminó conectada a:
+
+```text
+suarezcores
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+NetworkManager pudo solicitar exitosamente un cambio real:
+
+```text
+Claro640
+   ↓
+suarezcores
+```
+
+**[OBSERVADO]**
+
+El cambio utilizó un perfil Wi-Fi previamente configurado en Windows.
+
+**[OBSERVADO]**
+
+La transición produjo una breve interrupción de conectividad.
+
+**[DECISIÓN]**
+
+La aceptación del comando por parte de Windows no será considerada evidencia suficiente de éxito.
+
+PrintSwitch deberá verificar posteriormente el estado real de la interfaz.
+
+---
+
+# 22.2 NetworkManager v0.3 — Verificación del cambio
+
+## Objetivo
+
+Distinguir entre:
+
+```text
+orden de cambio aceptada
+```
+
+y:
+
+```text
+cambio realmente completado
+```
+
+Para ello NetworkManager v0.3 vuelve a consultar el SSID después de solicitar la conexión.
+
+---
+
+## Condiciones
+
+```text
+SSID inicial       Claro640
+SSID objetivo      suarezcores
+Perfil conocido    True
+Red visible        True
+```
+
+Clasificación inicial:
+
+```text
+NETWORK_SWITCH_AVAILABLE
+```
+
+El cambio fue autorizado manualmente.
+
+Windows aceptó la solicitud.
+
+---
+
+## Comportamiento durante la transición
+
+NetworkManager consultó repetidamente el estado de la interfaz.
+
+Se obtuvo:
+
+```text
+Intento 1/10 - SSID detectado:
+Intento 2/10 - SSID detectado:
+Intento 3/10 - SSID detectado:
+Intento 4/10 - SSID detectado: suarezcores
+```
+
+Durante los primeros intentos la interfaz se encontraba en transición y no reportó un SSID asociado.
+
+En el cuarto intento Windows informó:
+
+```text
+suarezcores
+```
+
+---
+
+## Resultado
+
+```text
+SSID inicial       : Claro640
+SSID solicitado    : suarezcores
+SSID final         : suarezcores
+SwitchRequested    : True
+CommandIssued      : True
+SwitchVerified     : True
+```
+
+Resultado lógico:
+
+```text
+NETWORK_SWITCH_VERIFIED
+```
+
+Además se verificó externamente que la PC había quedado efectivamente conectada a `suarezcores`.
+
+---
+
+## Conclusión
+
+**[OBSERVADO]**
+
+La transición Wi-Fi no es instantánea.
+
+**[OBSERVADO]**
+
+Durante varios segundos Windows puede no reportar ningún SSID mientras cambia de asociación.
+
+**[OBSERVADO]**
+
+NetworkManager toleró correctamente ese estado transitorio.
+
+**[OBSERVADO]**
+
+El componente verificó el cambio únicamente cuando:
+
+```text
+FinalSSID == TargetSSID
+```
+
+**[DECISIÓN]**
+
+PrintSwitch deberá distinguir siempre:
+
+```text
+CommandIssued
+```
+
+de:
+
+```text
+SwitchVerified
+```
+
+Una orden enviada no implica necesariamente una transición exitosa.
+
+---
+
+# 22.3 Observación adicional — visibilidad Wi-Fi transitoria
+
+Durante una ejecución previa, NetworkManager obtuvo:
+
+```text
+TargetProfileKnown   : True
+TargetNetworkVisible : False
+```
+
+para `suarezcores`.
+
+El componente respondió correctamente:
+
+```text
+TARGET_NETWORK_NOT_VISIBLE
+```
+
+y no intentó modificar la conectividad.
+
+Una consulta posterior de Windows mediante:
+
+```text
+netsh wlan show networks mode=bssid
+```
+
+mostró nuevamente `suarezcores` disponible.
+
+Una nueva ejecución de NetworkManager también la detectó correctamente.
+
+## Conclusión
+
+**[OBSERVADO]**
+
+La lista de redes Wi-Fi visibles puede presentar estados transitorios.
+
+**[INFERIDO]**
+
+Una única consulta negativa no debería considerarse necesariamente evidencia suficiente de indisponibilidad persistente.
+
+**[DECISIÓN FUTURA]**
+
+Antes de declarar:
+
+```text
+TARGET_NETWORK_NOT_VISIBLE
+```
+
+NetworkManager podrá realizar varios intentos de descubrimiento separados por una espera breve.
+
+Esta mejora deberá implementarse antes o durante la maduración del componente.
+
+---
+
+# 22.4 Estado alcanzado
+
+```text
+NetworkManager
+
+Detectar SSID actual           ✔
+Detectar perfil conocido       ✔
+Detectar red visible           ✔
+Clasificar                     ✔
+Proponer cambio                ✔
+Solicitar autorización         ✔
+Ejecutar cambio real           ✔
+Esperar transición             ✔
+Verificar SSID final           ✔
+```
+
+NetworkManager ya posee las capacidades mínimas necesarias para comenzar una integración controlada con el core de PrintSwitch.
+
+---
+
+# 22.5 Próximo hito
+
+El siguiente experimento deberá integrar:
+
+```text
+QueueWatcher
+      ↓
+trabajo detectado
+      ↓
+ConnectivityAnalyzer
+      ↓
+NETWORK_MISMATCH
+      ↓
+NetworkManager
+      ↓
+NETWORK_SWITCH_AVAILABLE
+      ↓
+cambio Wi-Fi
+      ↓
+SwitchVerified
+      ↓
+ConnectivityAnalyzer
+      ↓
+PRINTER_REACHABLE
+```
+
+El éxito del cambio de red no será suficiente para considerar resuelto el problema.
+
+PrintSwitch deberá comprobar posteriormente que la impresora se volvió realmente alcanzable.
+
+Por lo tanto:
+
+```text
+cambiar de red
+       ≠
+impresión recuperada
+```
+
+El criterio de recuperación será evidencia posterior de conectividad con el destino de impresión.
