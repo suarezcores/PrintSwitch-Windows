@@ -2259,3 +2259,551 @@ Problemas físicos de impresora
 ```
 
 Este experimento constituye el primer flujo end-to-end funcional del core de PrintSwitch.
+
+# 24. Batería de pruebas negativas end-to-end
+
+## Objetivo
+
+Validar que PrintSwitch no solamente sea capaz de actuar cuando corresponde, sino también de:
+
+- abstenerse cuando una acción de red no tiene sentido;
+- distinguir una recuperación de red exitosa de una impresora todavía inaccesible;
+- no ejecutar cambios cuando la red objetivo no está disponible;
+- evitar conclusiones físicas que no estén respaldadas por evidencia.
+
+Las pruebas se realizaron con:
+
+```text
+QueueWatcher v0.3
+ConnectivityAnalyzer v0.3.1
+NetworkManager v0.4
+```
+
+y con recuperación habilitada mediante:
+
+```powershell
+.\src\QueueWatcher.ps1 -EnableRecovery
+```
+
+Esto es importante porque el sistema tenía permiso para modificar la interfaz Wi-Fi, pero debía decidir correctamente cuándo hacerlo y cuándo no.
+
+---
+
+# 24.1 Caso negativo A — Red correcta + impresora no alcanzable
+
+## Condiciones
+
+```text
+SSID actual       suarezcores
+SSID requerido    suarezcores
+Epson             OFF
+Recovery          habilitado
+```
+
+Se envió un trabajo a:
+
+```text
+L365 Series(Red)
+```
+
+## Evidencia
+
+ConnectivityAnalyzer obtuvo:
+
+```text
+Ping           False
+TCP 9100       False
+HTTP 80        False
+```
+
+Clasificación:
+
+```text
+PRINTER_UNREACHABLE_ON_TARGET_NETWORK
+```
+
+## Decisión
+
+QueueWatcher informó:
+
+```text
+PRINTER_UNREACHABLE_ON_TARGET_NETWORK
+
+No se cambiara de red.
+La PC ya esta en la red esperada.
+No se infiere la causa fisica.
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+PrintSwitch tenía recuperación habilitada, pero no intentó modificar la red.
+
+**[OBSERVADO]**
+
+La PC ya se encontraba en `suarezcores`.
+
+**[OBSERVADO]**
+
+La impresora no era alcanzable.
+
+**[DECISIÓN]**
+
+La autorización para actuar no implica que PrintSwitch deba actuar.
+
+Conceptualmente:
+
+```text
+permiso para actuar
+        ≠
+motivo para actuar
+```
+
+Si la PC ya se encuentra en la red requerida, la falta de respuesta de la impresora no deberá provocar un cambio de SSID.
+
+---
+
+# 24.2 Caso negativo B — Cambio correcto + impresora todavía inaccesible
+
+## Condiciones
+
+```text
+SSID inicial      Claro640
+SSID requerido    suarezcores
+Epson             OFF
+Recovery          habilitado
+```
+
+Se envió un trabajo de impresión.
+
+## Fase inicial
+
+ConnectivityAnalyzer obtuvo:
+
+```text
+SSID actual    Claro640
+SSID requerido suarezcores
+
+Ping           False
+TCP 9100       False
+HTTP 80        False
+```
+
+Clasificación:
+
+```text
+NETWORK_MISMATCH
+```
+
+Por lo tanto, QueueWatcher solicitó recuperación a NetworkManager.
+
+---
+
+## Recuperación de red
+
+NetworkManager obtuvo:
+
+```text
+InitialSSID           Claro640
+TargetSSID            suarezcores
+TargetProfileKnown    True
+TargetNetworkVisible  True
+```
+
+Clasificación:
+
+```text
+NETWORK_SWITCH_AVAILABLE
+```
+
+El cambio se ejecutó programáticamente.
+
+Resultado:
+
+```text
+FinalSSID         suarezcores
+SwitchVerified    True
+ExecutionResult   NETWORK_SWITCH_VERIFIED
+```
+
+La PC quedó efectivamente conectada a:
+
+```text
+suarezcores
+```
+
+---
+
+## Revalidación
+
+Después del cambio, QueueWatcher volvió a ejecutar ConnectivityAnalyzer.
+
+La PC ya estaba en:
+
+```text
+suarezcores
+```
+
+pero la impresora continuó sin responder.
+
+Las pruebas de conectividad permanecieron negativas.
+
+## Resultado conceptual
+
+```text
+NETWORK_SWITCH_VERIFIED
+        +
+PRINTER_UNREACHABLE_ON_TARGET_NETWORK
+        ↓
+NETWORK_SWITCH_OK_BUT_PRINTER_UNREACHABLE
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+NetworkManager realizó correctamente su trabajo.
+
+**[OBSERVADO]**
+
+El cambio de red fue verificado.
+
+**[OBSERVADO]**
+
+La impresora permaneció inaccesible.
+
+**[DECISIÓN]**
+
+PrintSwitch debe distinguir entre:
+
+```text
+mi mecanismo de recuperación funcionó
+```
+
+y:
+
+```text
+el problema completo quedó solucionado
+```
+
+Un cambio de red correcto no implica que la impresora esté disponible.
+
+---
+
+# 24.3 Caso negativo C — Red objetivo no disponible
+
+## Objetivo
+
+Comprobar que PrintSwitch se abstenga de intentar un cambio cuando la red necesaria no está disponible.
+
+## Preparación física
+
+La PC se conectó a:
+
+```text
+Claro640
+```
+
+La red objetivo era:
+
+```text
+suarezcores
+```
+
+Para producir un escenario real de indisponibilidad se cortó la alimentación del router / access point que genera `suarezcores`.
+
+Windows tardó algunos segundos en dejar de mostrar la red entre los SSID visibles.
+
+## Condiciones finales
+
+```text
+SSID actual           Claro640
+SSID objetivo         suarezcores
+Perfil conocido       True
+Red visible           False
+Recovery              habilitado
+```
+
+---
+
+## Fase inicial
+
+ConnectivityAnalyzer clasificó:
+
+```text
+NETWORK_MISMATCH
+```
+
+QueueWatcher solicitó recuperación a NetworkManager.
+
+---
+
+## Comportamiento de NetworkManager
+
+NetworkManager realizó varios intentos de descubrimiento:
+
+```text
+Red objetivo no detectada. Reintentando 1/3...
+Red objetivo no detectada. Reintentando 2/3...
+```
+
+Finalmente obtuvo:
+
+```text
+TargetProfileKnown    True
+TargetNetworkVisible  False
+```
+
+Clasificación:
+
+```text
+TARGET_NETWORK_NOT_VISIBLE
+```
+
+Resultado:
+
+```text
+SwitchAuthorized   False
+SwitchRequested    False
+CommandIssued      False
+SwitchVerified     False
+ExecutionResult    SWITCH_NOT_AVAILABLE
+```
+
+La PC permaneció conectada a:
+
+```text
+Claro640
+```
+
+## Conclusión
+
+**[OBSERVADO]**
+
+PrintSwitch detectó correctamente que existía un problema de red.
+
+**[OBSERVADO]**
+
+Windows conocía el perfil `suarezcores`.
+
+**[OBSERVADO]**
+
+La red objetivo no se encontraba disponible.
+
+**[OBSERVADO]**
+
+NetworkManager no intentó conectarse.
+
+**[OBSERVADO]**
+
+No buscó automáticamente otra red con nombre similar.
+
+**[DECISIÓN]**
+
+PrintSwitch no deberá improvisar una red alternativa cuando la red configurada no esté disponible.
+
+---
+
+# 24.4 Hallazgo — visibilidad Wi-Fi y memoria temporal
+
+Durante la prueba de indisponibilidad se observó que el SSID:
+
+```text
+suarezcores
+```
+
+no desapareció inmediatamente del listado de Windows después de cortar físicamente la energía del access point.
+
+Durante algunos segundos Windows continuó reflejando información reciente del entorno inalámbrico.
+
+## Interpretación
+
+**[OBSERVADO]**
+
+La visibilidad de una red Wi-Fi puede presentar un retraso temporal respecto del estado físico real del access point.
+
+Por lo tanto:
+
+```text
+una lectura instantanea
+        ≠
+estado estable confirmado
+```
+
+La desaparición o aparición de una red debe considerarse un proceso potencialmente asincrónico.
+
+---
+
+## Consecuencia de diseño
+
+NetworkManager v0.4 ya utiliza varios intentos antes de determinar que una red no está visible.
+
+Conceptualmente:
+
+```text
+consulta
+   ↓
+no aparece
+   ↓
+esperar
+   ↓
+consultar nuevamente
+   ↓
+persistencia del estado
+   ↓
+TARGET_NETWORK_NOT_VISIBLE
+```
+
+**[DECISIÓN]**
+
+Las decisiones futuras relacionadas con disponibilidad Wi-Fi deberán utilizar tolerancia temporal y no depender exclusivamente de una única fotografía instantánea.
+
+El número de intentos y tiempos de espera podrá ajustarse posteriormente mediante experimentación.
+
+---
+
+# 24.5 Corrección semántica de resultados
+
+Durante la primera implementación, cuando NetworkManager devolvía:
+
+```text
+SWITCH_NOT_AVAILABLE
+```
+
+QueueWatcher mostraba:
+
+```text
+RECOVERY_FAILED
+```
+
+Este mensaje resultaba ambiguo.
+
+No había ocurrido un fallo durante una recuperación porque la recuperación nunca había comenzado.
+
+## Nueva distinción
+
+Se adopta:
+
+```text
+NETWORK_RECOVERY_UNAVAILABLE
+```
+
+cuando las condiciones necesarias para intentar la recuperación no están disponibles.
+
+Por ejemplo:
+
+```text
+TARGET_NETWORK_NOT_VISIBLE
+TARGET_PROFILE_NOT_FOUND
+```
+
+En cambio:
+
+```text
+RECOVERY_FAILED
+```
+
+queda reservado para situaciones donde:
+
+```text
+se intento realizar una recuperacion
+        +
+el resultado no pudo ser verificado
+```
+
+Conceptualmente:
+
+```text
+SWITCH_NOT_AVAILABLE
+        ↓
+NETWORK_RECOVERY_UNAVAILABLE
+```
+
+mientras:
+
+```text
+CommandIssued = True
+        +
+SwitchVerified = False
+        ↓
+RECOVERY_FAILED
+```
+
+---
+
+# 24.6 Matriz negativa validada
+
+| Escenario | ¿PrintSwitch actúa? | Resultado esperado |
+|---|---:|---|
+| Red correcta + impresora inaccesible | No | PRINTER_UNREACHABLE_ON_TARGET_NETWORK |
+| Red incorrecta + red disponible + impresora inaccesible | Sí, corrige la red | NETWORK_SWITCH_OK_BUT_PRINTER_UNREACHABLE |
+| Red incorrecta + red objetivo no visible | No | NETWORK_RECOVERY_UNAVAILABLE |
+
+---
+
+# 24.7 Regla general de seguridad
+
+A partir de estas pruebas se establece:
+
+> **PrintSwitch debe ser tan cuidadoso al decidir no actuar como al decidir actuar.**
+
+La lógica general no es:
+
+```text
+hay un problema
+    ↓
+hacer algo
+```
+
+sino:
+
+```text
+hay un problema
+    ↓
+obtener evidencia
+    ↓
+clasificar
+    ↓
+¿existe una acción válida dentro del dominio de PrintSwitch?
+        │
+     ┌──┴──┐
+     │     │
+    NO    SÍ
+     │     │
+     ▼     ▼
+ abstenerse  actuar
+              ↓
+           verificar
+```
+
+---
+
+# 24.8 Estado del core después de las pruebas negativas
+
+```text
+Detectar trabajos                      ✔
+Detectar impresora alcanzable          ✔
+Detectar red incorrecta                ✔
+Detectar impresora inaccesible         ✔
+Cambiar Wi-Fi automáticamente          ✔
+Verificar cambio                       ✔
+Revalidar impresora                    ✔
+Abstenerse en red correcta             ✔
+Abstenerse si red objetivo no existe   ✔
+Distinguir acción fallida de imposible ✔
+```
+
+Las pruebas negativas confirman que el core puede:
+
+```text
+ACTUAR
+```
+
+cuando existe una acción válida, y también:
+
+```text
+NO ACTUAR
+```
+
+cuando la evidencia indica que una intervención de red sería incorrecta o imposible.

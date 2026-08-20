@@ -175,7 +175,7 @@ while ($true) {
             Write-Host "Estado      : $($Event.JobStatus)"
 
             # =================================================
-            # PRIMER ANALISIS
+            # FASE 1: ANALISIS INICIAL
             # =================================================
 
             Write-Host ""
@@ -199,13 +199,14 @@ while ($true) {
                 -Connectivity $Connectivity
 
             # =================================================
-            # DECISION
+            # DECISION PRINCIPAL
             # =================================================
 
             switch ($Connectivity.Classification) {
 
                 # ---------------------------------------------
-                # CASO 1: impresora ya alcanzable
+                # CASO 1:
+                # La impresora ya es alcanzable.
                 # ---------------------------------------------
 
                 "PRINTER_REACHABLE" {
@@ -224,7 +225,8 @@ while ($true) {
                 }
 
                 # ---------------------------------------------
-                # CASO 2: red incorrecta
+                # CASO 2:
+                # La PC esta en una red diferente.
                 # ---------------------------------------------
 
                 "NETWORK_MISMATCH" {
@@ -258,11 +260,12 @@ while ($true) {
                     }
 
                     # -----------------------------------------
-                    # Validar NetworkManager
+                    # Validar existencia de NetworkManager
                     # -----------------------------------------
 
                     if (-not (Test-Path $NetworkManagerPath)) {
 
+                        Write-Host ""
                         Write-Host `
                             "ERROR: NetworkManager no encontrado." `
                             -ForegroundColor Red
@@ -287,6 +290,7 @@ while ($true) {
                     }
                     catch {
 
+                        Write-Host ""
                         Write-Host `
                             "ERROR ejecutando NetworkManager." `
                             -ForegroundColor Red
@@ -298,12 +302,17 @@ while ($true) {
 
                     if ($null -eq $NetworkResult) {
 
+                        Write-Host ""
                         Write-Host `
                             "ERROR: NetworkManager no devolvio resultado." `
                             -ForegroundColor Red
 
                         break
                     }
+
+                    # -----------------------------------------
+                    # Mostrar resultado de NetworkManager
+                    # -----------------------------------------
 
                     Write-Host ""
                     Write-Host "----------------------------------------"
@@ -320,24 +329,68 @@ while ($true) {
                         "FinalSSID       : $($NetworkResult.FinalSSID)"
 
                     Write-Host `
+                        "Classification  : $($NetworkResult.Classification)"
+
+                    Write-Host `
+                        "SwitchRequested : $($NetworkResult.SwitchRequested)"
+
+                    Write-Host `
+                        "CommandIssued   : $($NetworkResult.CommandIssued)"
+
+                    Write-Host `
                         "SwitchVerified  : $($NetworkResult.SwitchVerified)"
 
                     Write-Host `
                         "ExecutionResult : $($NetworkResult.ExecutionResult)"
 
-                    # -----------------------------------------
-                    # ¿El cambio fue realmente verificado?
-                    # -----------------------------------------
+                    # =================================================
+                    # EVALUAR RESULTADO DE RECUPERACION DE RED
+                    # =================================================
 
                     if (-not $NetworkResult.SwitchVerified) {
 
                         Write-Host ""
                         Write-Host "========================================"
-                        Write-Host "RECOVERY_FAILED" -ForegroundColor Red
-                        Write-Host "========================================"
 
-                        Write-Host `
-                            "El cambio de red no pudo ser verificado."
+                        # -----------------------------------------
+                        # No estaban disponibles las condiciones
+                        # para realizar el cambio.
+                        # -----------------------------------------
+
+                        if (
+                            $NetworkResult.ExecutionResult `
+                                -eq "SWITCH_NOT_AVAILABLE"
+                        ) {
+
+                            Write-Host `
+                                "NETWORK_RECOVERY_UNAVAILABLE" `
+                                -ForegroundColor Yellow
+
+                            Write-Host "========================================"
+
+                            Write-Host `
+                                "No se intento cambiar de red porque las condiciones necesarias no estaban disponibles."
+
+                            Write-Host `
+                                "NetworkManager devolvio: $($NetworkResult.Classification)"
+                        }
+
+                        # -----------------------------------------
+                        # El cambio fue posible / solicitado,
+                        # pero no pudo verificarse.
+                        # -----------------------------------------
+
+                        else {
+
+                            Write-Host `
+                                "RECOVERY_FAILED" `
+                                -ForegroundColor Red
+
+                            Write-Host "========================================"
+
+                            Write-Host `
+                                "Se intento recuperar la conectividad, pero el cambio de red no pudo ser verificado."
+                        }
 
                         break
                     }
@@ -357,9 +410,11 @@ while ($true) {
                     if ($null -eq $ConnectivityAfterSwitch) {
 
                         Write-Host ""
+                        Write-Host "========================================"
                         Write-Host `
                             "RECOVERY_INDETERMINATE" `
                             -ForegroundColor Red
+                        Write-Host "========================================"
 
                         Write-Host `
                             "La red cambio, pero no fue posible repetir el diagnostico."
@@ -371,7 +426,7 @@ while ($true) {
                         -Connectivity $ConnectivityAfterSwitch
 
                     # -----------------------------------------
-                    # Resultado final
+                    # Resultado final de recuperacion
                     # -----------------------------------------
 
                     if (
@@ -381,7 +436,9 @@ while ($true) {
 
                         Write-Host ""
                         Write-Host "========================================"
-                        Write-Host "RECOVERY_SUCCESS" -ForegroundColor Green
+                        Write-Host `
+                            "RECOVERY_SUCCESS" `
+                            -ForegroundColor Green
                         Write-Host "========================================"
 
                         Write-Host `
@@ -412,8 +469,9 @@ while ($true) {
                 }
 
                 # ---------------------------------------------
-                # CASO 3: ya estamos en red correcta,
-                # pero impresora no alcanzable
+                # CASO 3:
+                # Ya estamos en la red esperada,
+                # pero la impresora no responde.
                 # ---------------------------------------------
 
                 "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" {
@@ -438,7 +496,7 @@ while ($true) {
                 }
 
                 # ---------------------------------------------
-                # CUALQUIER ESTADO FUTURO / DESCONOCIDO
+                # ESTADO DESCONOCIDO / FUTURO
                 # ---------------------------------------------
 
                 default {
@@ -465,7 +523,7 @@ while ($true) {
     }
 
     # ========================================================
-    # LIMPIAR TRABAJOS DESAPARECIDOS
+    # LIMPIAR TRABAJOS QUE YA DESAPARECIERON
     # ========================================================
 
     $CurrentKeys = @(

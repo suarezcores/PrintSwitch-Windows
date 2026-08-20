@@ -1,5 +1,29 @@
 # PrintSwitch
 
+## Automatización de conectividad para impresoras de red en Windows
+
+PrintSwitch parte de una idea simple:
+
+> **Detectar que Windows tiene un trabajo de impresión, comprobar si existe un camino de red válido hacia la impresora y, solamente cuando sea necesario, recuperar automáticamente esa conectividad.**
+
+PrintSwitch no pretende reemplazar al sistema de impresión de Windows, al driver ni al software del fabricante.
+
+Su responsabilidad es mucho más concreta:
+
+> **PrintSwitch no administra la impresora. Administra el camino de red necesario para llegar a ella.**
+
+---
+
+# Arquitectura en tres módulos
+
+Mentalmente, PrintSwitch puede entenderse como tres módulos independientes que colaboran entre sí:
+
+![Arquitectura de PrintSwitch](assets/PrintSwitch_Architecture.png)
+
+Los tres componentes pueden resumirse mediante tres acciones:
+
+# PrintSwitch
+
 ## Estado del proyecto
 
 **Fase actual:** documentación e inicio de desarrollo
