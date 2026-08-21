@@ -1,12 +1,22 @@
 param (
-    [switch]$EnableRecovery
+    [switch]$EnableRecovery,
+
+    [string]$PrinterName,
+
+    [string]$ConfigPath = (
+        Join-Path `
+            (Split-Path $PSScriptRoot -Parent) `
+            "config\printers.json"
+    )
 )
 
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - QueueWatcher v0.3
-# Integracion End-to-End
+# PrintSwitch - QueueWatcher v0.4
+#
+# Observa la cola de impresion configurada.
+# La impresora se obtiene desde config/printers.json.
 #
 # Sin -EnableRecovery:
 #   observa, analiza y NO modifica Wi-Fi.
@@ -15,7 +25,6 @@ $ErrorActionPreference = "Continue"
 #   puede solicitar a NetworkManager un cambio real de Wi-Fi.
 # ============================================================
 
-$PrinterName = "L365 Series(Red)"
 $PollingMilliseconds = 500
 
 $ConnectivityAnalyzerPath = Join-Path `
@@ -28,26 +37,138 @@ $NetworkManagerPath = Join-Path `
 
 $KnownJobs = @{}
 
+# ============================================================
+# 0. CARGAR CONFIGURACION
+# ============================================================
+
 Write-Host ""
-Write-Host "PrintSwitch - QueueWatcher v0.3" -ForegroundColor Cyan
+Write-Host "PrintSwitch - QueueWatcher v0.4" `
+    -ForegroundColor Cyan
 
-if ($EnableRecovery) {
+Write-Host ""
 
-    Write-Host "Modo: RECUPERACION HABILITADA" -ForegroundColor Yellow
-    Write-Host "PrintSwitch puede modificar la interfaz Wi-Fi."
+if (-not (Test-Path $ConfigPath)) {
 
+    Write-Host `
+        "ERROR: no se encontro el archivo de configuracion." `
+        -ForegroundColor Red
+
+    Write-Host "Ruta esperada: $ConfigPath"
+
+    return
+}
+
+try {
+
+    $Config = Get-Content `
+        $ConfigPath `
+        -Raw `
+        -ErrorAction Stop |
+        ConvertFrom-Json `
+            -ErrorAction Stop
+}
+catch {
+
+    Write-Host `
+        "ERROR: no se pudo leer printers.json." `
+        -ForegroundColor Red
+
+    Write-Host $_.Exception.Message
+
+    return
+}
+
+if (
+    $null -eq $Config.printers -or
+    @($Config.printers).Count -eq 0
+) {
+
+    Write-Host `
+        "ERROR: printers.json no contiene perfiles de impresora." `
+        -ForegroundColor Red
+
+    return
+}
+
+# ============================================================
+# 0.1 SELECCIONAR IMPRESORA
+# ============================================================
+
+$PrinterProfile = $null
+
+if ($PrinterName) {
+
+    $PrinterProfile = @(
+        $Config.printers |
+            Where-Object {
+                $_.name -eq $PrinterName
+            }
+    ) | Select-Object -First 1
+
+    if ($null -eq $PrinterProfile) {
+
+        Write-Host `
+            "ERROR: no existe un perfil para '$PrinterName'." `
+            -ForegroundColor Red
+
+        return
+    }
 }
 else {
 
-    Write-Host "Modo: DRY-RUN" -ForegroundColor Yellow
-    Write-Host "No se modificara ninguna red Wi-Fi."
+    # Temporalmente, si no se especifica una impresora,
+    # QueueWatcher utiliza el primer perfil configurado.
+    #
+    # Esto permite mantener compatibilidad con las pruebas
+    # actuales y deja preparado el sistema para multiples
+    # impresoras en el futuro.
+
+    $PrinterProfile = @($Config.printers)[0]
+}
+
+if (
+    [string]::IsNullOrWhiteSpace(
+        [string]$PrinterProfile.name
+    )
+) {
+
+    Write-Host `
+        "ERROR: el perfil seleccionado no contiene 'name'." `
+        -ForegroundColor Red
+
+    return
+}
+
+$PrinterName = [string]$PrinterProfile.name
+
+# ============================================================
+# 0.2 INFORMACION DE ARRANQUE
+# ============================================================
+
+if ($EnableRecovery) {
+
+    Write-Host "Modo: RECUPERACION HABILITADA" `
+        -ForegroundColor Yellow
+
+    Write-Host `
+        "PrintSwitch puede modificar la interfaz Wi-Fi."
+}
+else {
+
+    Write-Host "Modo: DRY-RUN" `
+        -ForegroundColor Yellow
+
+    Write-Host `
+        "No se modificara ninguna red Wi-Fi."
 }
 
 Write-Host ""
+Write-Host "Configuracion       : $ConfigPath"
 Write-Host "Impresora observada : $PrinterName"
 Write-Host "Intervalo           : $PollingMilliseconds ms"
 Write-Host "ConnectivityAnalyzer: $ConnectivityAnalyzerPath"
 Write-Host "NetworkManager      : $NetworkManagerPath"
+
 Write-Host ""
 Write-Host "Esperando trabajos de impresion..."
 Write-Host "Ctrl+C para finalizar."
@@ -63,7 +184,8 @@ function Get-PrintJobs {
         [string]$TargetPrinter
     )
 
-    Get-CimInstance Win32_PrintJob -ErrorAction SilentlyContinue |
+    Get-CimInstance Win32_PrintJob `
+        -ErrorAction SilentlyContinue |
         Where-Object {
 
             $_.Name -like "$TargetPrinter,*" -or
@@ -88,8 +210,9 @@ function Invoke-ConnectivityAnalysis {
 
     try {
 
-        return & $ConnectivityAnalyzerPath
-
+        return & $ConnectivityAnalyzerPath `
+            -PrinterName $PrinterName `
+            -ConfigPath $ConfigPath
     }
     catch {
 
@@ -118,12 +241,29 @@ function Show-ConnectivitySummary {
     Write-Host "RESUMEN DE CONECTIVIDAD"
     Write-Host "----------------------------------------"
 
-    Write-Host "Clasificacion : $($Connectivity.Classification)"
-    Write-Host "SSID actual   : $($Connectivity.CurrentSSID)"
-    Write-Host "SSID requerido: $($Connectivity.RequiredSSID)"
-    Write-Host "Ping          : $($Connectivity.PingSucceeded)"
-    Write-Host "TCP 9100      : $($Connectivity.Tcp9100Succeeded)"
-    Write-Host "HTTP 80       : $($Connectivity.Tcp80Succeeded)"
+    Write-Host `
+        "Clasificacion : $($Connectivity.Classification)"
+
+    Write-Host `
+        "Impresora     : $($Connectivity.PrinterName)"
+
+    Write-Host `
+        "IP            : $($Connectivity.PrinterIP)"
+
+    Write-Host `
+        "SSID actual   : $($Connectivity.CurrentSSID)"
+
+    Write-Host `
+        "SSID requerido: $($Connectivity.RequiredSSID)"
+
+    Write-Host `
+        "Ping          : $($Connectivity.PingSucceeded)"
+
+    Write-Host `
+        "TCP 9100      : $($Connectivity.Tcp9100Succeeded)"
+
+    Write-Host `
+        "HTTP 80       : $($Connectivity.Tcp80Succeeded)"
 }
 
 # ============================================================
@@ -132,7 +272,10 @@ function Show-ConnectivitySummary {
 
 while ($true) {
 
-    $Jobs = @(Get-PrintJobs -TargetPrinter $PrinterName)
+    $Jobs = @(
+        Get-PrintJobs `
+            -TargetPrinter $PrinterName
+    )
 
     foreach ($Job in $Jobs) {
 
@@ -148,27 +291,47 @@ while ($true) {
 
             $Event = [PSCustomObject]@{
 
-                EventType    = "PrintJobDetected"
-                Timestamp    = Get-Date
+                EventType =
+                    "PrintJobDetected"
 
-                PrinterName  = $PrinterName
-                JobId        = $Job.JobId
-                Document     = $Job.Document
-                Owner        = $Job.Owner
+                Timestamp =
+                    Get-Date
 
-                Status       = $Job.Status
-                JobStatus    = $Job.JobStatus
+                PrinterName =
+                    $PrinterName
 
-                TotalPages   = $Job.TotalPages
-                PagesPrinted = $Job.PagesPrinted
-                SizeBytes    = $Job.Size
+                JobId =
+                    $Job.JobId
+
+                Document =
+                    $Job.Document
+
+                Owner =
+                    $Job.Owner
+
+                Status =
+                    $Job.Status
+
+                JobStatus =
+                    $Job.JobStatus
+
+                TotalPages =
+                    $Job.TotalPages
+
+                PagesPrinted =
+                    $Job.PagesPrinted
+
+                SizeBytes =
+                    $Job.Size
             }
 
             Write-Host ""
             Write-Host "========================================"
-            Write-Host "NUEVO TRABAJO DETECTADO" -ForegroundColor Green
+            Write-Host "NUEVO TRABAJO DETECTADO" `
+                -ForegroundColor Green
             Write-Host "========================================"
 
+            Write-Host "Impresora   : $($Event.PrinterName)"
             Write-Host "JobId       : $($Event.JobId)"
             Write-Host "Documento   : $($Event.Document)"
             Write-Host "Propietario : $($Event.Owner)"
@@ -260,7 +423,7 @@ while ($true) {
                     }
 
                     # -----------------------------------------
-                    # Validar existencia de NetworkManager
+                    # Validar NetworkManager
                     # -----------------------------------------
 
                     if (-not (Test-Path $NetworkManagerPath)) {
@@ -286,7 +449,6 @@ while ($true) {
                         $NetworkResult = & $NetworkManagerPath `
                             -TargetSSID $Connectivity.RequiredSSID `
                             -AutoExecute
-
                     }
                     catch {
 
@@ -311,7 +473,7 @@ while ($true) {
                     }
 
                     # -----------------------------------------
-                    # Mostrar resultado de NetworkManager
+                    # Resultado NetworkManager
                     # -----------------------------------------
 
                     Write-Host ""
@@ -344,18 +506,13 @@ while ($true) {
                         "ExecutionResult : $($NetworkResult.ExecutionResult)"
 
                     # =================================================
-                    # EVALUAR RESULTADO DE RECUPERACION DE RED
+                    # EVALUAR RECUPERACION
                     # =================================================
 
                     if (-not $NetworkResult.SwitchVerified) {
 
                         Write-Host ""
                         Write-Host "========================================"
-
-                        # -----------------------------------------
-                        # No estaban disponibles las condiciones
-                        # para realizar el cambio.
-                        # -----------------------------------------
 
                         if (
                             $NetworkResult.ExecutionResult `
@@ -374,12 +531,6 @@ while ($true) {
                             Write-Host `
                                 "NetworkManager devolvio: $($NetworkResult.Classification)"
                         }
-
-                        # -----------------------------------------
-                        # El cambio fue posible / solicitado,
-                        # pero no pudo verificarse.
-                        # -----------------------------------------
-
                         else {
 
                             Write-Host `
@@ -411,9 +562,11 @@ while ($true) {
 
                         Write-Host ""
                         Write-Host "========================================"
+
                         Write-Host `
                             "RECOVERY_INDETERMINATE" `
                             -ForegroundColor Red
+
                         Write-Host "========================================"
 
                         Write-Host `
@@ -426,7 +579,7 @@ while ($true) {
                         -Connectivity $ConnectivityAfterSwitch
 
                     # -----------------------------------------
-                    # Resultado final de recuperacion
+                    # Resultado final
                     # -----------------------------------------
 
                     if (
@@ -436,9 +589,11 @@ while ($true) {
 
                         Write-Host ""
                         Write-Host "========================================"
+
                         Write-Host `
                             "RECOVERY_SUCCESS" `
                             -ForegroundColor Green
+
                         Write-Host "========================================"
 
                         Write-Host `
@@ -449,15 +604,16 @@ while ($true) {
 
                         Write-Host `
                             "Windows puede continuar el trabajo pendiente."
-
                     }
                     else {
 
                         Write-Host ""
                         Write-Host "========================================"
+
                         Write-Host `
                             "NETWORK_SWITCH_OK_BUT_PRINTER_UNREACHABLE" `
                             -ForegroundColor Yellow
+
                         Write-Host "========================================"
 
                         Write-Host `
@@ -470,8 +626,7 @@ while ($true) {
 
                 # ---------------------------------------------
                 # CASO 3:
-                # Ya estamos en la red esperada,
-                # pero la impresora no responde.
+                # Ya estamos en la red esperada.
                 # ---------------------------------------------
 
                 "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" {
@@ -496,7 +651,7 @@ while ($true) {
                 }
 
                 # ---------------------------------------------
-                # ESTADO DESCONOCIDO / FUTURO
+                # ESTADO DESCONOCIDO
                 # ---------------------------------------------
 
                 default {
@@ -523,7 +678,7 @@ while ($true) {
     }
 
     # ========================================================
-    # LIMPIAR TRABAJOS QUE YA DESAPARECIERON
+    # LIMPIAR TRABAJOS QUE DESAPARECIERON
     # ========================================================
 
     $CurrentKeys = @(
@@ -541,11 +696,13 @@ while ($true) {
             $KnownJobs.Remove($KnownKey)
 
             Write-Host ""
+
             Write-Host `
                 "Trabajo finalizado o eliminado: $KnownKey" `
                 -ForegroundColor DarkGray
         }
     }
 
-    Start-Sleep -Milliseconds $PollingMilliseconds
+    Start-Sleep `
+        -Milliseconds $PollingMilliseconds
 }

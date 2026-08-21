@@ -1,52 +1,227 @@
-﻿$ErrorActionPreference = "Continue"
+﻿param (
+    [string]$PrinterName,
+
+    [string]$ConfigPath = (
+        Join-Path `
+            (Split-Path $PSScriptRoot -Parent) `
+            "config\printers.json"
+    )
+)
+
+$ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - ConnectivityAnalyzer v0.3.1
-# Diagnostico no intrusivo + salida programatica limpia
+# PrintSwitch - ConnectivityAnalyzer v0.4
+#
+# Diagnostico no intrusivo.
+# Configuracion externa mediante config/printers.json
+#
+# No modifica configuraciones de red.
 # ============================================================
 
-$PrinterName  = "L365 Series(Red)"
-$PrinterIP    = "192.168.1.108"
-$RequiredSSID = "suarezcores"
+Write-Host ""
+Write-Host "PrintSwitch - ConnectivityAnalyzer v0.4" `
+    -ForegroundColor Cyan
+
+Write-Host "Modo: DIAGNOSTICO NO INTRUSIVO" `
+    -ForegroundColor Yellow
+
+Write-Host `
+    "Configuracion externa: $ConfigPath"
 
 Write-Host ""
-Write-Host "PrintSwitch - ConnectivityAnalyzer v0.3.1" -ForegroundColor Cyan
-Write-Host "Modo: DIAGNOSTICO NO INTRUSIVO" -ForegroundColor Yellow
-Write-Host "Se realizaran consultas y pruebas de conectividad, sin modificar configuraciones."
-Write-Host ""
+
+# ============================================================
+# 0. CARGAR CONFIGURACION
+# ============================================================
+
+Write-Host "========================================"
+Write-Host "0. CONFIGURACION"
+Write-Host "========================================"
+
+if (-not (Test-Path $ConfigPath)) {
+
+    Write-Host `
+        "ERROR: no se encontro el archivo de configuracion." `
+        -ForegroundColor Red
+
+    Write-Host "Ruta esperada: $ConfigPath"
+
+    return
+}
+
+try {
+
+    $Config = Get-Content `
+        $ConfigPath `
+        -Raw `
+        -ErrorAction Stop |
+        ConvertFrom-Json `
+            -ErrorAction Stop
+
+}
+catch {
+
+    Write-Host `
+        "ERROR: no se pudo leer printers.json." `
+        -ForegroundColor Red
+
+    Write-Host $_.Exception.Message
+
+    return
+}
+
+if (
+    $null -eq $Config.printers -or
+    @($Config.printers).Count -eq 0
+) {
+
+    Write-Host `
+        "ERROR: printers.json no contiene perfiles de impresora." `
+        -ForegroundColor Red
+
+    return
+}
+
+# ============================================================
+# 0.1 SELECCIONAR PERFIL
+# ============================================================
+
+$PrinterProfile = $null
+
+if ($PrinterName) {
+
+    $PrinterProfile = @(
+        $Config.printers |
+            Where-Object {
+                $_.name -eq $PrinterName
+            }
+    ) | Select-Object -First 1
+
+    if ($null -eq $PrinterProfile) {
+
+        Write-Host `
+            "ERROR: no existe un perfil para '$PrinterName'." `
+            -ForegroundColor Red
+
+        return
+    }
+
+}
+else {
+
+    # Por ahora, si no se especifica una impresora,
+    # se utiliza el primer perfil configurado.
+    #
+    # QueueWatcher sera posteriormente quien indique
+    # explicitamente que perfil debe analizarse.
+
+    $PrinterProfile = @($Config.printers)[0]
+}
+
+# ============================================================
+# 0.2 VALIDAR PERFIL
+# ============================================================
+
+if (
+    [string]::IsNullOrWhiteSpace(
+        [string]$PrinterProfile.name
+    )
+) {
+
+    Write-Host `
+        "ERROR: el perfil no contiene 'name'." `
+        -ForegroundColor Red
+
+    return
+}
+
+if (
+    [string]::IsNullOrWhiteSpace(
+        [string]$PrinterProfile.ip
+    )
+) {
+
+    Write-Host `
+        "ERROR: el perfil no contiene 'ip'." `
+        -ForegroundColor Red
+
+    return
+}
+
+if (
+    [string]::IsNullOrWhiteSpace(
+        [string]$PrinterProfile.requiredSSID
+    )
+) {
+
+    Write-Host `
+        "ERROR: el perfil no contiene 'requiredSSID'." `
+        -ForegroundColor Red
+
+    return
+}
+
+# ============================================================
+# 0.3 EXTRAER CONFIGURACION
+# ============================================================
+
+$PrinterName = [string]$PrinterProfile.name
+$PrinterIP = [string]$PrinterProfile.ip
+$RequiredSSID = [string]$PrinterProfile.requiredSSID
+
+Write-Host "Perfil seleccionado:"
+Write-Host "PrinterName  : $PrinterName"
+Write-Host "PrinterIP    : $PrinterIP"
+Write-Host "RequiredSSID : $RequiredSSID"
+
+# ============================================================
+# FUNCION: obtener SSID actual
+# ============================================================
+
+function Get-CurrentSSID {
+
+    $InterfaceInfo = netsh wlan show interfaces
+
+    $CurrentSSIDMatch = $InterfaceInfo |
+        Select-String '^\s*SSID\s*:' |
+        Select-Object -First 1
+
+    if ($CurrentSSIDMatch) {
+
+        $CurrentSSIDText = $CurrentSSIDMatch.ToString()
+
+        $CurrentSSID = (
+            $CurrentSSIDText.Split(":", 2)[1]
+        ).Trim()
+
+        return $CurrentSSID
+    }
+
+    return $null
+}
 
 # ============================================================
 # 1. CONTEXTO DE RED
 # ============================================================
 
+Write-Host ""
 Write-Host "========================================"
 Write-Host "1. CONTEXTO DE RED"
 Write-Host "========================================"
 
 $WlanInfo = netsh wlan show interfaces
 
-# Select-String produce objetos MatchInfo.
-# Los convertimos a texto y los enviamos exclusivamente a pantalla.
 $WlanDisplay = $WlanInfo |
-    Select-String "Name|Nombre|State|Estado|SSID|BSSID|Signal|Señal|Radio"
+    Select-String `
+        "Name|Nombre|State|Estado|SSID|BSSID|Signal|Señal|Radio"
 
 foreach ($Line in $WlanDisplay) {
+
     Write-Host $Line.ToString()
 }
 
-# Obtener SSID actual sin enviar el resultado al pipeline.
-$CurrentSSIDMatch = $WlanInfo |
-    Select-String '^\s*SSID\s*:' |
-    Select-Object -First 1
-
-$CurrentSSID = $null
-
-if ($CurrentSSIDMatch) {
-
-    $CurrentSSID = (
-        $CurrentSSIDMatch.ToString().Split(":", 2)[1]
-    ).Trim()
-}
+$CurrentSSID = Get-CurrentSSID
 
 # ============================================================
 # 2. INFORMACION DE IMPRESORA - Get-Printer
@@ -57,18 +232,20 @@ Write-Host "========================================"
 Write-Host "2. INFORMACION DE IMPRESORA - Get-Printer"
 Write-Host "========================================"
 
-$PrinterStatus     = $null
-$PrinterJobCount   = $null
-$PrinterPortName   = $null
+$PrinterStatus = $null
+$PrinterJobCount = $null
+$PrinterPortName = $null
 $PrinterDriverName = $null
 
 try {
 
-    $PrinterInfo = Get-Printer -Name $PrinterName
+    $PrinterInfo = Get-Printer `
+        -Name $PrinterName `
+        -ErrorAction Stop
 
-    $PrinterStatus     = $PrinterInfo.PrinterStatus
-    $PrinterJobCount   = $PrinterInfo.JobCount
-    $PrinterPortName   = $PrinterInfo.PortName
+    $PrinterStatus = $PrinterInfo.PrinterStatus
+    $PrinterJobCount = $PrinterInfo.JobCount
+    $PrinterPortName = $PrinterInfo.PortName
     $PrinterDriverName = $PrinterInfo.DriverName
 
     $PrinterDisplay = $PrinterInfo |
@@ -84,10 +261,13 @@ try {
         Out-String
 
     Write-Host $PrinterDisplay
+
 }
 catch {
 
-    Write-Host "No se pudo obtener informacion mediante Get-Printer."
+    Write-Host `
+        "No se pudo obtener informacion mediante Get-Printer."
+
     Write-Host $_.Exception.Message
 }
 
@@ -100,22 +280,31 @@ Write-Host "========================================"
 Write-Host "3. INFORMACION CIM - Win32_Printer"
 Write-Host "========================================"
 
-$CimPrinterStatus      = $null
+$CimPrinterStatus = $null
 $ExtendedPrinterStatus = $null
-$DetectedErrorState    = $null
-$WorkOffline           = $null
+$DetectedErrorState = $null
+$WorkOffline = $null
 
 try {
 
     $CimPrinter = Get-CimInstance Win32_Printer |
-        Where-Object { $_.Name -eq $PrinterName }
+        Where-Object {
+            $_.Name -eq $PrinterName
+        }
 
     if ($CimPrinter) {
 
-        $CimPrinterStatus      = $CimPrinter.PrinterStatus
-        $ExtendedPrinterStatus = $CimPrinter.ExtendedPrinterStatus
-        $DetectedErrorState    = $CimPrinter.DetectedErrorState
-        $WorkOffline           = $CimPrinter.WorkOffline
+        $CimPrinterStatus =
+            $CimPrinter.PrinterStatus
+
+        $ExtendedPrinterStatus =
+            $CimPrinter.ExtendedPrinterStatus
+
+        $DetectedErrorState =
+            $CimPrinter.DetectedErrorState
+
+        $WorkOffline =
+            $CimPrinter.WorkOffline
 
         $CimDisplay = $CimPrinter |
             Select-Object `
@@ -131,10 +320,13 @@ try {
 
         Write-Host $CimDisplay
     }
+
 }
 catch {
 
-    Write-Host "No se pudo obtener informacion mediante CIM."
+    Write-Host `
+        "No se pudo obtener informacion mediante CIM."
+
     Write-Host $_.Exception.Message
 }
 
@@ -149,7 +341,10 @@ Write-Host "========================================"
 
 $Jobs = @(
 
-    Get-CimInstance Win32_PrintJob -ErrorAction SilentlyContinue |
+    Get-CimInstance `
+        Win32_PrintJob `
+        -ErrorAction SilentlyContinue |
+
         Where-Object {
 
             $_.Name -like "$PrinterName,*" -or
@@ -191,7 +386,7 @@ Write-Host "========================================"
 Write-Host "IP objetivo: $PrinterIP"
 
 # ------------------------------------------------------------
-# 5.1 ICMP / Ping
+# 5.1 ICMP
 # ------------------------------------------------------------
 
 Write-Host ""
@@ -208,6 +403,7 @@ try {
         -ErrorAction SilentlyContinue
 
     Write-Host "PingSucceeded : $PingResult"
+
 }
 catch {
 
@@ -215,7 +411,7 @@ catch {
 }
 
 # ------------------------------------------------------------
-# 5.2 TCP puerto 9100
+# 5.2 TCP 9100
 # ------------------------------------------------------------
 
 Write-Host ""
@@ -230,9 +426,12 @@ try {
         -Port 9100 `
         -WarningAction SilentlyContinue
 
-    $Tcp9100Succeeded = $Tcp9100.TcpTestSucceeded
+    $Tcp9100Succeeded =
+        $Tcp9100.TcpTestSucceeded
 
-    Write-Host "Tcp9100Succeeded : $Tcp9100Succeeded"
+    Write-Host `
+        "Tcp9100Succeeded : $Tcp9100Succeeded"
+
 }
 catch {
 
@@ -240,7 +439,7 @@ catch {
 }
 
 # ------------------------------------------------------------
-# 5.3 HTTP puerto 80
+# 5.3 HTTP 80
 # ------------------------------------------------------------
 
 Write-Host ""
@@ -255,9 +454,12 @@ try {
         -Port 80 `
         -WarningAction SilentlyContinue
 
-    $Tcp80Succeeded = $Tcp80.TcpTestSucceeded
+    $Tcp80Succeeded =
+        $Tcp80.TcpTestSucceeded
 
-    Write-Host "Tcp80Succeeded : $Tcp80Succeeded"
+    Write-Host `
+        "Tcp80Succeeded : $Tcp80Succeeded"
+
 }
 catch {
 
@@ -265,12 +467,12 @@ catch {
 }
 
 # ============================================================
-# 6. CLASIFICACION PROVISIONAL
+# 6. CLASIFICACION
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "6. CLASIFICACION PROVISIONAL"
+Write-Host "6. CLASIFICACION"
 Write-Host "========================================"
 
 $AnyPositiveNetworkEvidence =
@@ -280,17 +482,20 @@ $AnyPositiveNetworkEvidence =
 
 if ($CurrentSSID -ne $RequiredSSID) {
 
-    $Classification = "NETWORK_MISMATCH"
+    $Classification =
+        "NETWORK_MISMATCH"
 
 }
 elseif ($AnyPositiveNetworkEvidence) {
 
-    $Classification = "PRINTER_REACHABLE"
+    $Classification =
+        "PRINTER_REACHABLE"
 
 }
 else {
 
-    $Classification = "PRINTER_UNREACHABLE_ON_TARGET_NETWORK"
+    $Classification =
+        "PRINTER_UNREACHABLE_ON_TARGET_NETWORK"
 }
 
 Write-Host "SSID actual    : $CurrentSSID"
@@ -298,43 +503,80 @@ Write-Host "SSID requerido : $RequiredSSID"
 Write-Host "Ping           : $PingResult"
 Write-Host "TCP 9100       : $Tcp9100Succeeded"
 Write-Host "HTTP 80        : $Tcp80Succeeded"
+
 Write-Host ""
-Write-Host "Resultado      : $Classification" -ForegroundColor Green
+Write-Host `
+    "Resultado      : $Classification" `
+    -ForegroundColor Green
 
 # ============================================================
-# 7. CONSTRUCCION DEL RESULTADO ESTRUCTURADO
+# 7. RESULTADO ESTRUCTURADO
 # ============================================================
 
 $ConnectivityResult = [PSCustomObject]@{
 
-    Component             = "ConnectivityAnalyzer"
-    Version               = "0.3.1"
+    Component =
+        "ConnectivityAnalyzer"
 
-    Timestamp             = Get-Date
+    Version =
+        "0.4"
 
-    PrinterName           = $PrinterName
-    PrinterIP             = $PrinterIP
+    Timestamp =
+        Get-Date
 
-    RequiredSSID          = $RequiredSSID
-    CurrentSSID           = $CurrentSSID
+    ConfigPath =
+        $ConfigPath
 
-    Classification        = $Classification
+    PrinterName =
+        $PrinterName
 
-    PingSucceeded         = $PingResult
-    Tcp9100Succeeded      = $Tcp9100Succeeded
-    Tcp80Succeeded        = $Tcp80Succeeded
+    PrinterIP =
+        $PrinterIP
 
-    WindowsPrinterStatus  = $PrinterStatus
-    WindowsJobCount       = $PrinterJobCount
-    WindowsPortName       = $PrinterPortName
-    WindowsDriverName     = $PrinterDriverName
+    RequiredSSID =
+        $RequiredSSID
 
-    CimPrinterStatus      = $CimPrinterStatus
-    ExtendedPrinterStatus = $ExtendedPrinterStatus
-    DetectedErrorState    = $DetectedErrorState
-    WorkOffline           = $WorkOffline
+    CurrentSSID =
+        $CurrentSSID
 
-    CurrentJobCount       = $Jobs.Count
+    Classification =
+        $Classification
+
+    PingSucceeded =
+        $PingResult
+
+    Tcp9100Succeeded =
+        $Tcp9100Succeeded
+
+    Tcp80Succeeded =
+        $Tcp80Succeeded
+
+    WindowsPrinterStatus =
+        $PrinterStatus
+
+    WindowsJobCount =
+        $PrinterJobCount
+
+    WindowsPortName =
+        $PrinterPortName
+
+    WindowsDriverName =
+        $PrinterDriverName
+
+    CimPrinterStatus =
+        $CimPrinterStatus
+
+    ExtendedPrinterStatus =
+        $ExtendedPrinterStatus
+
+    DetectedErrorState =
+        $DetectedErrorState
+
+    WorkOffline =
+        $WorkOffline
+
+    CurrentJobCount =
+        $Jobs.Count
 }
 
 # ============================================================
@@ -346,24 +588,34 @@ Write-Host "========================================"
 Write-Host "8. RESULTADO ESTRUCTURADO"
 Write-Host "========================================"
 
-Write-Host "Component      : $($ConnectivityResult.Component)"
-Write-Host "Version        : $($ConnectivityResult.Version)"
-Write-Host "Timestamp      : $($ConnectivityResult.Timestamp)"
-Write-Host "PrinterName    : $($ConnectivityResult.PrinterName)"
-Write-Host "PrinterIP      : $($ConnectivityResult.PrinterIP)"
-Write-Host "CurrentSSID    : $($ConnectivityResult.CurrentSSID)"
-Write-Host "RequiredSSID   : $($ConnectivityResult.RequiredSSID)"
-Write-Host "Classification : $($ConnectivityResult.Classification)"
+Write-Host `
+    "Component      : $($ConnectivityResult.Component)"
 
-# ============================================================
-# FIN
-# ============================================================
+Write-Host `
+    "Version        : $($ConnectivityResult.Version)"
+
+Write-Host `
+    "PrinterName    : $($ConnectivityResult.PrinterName)"
+
+Write-Host `
+    "PrinterIP      : $($ConnectivityResult.PrinterIP)"
+
+Write-Host `
+    "CurrentSSID    : $($ConnectivityResult.CurrentSSID)"
+
+Write-Host `
+    "RequiredSSID   : $($ConnectivityResult.RequiredSSID)"
+
+Write-Host `
+    "Classification : $($ConnectivityResult.Classification)"
 
 Write-Host ""
 Write-Host "========================================"
 Write-Host "FIN DEL ANALISIS"
 Write-Host "========================================"
 
-# IMPORTANTE:
-# Esta debe ser la unica salida programatica del script.
+# ============================================================
+# UNICA SALIDA PROGRAMATICA
+# ============================================================
+
 $ConnectivityResult

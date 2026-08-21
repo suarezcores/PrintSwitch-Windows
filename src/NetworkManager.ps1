@@ -1,9 +1,9 @@
 param (
-    [string]$TargetSSID = "suarezcores",
+    [Parameter(Mandatory = $true)]
+    [string]$TargetSSID,
 
     [switch]$AutoExecute
 )
-
 $ErrorActionPreference = "Continue"
 
 # ============================================================
