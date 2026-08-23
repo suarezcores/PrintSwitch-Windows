@@ -13,22 +13,23 @@ param (
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - QueueWatcher v0.5
+# PrintSwitch - QueueWatcher v0.6
 #
 # Orquestador principal.
 #
-# Antes de observar trabajos:
-#   1. valida config/printers.json mediante ConfigValidator
-#   2. solo continua si la configuracion es valida
-#
-# Sin -EnableRecovery:
-#   observa, analiza y NO modifica Wi-Fi.
-#
-# Con -EnableRecovery:
-#   puede solicitar a NetworkManager un cambio real de Wi-Fi.
+# Funciones:
+#   - valida configuracion
+#   - observa trabajos
+#   - solicita diagnostico
+#   - solicita recuperacion de red
+#   - registra eventos importantes mediante Logger
 # ============================================================
 
 $PollingMilliseconds = 500
+
+$LoggerPath = Join-Path `
+    $PSScriptRoot `
+    "Logger.ps1"
 
 $ConfigValidatorPath = Join-Path `
     $PSScriptRoot `
@@ -45,17 +46,59 @@ $NetworkManagerPath = Join-Path `
 $KnownJobs = @{}
 
 # ============================================================
-# 0. ARRANQUE
+# 0. CARGAR LOGGER
+# ============================================================
+
+if (-not (Test-Path $LoggerPath)) {
+
+    Write-Host ""
+    Write-Host `
+        "ERROR: Logger no encontrado." `
+        -ForegroundColor Red
+
+    Write-Host "Ruta esperada: $LoggerPath"
+
+    return
+}
+
+try {
+
+    . $LoggerPath
+}
+catch {
+
+    Write-Host ""
+    Write-Host `
+        "ERROR: no se pudo cargar Logger." `
+        -ForegroundColor Red
+
+    Write-Host $_.Exception.Message
+
+    return
+}
+
+# ============================================================
+# 1. ARRANQUE
 # ============================================================
 
 Write-Host ""
-Write-Host "PrintSwitch - QueueWatcher v0.5" `
+Write-Host "PrintSwitch - QueueWatcher v0.6" `
     -ForegroundColor Cyan
 
 Write-Host ""
 
+Write-PrintSwitchLog `
+    -Component "QueueWatcher" `
+    -Event "PRINTSWITCH_STARTED" `
+    -Level "INFO" `
+    -Data @{
+        RecoveryEnabled = [bool]$EnableRecovery
+        ConfigPath      = $ConfigPath
+    } |
+    Out-Null
+
 # ============================================================
-# 1. VALIDAR CONFIGURACION
+# 2. VALIDAR CONFIGURACION
 # ============================================================
 
 Write-Host "========================================"
@@ -69,8 +112,14 @@ if (-not (Test-Path $ConfigValidatorPath)) {
         "ERROR: ConfigValidator no encontrado." `
         -ForegroundColor Red
 
-    Write-Host `
-        "Ruta esperada: $ConfigValidatorPath"
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "CONFIG_VALIDATOR_NOT_FOUND" `
+        -Level "ERROR" `
+        -Data @{
+            Path = $ConfigValidatorPath
+        } |
+        Out-Null
 
     return
 }
@@ -89,6 +138,15 @@ catch {
 
     Write-Host $_.Exception.Message
 
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "CONFIG_VALIDATION_ERROR" `
+        -Level "ERROR" `
+        -Data @{
+            Message = $_.Exception.Message
+        } |
+        Out-Null
+
     return
 }
 
@@ -98,6 +156,12 @@ if ($null -eq $ValidationResult) {
     Write-Host `
         "ERROR: ConfigValidator no devolvio resultado." `
         -ForegroundColor Red
+
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "CONFIG_VALIDATION_NO_RESULT" `
+        -Level "ERROR" |
+        Out-Null
 
     return
 }
@@ -121,11 +185,23 @@ Write-Host `
 
 if (-not $ValidationResult.IsValid) {
 
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "CONFIG_INVALID" `
+        -Level "ERROR" `
+        -Data @{
+            ErrorCount = $ValidationResult.ErrorCount
+            Errors     = ($ValidationResult.Errors -join ",")
+        } |
+        Out-Null
+
     Write-Host ""
     Write-Host "========================================"
+
     Write-Host `
         "PRINTSWITCH_STARTUP_ABORTED" `
         -ForegroundColor Red
+
     Write-Host "========================================"
 
     Write-Host `
@@ -150,13 +226,22 @@ if (-not $ValidationResult.IsValid) {
     return
 }
 
+Write-PrintSwitchLog `
+    -Component "QueueWatcher" `
+    -Event "CONFIG_VALID" `
+    -Level "INFO" `
+    -Data @{
+        PrinterCount = $ValidationResult.PrinterCount
+    } |
+    Out-Null
+
 Write-Host ""
 Write-Host `
     "Configuracion validada correctamente." `
     -ForegroundColor Green
 
 # ============================================================
-# 2. CARGAR CONFIGURACION VALIDADA
+# 3. CARGAR CONFIGURACION VALIDADA
 # ============================================================
 
 Write-Host ""
@@ -180,13 +265,20 @@ catch {
         "ERROR: la configuracion fue validada pero no pudo volver a cargarse." `
         -ForegroundColor Red
 
-    Write-Host $_.Exception.Message
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "CONFIG_RELOAD_FAILED" `
+        -Level "ERROR" `
+        -Data @{
+            Message = $_.Exception.Message
+        } |
+        Out-Null
 
     return
 }
 
 # ============================================================
-# 3. SELECCIONAR IMPRESORA
+# 4. SELECCIONAR IMPRESORA
 # ============================================================
 
 $PrinterProfile = $null
@@ -207,6 +299,15 @@ if ($PrinterName) {
             "ERROR: no existe un perfil para '$PrinterName'." `
             -ForegroundColor Red
 
+        Write-PrintSwitchLog `
+            -Component "QueueWatcher" `
+            -Event "PRINTER_PROFILE_NOT_FOUND" `
+            -Level "ERROR" `
+            -Data @{
+                Printer = $PrinterName
+            } |
+            Out-Null
+
         return
     }
 }
@@ -218,7 +319,7 @@ else {
 $PrinterName = [string]$PrinterProfile.name
 
 # ============================================================
-# 4. INFORMACION DE ARRANQUE
+# 5. PRINTSWITCH READY
 # ============================================================
 
 Write-Host ""
@@ -249,9 +350,20 @@ Write-Host ""
 Write-Host "Configuracion       : $ConfigPath"
 Write-Host "Impresora observada : $PrinterName"
 Write-Host "Intervalo           : $PollingMilliseconds ms"
+Write-Host "Logger              : $LoggerPath"
 Write-Host "ConfigValidator     : $ConfigValidatorPath"
 Write-Host "ConnectivityAnalyzer: $ConnectivityAnalyzerPath"
 Write-Host "NetworkManager      : $NetworkManagerPath"
+
+Write-PrintSwitchLog `
+    -Component "QueueWatcher" `
+    -Event "PRINTSWITCH_READY" `
+    -Level "INFO" `
+    -Data @{
+        Printer         = $PrinterName
+        RecoveryEnabled = [bool]$EnableRecovery
+    } |
+    Out-Null
 
 Write-Host ""
 Write-Host "Esperando trabajos de impresion..."
@@ -278,7 +390,7 @@ function Get-PrintJobs {
 }
 
 # ============================================================
-# FUNCION: ejecutar ConnectivityAnalyzer
+# FUNCION: ConnectivityAnalyzer
 # ============================================================
 
 function Invoke-ConnectivityAnalysis {
@@ -311,7 +423,7 @@ function Invoke-ConnectivityAnalysis {
 }
 
 # ============================================================
-# FUNCION: mostrar resumen de conectividad
+# FUNCION: resumen
 # ============================================================
 
 function Show-ConnectivitySummary {
@@ -409,11 +521,23 @@ while ($true) {
                     $Job.Size
             }
 
+            Write-PrintSwitchLog `
+                -Component "QueueWatcher" `
+                -Event "PRINT_JOB_DETECTED" `
+                -Level "INFO" `
+                -Data @{
+                    Printer = $Event.PrinterName
+                    JobId   = $Event.JobId
+                } |
+                Out-Null
+
             Write-Host ""
             Write-Host "========================================"
+
             Write-Host `
                 "NUEVO TRABAJO DETECTADO" `
                 -ForegroundColor Green
+
             Write-Host "========================================"
 
             Write-Host "Impresora   : $($Event.PrinterName)"
@@ -423,7 +547,7 @@ while ($true) {
             Write-Host "Estado      : $($Event.JobStatus)"
 
             # =================================================
-            # FASE 1: ANALISIS INICIAL
+            # FASE 1
             # =================================================
 
             Write-Host ""
@@ -435,10 +559,15 @@ while ($true) {
 
             if ($null -eq $Connectivity) {
 
-                Write-Host ""
-                Write-Host `
-                    "No fue posible obtener un diagnostico." `
-                    -ForegroundColor Red
+                Write-PrintSwitchLog `
+                    -Component "QueueWatcher" `
+                    -Event "CONNECTIVITY_ANALYSIS_FAILED" `
+                    -Level "ERROR" `
+                    -Data @{
+                        Printer = $PrinterName
+                        JobId   = $Event.JobId
+                    } |
+                    Out-Null
 
                 continue
             }
@@ -447,16 +576,23 @@ while ($true) {
                 -Connectivity $Connectivity
 
             # =================================================
-            # DECISION PRINCIPAL
+            # DECISION
             # =================================================
 
             switch ($Connectivity.Classification) {
 
-                # ---------------------------------------------
-                # CASO 1: impresora alcanzable
-                # ---------------------------------------------
-
                 "PRINTER_REACHABLE" {
+
+                    Write-PrintSwitchLog `
+                        -Component "QueueWatcher" `
+                        -Event "PRINTER_REACHABLE" `
+                        -Level "INFO" `
+                        -Data @{
+                            Printer = $PrinterName
+                            JobId   = $Event.JobId
+                            SSID    = $Connectivity.CurrentSSID
+                        } |
+                        Out-Null
 
                     Write-Host ""
                     Write-Host "========================================"
@@ -471,11 +607,19 @@ while ($true) {
                         "No se requiere intervencion de red."
                 }
 
-                # ---------------------------------------------
-                # CASO 2: red incorrecta
-                # ---------------------------------------------
-
                 "NETWORK_MISMATCH" {
+
+                    Write-PrintSwitchLog `
+                        -Component "QueueWatcher" `
+                        -Event "NETWORK_MISMATCH" `
+                        -Level "WARN" `
+                        -Data @{
+                            Printer     = $PrinterName
+                            JobId       = $Event.JobId
+                            CurrentSSID = $Connectivity.CurrentSSID
+                            TargetSSID  = $Connectivity.RequiredSSID
+                        } |
+                        Out-Null
 
                     Write-Host ""
                     Write-Host "========================================"
@@ -488,44 +632,25 @@ while ($true) {
                     Write-Host `
                         "Red requerida: $($Connectivity.RequiredSSID)"
 
-                    # -----------------------------------------
-                    # DRY-RUN
-                    # -----------------------------------------
-
                     if (-not $EnableRecovery) {
 
                         Write-Host ""
-                        Write-Host `
-                            "ACCION PROPUESTA: cambiar a '$($Connectivity.RequiredSSID)'." `
-                            -ForegroundColor Yellow
-
                         Write-Host `
                             "DRY-RUN: no se modifico la red."
 
                         break
                     }
 
-                    # -----------------------------------------
-                    # Validar NetworkManager
-                    # -----------------------------------------
-
                     if (-not (Test-Path $NetworkManagerPath)) {
 
-                        Write-Host ""
-                        Write-Host `
-                            "ERROR: NetworkManager no encontrado." `
-                            -ForegroundColor Red
+                        Write-PrintSwitchLog `
+                            -Component "QueueWatcher" `
+                            -Event "NETWORK_MANAGER_NOT_FOUND" `
+                            -Level "ERROR" |
+                            Out-Null
 
                         break
                     }
-
-                    # -----------------------------------------
-                    # Ejecutar NetworkManager
-                    # -----------------------------------------
-
-                    Write-Host ""
-                    Write-Host `
-                        "Solicitando recuperacion a NetworkManager..."
 
                     try {
 
@@ -535,136 +660,115 @@ while ($true) {
                     }
                     catch {
 
-                        Write-Host ""
-                        Write-Host `
-                            "ERROR ejecutando NetworkManager." `
-                            -ForegroundColor Red
-
-                        Write-Host $_.Exception.Message
+                        Write-PrintSwitchLog `
+                            -Component "QueueWatcher" `
+                            -Event "NETWORK_MANAGER_ERROR" `
+                            -Level "ERROR" `
+                            -Data @{
+                                Message = $_.Exception.Message
+                            } |
+                            Out-Null
 
                         break
                     }
 
                     if ($null -eq $NetworkResult) {
 
-                        Write-Host ""
-                        Write-Host `
-                            "ERROR: NetworkManager no devolvio resultado." `
-                            -ForegroundColor Red
+                        Write-PrintSwitchLog `
+                            -Component "QueueWatcher" `
+                            -Event "NETWORK_MANAGER_NO_RESULT" `
+                            -Level "ERROR" |
+                            Out-Null
 
                         break
                     }
 
-                    Write-Host ""
-                    Write-Host "----------------------------------------"
-                    Write-Host "RESULTADO NETWORKMANAGER"
-                    Write-Host "----------------------------------------"
-
-                    Write-Host `
-                        "InitialSSID     : $($NetworkResult.InitialSSID)"
-
-                    Write-Host `
-                        "TargetSSID      : $($NetworkResult.TargetSSID)"
-
-                    Write-Host `
-                        "FinalSSID       : $($NetworkResult.FinalSSID)"
-
-                    Write-Host `
-                        "Classification  : $($NetworkResult.Classification)"
-
-                    Write-Host `
-                        "SwitchRequested : $($NetworkResult.SwitchRequested)"
-
-                    Write-Host `
-                        "CommandIssued   : $($NetworkResult.CommandIssued)"
-
-                    Write-Host `
-                        "SwitchVerified  : $($NetworkResult.SwitchVerified)"
-
-                    Write-Host `
-                        "ExecutionResult : $($NetworkResult.ExecutionResult)"
-
-                    # =================================================
-                    # EVALUAR RECUPERACION
-                    # =================================================
-
                     if (-not $NetworkResult.SwitchVerified) {
-
-                        Write-Host ""
-                        Write-Host "========================================"
 
                         if (
                             $NetworkResult.ExecutionResult `
                                 -eq "SWITCH_NOT_AVAILABLE"
                         ) {
 
-                            Write-Host `
-                                "NETWORK_RECOVERY_UNAVAILABLE" `
-                                -ForegroundColor Yellow
+                            Write-PrintSwitchLog `
+                                -Component "QueueWatcher" `
+                                -Event "NETWORK_RECOVERY_UNAVAILABLE" `
+                                -Level "WARN" `
+                                -Data @{
+                                    Classification =
+                                        $NetworkResult.Classification
 
-                            Write-Host "========================================"
-
-                            Write-Host `
-                                "No se intento cambiar de red porque las condiciones necesarias no estaban disponibles."
-
-                            Write-Host `
-                                "NetworkManager devolvio: $($NetworkResult.Classification)"
+                                    TargetSSID =
+                                        $NetworkResult.TargetSSID
+                                } |
+                                Out-Null
                         }
                         else {
 
-                            Write-Host `
-                                "RECOVERY_FAILED" `
-                                -ForegroundColor Red
+                            Write-PrintSwitchLog `
+                                -Component "QueueWatcher" `
+                                -Event "RECOVERY_FAILED" `
+                                -Level "ERROR" `
+                                -Data @{
+                                    InitialSSID =
+                                        $NetworkResult.InitialSSID
 
-                            Write-Host "========================================"
-
-                            Write-Host `
-                                "Se intento recuperar la conectividad, pero el cambio de red no pudo ser verificado."
+                                    TargetSSID =
+                                        $NetworkResult.TargetSSID
+                                } |
+                                Out-Null
                         }
 
                         break
                     }
 
-                    # =================================================
-                    # FASE 3: REVALIDAR IMPRESORA
-                    # =================================================
+                    Write-PrintSwitchLog `
+                        -Component "QueueWatcher" `
+                        -Event "NETWORK_SWITCH_VERIFIED" `
+                        -Level "INFO" `
+                        -Data @{
+                            InitialSSID =
+                                $NetworkResult.InitialSSID
 
-                    Write-Host ""
-                    Write-Host "========================================"
-                    Write-Host "FASE 3 - REVALIDACION DE IMPRESORA"
-                    Write-Host "========================================"
+                            FinalSSID =
+                                $NetworkResult.FinalSSID
+                        } |
+                        Out-Null
+
+                    # =================================================
+                    # FASE 3
+                    # =================================================
 
                     $ConnectivityAfterSwitch = `
                         Invoke-ConnectivityAnalysis
 
                     if ($null -eq $ConnectivityAfterSwitch) {
 
-                        Write-Host ""
-                        Write-Host "========================================"
-
-                        Write-Host `
-                            "RECOVERY_INDETERMINATE" `
-                            -ForegroundColor Red
-
-                        Write-Host "========================================"
-
-                        Write-Host `
-                            "La red cambio, pero no fue posible repetir el diagnostico."
+                        Write-PrintSwitchLog `
+                            -Component "QueueWatcher" `
+                            -Event "RECOVERY_INDETERMINATE" `
+                            -Level "ERROR" |
+                            Out-Null
 
                         break
                     }
-
-                    Show-ConnectivitySummary `
-                        -Connectivity $ConnectivityAfterSwitch
-
-                    # -----------------------------------------
-                    # Resultado final
-                    # -----------------------------------------
 
                     if (
                         $ConnectivityAfterSwitch.Classification `
                             -eq "PRINTER_REACHABLE"
                     ) {
+
+                        Write-PrintSwitchLog `
+                            -Component "QueueWatcher" `
+                            -Event "RECOVERY_SUCCESS" `
+                            -Level "INFO" `
+                            -Data @{
+                                Printer = $PrinterName
+                                JobId   = $Event.JobId
+                                SSID    =
+                                    $ConnectivityAfterSwitch.CurrentSSID
+                            } |
+                            Out-Null
 
                         Write-Host ""
                         Write-Host "========================================"
@@ -676,75 +780,63 @@ while ($true) {
                         Write-Host "========================================"
 
                         Write-Host `
-                            "Cambio de red verificado."
-
-                        Write-Host `
                             "La impresora ahora resulta alcanzable."
-
-                        Write-Host `
-                            "Windows puede continuar el trabajo pendiente."
                     }
                     else {
 
-                        Write-Host ""
-                        Write-Host "========================================"
+                        Write-PrintSwitchLog `
+                            -Component "QueueWatcher" `
+                            -Event "PRINTER_UNREACHABLE_AFTER_SWITCH" `
+                            -Level "WARN" `
+                            -Data @{
+                                Printer =
+                                    $PrinterName
 
+                                Classification =
+                                    $ConnectivityAfterSwitch.Classification
+                            } |
+                            Out-Null
+
+                        Write-Host ""
                         Write-Host `
                             "NETWORK_SWITCH_OK_BUT_PRINTER_UNREACHABLE" `
                             -ForegroundColor Yellow
-
-                        Write-Host "========================================"
-
-                        Write-Host `
-                            "El cambio de red fue correcto, pero la impresora sigue sin ser alcanzable."
-
-                        Write-Host `
-                            "No se infiere la causa fisica."
                     }
                 }
 
-                # ---------------------------------------------
-                # CASO 3: red correcta, impresora inaccesible
-                # ---------------------------------------------
-
                 "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" {
 
-                    Write-Host ""
-                    Write-Host "========================================"
-                    Write-Host "RESULTADO PRINTSWITCH"
-                    Write-Host "========================================"
+                    Write-PrintSwitchLog `
+                        -Component "QueueWatcher" `
+                        -Event "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" `
+                        -Level "WARN" `
+                        -Data @{
+                            Printer = $PrinterName
+                            JobId   = $Event.JobId
+                            SSID    = $Connectivity.CurrentSSID
+                        } |
+                        Out-Null
 
+                    Write-Host ""
                     Write-Host `
                         "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" `
                         -ForegroundColor Yellow
 
                     Write-Host `
                         "No se cambiara de red."
-
-                    Write-Host `
-                        "La PC ya esta en la red esperada."
-
-                    Write-Host `
-                        "No se infiere la causa fisica."
                 }
-
-                # ---------------------------------------------
-                # ESTADO DESCONOCIDO
-                # ---------------------------------------------
 
                 default {
 
-                    Write-Host ""
-                    Write-Host "========================================"
-                    Write-Host "RESULTADO PRINTSWITCH"
-                    Write-Host "========================================"
-
-                    Write-Host `
-                        "Clasificacion no reconocida." `
-                        -ForegroundColor Yellow
-
-                    Write-Host `
-                        "No se realizara ninguna accion."
+                    Write-PrintSwitchLog `
+                        -Component "QueueWatcher" `
+                        -Event "UNKNOWN_CLASSIFICATION" `
+                        -Level "WARN" `
+                        -Data @{
+                            Classification =
+                                $Connectivity.Classification
+                        } |
+                        Out-Null
                 }
             }
 
@@ -756,7 +848,7 @@ while ($true) {
     }
 
     # ========================================================
-    # LIMPIAR TRABAJOS QUE DESAPARECIERON
+    # LIMPIAR TRABAJOS DESAPARECIDOS
     # ========================================================
 
     $CurrentKeys = @(
