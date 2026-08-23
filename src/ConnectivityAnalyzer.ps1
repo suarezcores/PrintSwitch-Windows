@@ -1,6 +1,8 @@
 ﻿param (
     [string]$PrinterName,
 
+    [int]$FastTcpTimeoutMs = 1200,
+
     [string]$ConfigPath = (
         Join-Path `
             (Split-Path $PSScriptRoot -Parent) `
@@ -11,23 +13,28 @@
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - ConnectivityAnalyzer v0.4
+# PrintSwitch - ConnectivityAnalyzer v0.5
 #
 # Diagnostico no intrusivo.
 # Configuracion externa mediante config/printers.json
+#
+# v0.5:
+# - mantiene Ping
+# - reemplaza Test-NetConnection para TCP 9100 y TCP 80
+#   por TcpClient con timeout controlado
 #
 # No modifica configuraciones de red.
 # ============================================================
 
 Write-Host ""
-Write-Host "PrintSwitch - ConnectivityAnalyzer v0.4" `
+Write-Host "PrintSwitch - ConnectivityAnalyzer v0.5" `
     -ForegroundColor Cyan
 
 Write-Host "Modo: DIAGNOSTICO NO INTRUSIVO" `
     -ForegroundColor Yellow
 
-Write-Host `
-    "Configuracion externa: $ConfigPath"
+Write-Host "Configuracion externa: $ConfigPath"
+Write-Host "Fast TCP timeout     : $FastTcpTimeoutMs ms"
 
 Write-Host ""
 
@@ -58,7 +65,6 @@ try {
         -ErrorAction Stop |
         ConvertFrom-Json `
             -ErrorAction Stop
-
 }
 catch {
 
@@ -106,15 +112,8 @@ if ($PrinterName) {
 
         return
     }
-
 }
 else {
-
-    # Por ahora, si no se especifica una impresora,
-    # se utiliza el primer perfil configurado.
-    #
-    # QueueWatcher sera posteriormente quien indique
-    # explicitamente que perfil debe analizarse.
 
     $PrinterProfile = @($Config.printers)[0]
 }
@@ -202,6 +201,54 @@ function Get-CurrentSSID {
 }
 
 # ============================================================
+# FUNCION: prueba TCP rapida
+# ============================================================
+
+function Test-FastTcpPort {
+
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$ComputerName,
+
+        [Parameter(Mandatory = $true)]
+        [int]$Port,
+
+        [Parameter(Mandatory = $true)]
+        [int]$TimeoutMs
+    )
+
+    $Client = New-Object System.Net.Sockets.TcpClient
+
+    try {
+
+        $ConnectTask = $Client.ConnectAsync(
+            $ComputerName,
+            $Port
+        )
+
+        $Completed = $ConnectTask.Wait(
+            $TimeoutMs
+        )
+
+        if (-not $Completed) {
+
+            return $false
+        }
+
+        return $Client.Connected
+    }
+    catch {
+
+        return $false
+    }
+    finally {
+
+        $Client.Close()
+        $Client.Dispose()
+    }
+}
+
+# ============================================================
 # 1. CONTEXTO DE RED
 # ============================================================
 
@@ -261,7 +308,6 @@ try {
         Out-String
 
     Write-Host $PrinterDisplay
-
 }
 catch {
 
@@ -320,7 +366,6 @@ try {
 
         Write-Host $CimDisplay
     }
-
 }
 catch {
 
@@ -403,7 +448,6 @@ try {
         -ErrorAction SilentlyContinue
 
     Write-Host "PingSucceeded : $PingResult"
-
 }
 catch {
 
@@ -411,60 +455,34 @@ catch {
 }
 
 # ------------------------------------------------------------
-# 5.2 TCP 9100
+# 5.2 TCP 9100 RAPIDO
 # ------------------------------------------------------------
 
 Write-Host ""
-Write-Host "Prueba TCP puerto 9100"
+Write-Host "Prueba TCP puerto 9100 - FastTcp"
 
-$Tcp9100Succeeded = $false
+$Tcp9100Succeeded = Test-FastTcpPort `
+    -ComputerName $PrinterIP `
+    -Port 9100 `
+    -TimeoutMs $FastTcpTimeoutMs
 
-try {
-
-    $Tcp9100 = Test-NetConnection `
-        -ComputerName $PrinterIP `
-        -Port 9100 `
-        -WarningAction SilentlyContinue
-
-    $Tcp9100Succeeded =
-        $Tcp9100.TcpTestSucceeded
-
-    Write-Host `
-        "Tcp9100Succeeded : $Tcp9100Succeeded"
-
-}
-catch {
-
-    Write-Host "Tcp9100Succeeded : ERROR"
-}
+Write-Host `
+    "Tcp9100Succeeded : $Tcp9100Succeeded"
 
 # ------------------------------------------------------------
-# 5.3 HTTP 80
+# 5.3 HTTP / TCP 80 RAPIDO
 # ------------------------------------------------------------
 
 Write-Host ""
-Write-Host "Prueba HTTP puerto 80"
+Write-Host "Prueba TCP puerto 80 - FastTcp"
 
-$Tcp80Succeeded = $false
+$Tcp80Succeeded = Test-FastTcpPort `
+    -ComputerName $PrinterIP `
+    -Port 80 `
+    -TimeoutMs $FastTcpTimeoutMs
 
-try {
-
-    $Tcp80 = Test-NetConnection `
-        -ComputerName $PrinterIP `
-        -Port 80 `
-        -WarningAction SilentlyContinue
-
-    $Tcp80Succeeded =
-        $Tcp80.TcpTestSucceeded
-
-    Write-Host `
-        "Tcp80Succeeded : $Tcp80Succeeded"
-
-}
-catch {
-
-    Write-Host "Tcp80Succeeded : ERROR"
-}
+Write-Host `
+    "Tcp80Succeeded : $Tcp80Succeeded"
 
 # ============================================================
 # 6. CLASIFICACION
@@ -519,7 +537,7 @@ $ConnectivityResult = [PSCustomObject]@{
         "ConnectivityAnalyzer"
 
     Version =
-        "0.4"
+        "0.5"
 
     Timestamp =
         Get-Date
@@ -550,6 +568,9 @@ $ConnectivityResult = [PSCustomObject]@{
 
     Tcp80Succeeded =
         $Tcp80Succeeded
+
+    FastTcpTimeoutMs =
+        $FastTcpTimeoutMs
 
     WindowsPrinterStatus =
         $PrinterStatus
@@ -609,13 +630,12 @@ Write-Host `
 Write-Host `
     "Classification : $($ConnectivityResult.Classification)"
 
+Write-Host `
+    "FastTcpTimeout : $($ConnectivityResult.FastTcpTimeoutMs) ms"
+
 Write-Host ""
 Write-Host "========================================"
 Write-Host "FIN DEL ANALISIS"
 Write-Host "========================================"
-
-# ============================================================
-# UNICA SALIDA PROGRAMATICA
-# ============================================================
 
 $ConnectivityResult
