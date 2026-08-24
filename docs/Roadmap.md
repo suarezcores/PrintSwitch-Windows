@@ -599,3 +599,284 @@ El siguiente hito técnico será construir el primer prototipo controlado que pu
 En ese primer prototipo el cambio podrá permanecer inicialmente deshabilitado o requerir confirmación para observar la decisión antes de permitir que PrintSwitch modifique la conectividad.
 
 Esto permitirá validar la lógica antes de entregar al programa control efectivo sobre la interfaz Wi-Fi.
+
+# Evolución de alcance — de cambio de Wi-Fi a gestión de conectividad
+
+## Visión inicial
+
+PrintSwitch nació para resolver un problema concreto:
+
+```text
+el usuario trabaja conectado a una red
+        ↓
+envía un trabajo a una impresora ubicada en otra red
+        ↓
+Windows mantiene el trabajo pendiente
+        ↓
+el usuario debe cambiar manualmente de Wi-Fi
+```
+
+La primera estrategia implementada y validada fue:
+
+```text
+detectar trabajo
+    ↓
+diagnosticar conectividad
+    ↓
+detectar NETWORK_MISMATCH
+    ↓
+cambiar al SSID requerido
+    ↓
+verificar cambio
+    ↓
+revalidar impresora
+```
+
+Esta estrategia ya fue validada end-to-end.
+
+---
+
+# Nueva definición de alcance
+
+A partir del desarrollo y de las pruebas realizadas se amplía la definición conceptual de PrintSwitch.
+
+> **PrintSwitch no es simplemente un programa que cambia de Wi-Fi.**
+
+Su objetivo general pasa a ser:
+
+> **Administrar el camino de conectividad necesario para que Windows pueda alcanzar una impresora de red, interviniendo solamente cuando sea necesario y alterando lo mínimo posible la conectividad existente.**
+
+El cambio de SSID constituye una estrategia posible dentro de ese objetivo general.
+
+---
+
+# Principio de mínima intervención
+
+La evolución futura deberá respetar:
+
+```text
+¿la impresora ya es alcanzable?
+        │
+     ┌──┴──┐
+     │     │
+    SÍ    NO
+     │     │
+     ▼     ▼
+NO TOCAR   analizar alternativas
+```
+
+PrintSwitch no deberá modificar la conectividad solamente porque exista una red objetivo configurada.
+
+Primero deberá determinar si ya existe un camino válido hacia la impresora.
+
+---
+
+# Futuro — Interface / Route Awareness
+
+Actualmente la estrategia principal se concentra en la interfaz Wi-Fi.
+
+A futuro PrintSwitch deberá considerar otras interfaces disponibles.
+
+Ejemplo:
+
+```text
+Ethernet activo
+      +
+Wi-Fi activo
+      ↓
+¿la impresora ya es alcanzable por Ethernet?
+      │
+   SÍ ┴ NO
+   │    │
+   │    └→ evaluar Wi-Fi
+   │
+   └→ mantener interfaces sin cambios
+```
+
+Otro escenario posible:
+
+```text
+Ethernet
+→ mantiene conectividad general
+  Internet / Jabber / VPN / servicios
+
+Wi-Fi
+→ puede cambiarse específicamente
+  para alcanzar la impresora
+```
+
+Esto permitiría minimizar microcortes o interrupciones en aplicaciones sensibles a cambios de red.
+
+---
+
+# Futuro — PrinterDiscovery
+
+Actualmente los perfiles se definen explícitamente en:
+
+```text
+config/printers.json
+```
+
+A futuro se propone un componente:
+
+```text
+PrinterDiscovery
+```
+
+responsable de consultar el subsistema de impresión de Windows.
+
+Deberá poder obtener información como:
+
+```text
+impresoras instaladas
+nombre
+driver
+puerto
+estado
+impresora predeterminada
+tipo de puerto
+hostname o IP cuando sea identificable
+```
+
+El objetivo será aprovechar primero la información que Windows ya posee antes de solicitar datos manualmente al usuario.
+
+---
+
+# Impresora predeterminada
+
+La impresora predeterminada podrá utilizarse como:
+
+```text
+candidata principal
+```
+
+pero no deberá considerarse automáticamente la única impresora relevante.
+
+PrintSwitch deberá poder trabajar con múltiples destinos configurados.
+
+---
+
+# Futuro — estrategias por tipo de destino
+
+La validación inicial se realizó con una Epson L365 utilizando evidencias como:
+
+```text
+ICMP
+TCP 9100
+TCP 80
+```
+
+Sin embargo, estas pruebas no deberán convertirse en requisitos universales.
+
+Windows puede utilizar diferentes mecanismos según la impresora y su configuración:
+
+```text
+Standard TCP/IP
+RAW / TCP 9100
+LPR
+WSD / WS-Print
+IPP / IPPS
+monitores de puerto específicos
+```
+
+Por lo tanto, la arquitectura futura deberá tender a:
+
+```text
+PrinterDiscovery
+      ↓
+identificar tipo de destino
+      ↓
+seleccionar estrategia de conectividad
+      ↓
+ConnectivityAnalyzer
+```
+
+---
+
+# Estrategia actualmente validada
+
+La estrategia disponible actualmente puede considerarse:
+
+```text
+Strategy 1
+Wi-Fi Target Switching
+```
+
+Estado:
+
+```text
+detección de trabajo              ✔
+configuración externa             ✔
+validación de configuración       ✔
+diagnóstico de conectividad       ✔
+cambio automático de Wi-Fi        ✔
+verificación del cambio           ✔
+revalidación posterior            ✔
+logging persistente               ✔
+optimización de latencia          ✔
+```
+
+Esta estrategia no será descartada cuando aparezcan nuevas capacidades.
+
+Pasará a formar parte de un conjunto más amplio de estrategias de conectividad.
+
+---
+
+# Evolución conceptual
+
+```text
+Problema real
+    ↓
+automatización específica
+    ↓
+prototipo funcional
+    ↓
+core modular
+    ↓
+configuración externa
+    ↓
+validación
+    ↓
+logging
+    ↓
+optimización
+    ↓
+gestión inteligente de conectividad
+```
+
+---
+
+# Roadmap futuro
+
+## Corto plazo
+
+```text
+[ ] consolidar documentación del prototipo funcional
+[ ] mantener pruebas de regresión
+[ ] preparar configuración para múltiples impresoras
+[ ] mejorar trazabilidad de ejecución
+```
+
+## Medio plazo
+
+```text
+[ ] PrinterDiscovery
+[ ] detección de impresora predeterminada
+[ ] análisis de puertos configurados en Windows
+[ ] estrategias según tipo de puerto/protocolo
+[ ] pruebas con HP
+[ ] pruebas con Lexmark
+```
+
+## Largo plazo
+
+```text
+[ ] Interface / Route Awareness
+[ ] coexistencia Ethernet + Wi-Fi
+[ ] selección de ruta con mínima intervención
+[ ] asistente de configuración
+[ ] empaquetado / ejecutable
+[ ] pruebas en equipos externos
+[ ] publicación de documentación
+[ ] dominio y hosting del sitio
+```

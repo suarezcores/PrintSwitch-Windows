@@ -2807,3 +2807,457 @@ NO ACTUAR
 ```
 
 cuando la evidencia indica que una intervención de red sería incorrecta o imposible.
+
+# 25. Optimización de latencia del diagnóstico de conectividad
+
+## Objetivo
+
+Medir y reducir el tiempo necesario para determinar si una impresora de red es alcanzable.
+
+La optimización se realizó sin modificar:
+
+```text
+QueueWatcher
+NetworkManager
+ConfigValidator
+Logger
+clasificaciones del core
+```
+
+El objetivo era mantener exactamente las mismas decisiones y reducir únicamente la latencia del diagnóstico.
+
+---
+
+# 25.1 Situación inicial
+
+Durante una recuperación real se había observado:
+
+```text
+PRINT_JOB_DETECTED
+17:45:34
+
+NETWORK_MISMATCH
+17:46:54
+```
+
+Esto representaba aproximadamente:
+
+```text
+80 segundos
+```
+
+antes de que PrintSwitch pudiera determinar que la PC estaba en una red incorrecta.
+
+El sistema funcionaba correctamente, pero el tiempo de reacción era excesivo.
+
+---
+
+# 25.2 Instrumentación
+
+Se creó:
+
+```text
+PerformanceAnalyzer
+```
+
+para medir las operaciones individualmente antes de realizar modificaciones sobre el core.
+
+Se midieron:
+
+```text
+SSID actual
+Get-Printer
+Win32_Printer
+Ping
+TCP 9100
+TCP 80
+```
+
+---
+
+# 25.3 Resultado desde la red correcta
+
+Condición:
+
+```text
+SSID actual    suarezcores
+Impresora      alcanzable
+```
+
+Resultados aproximados:
+
+```text
+GetSSID          495 ms
+GetPrinter       829 ms
+Win32Printer     704 ms
+Ping             219 ms
+TCP 9100       11881 ms
+TCP 80          9231 ms
+
+TOTAL          23438 ms
+```
+
+Incluso cuando la impresora era alcanzable, las pruebas TCP realizadas mediante:
+
+```text
+Test-NetConnection
+```
+
+consumían la mayor parte del tiempo.
+
+---
+
+# 25.4 Resultado desde una red incorrecta
+
+Condición:
+
+```text
+SSID actual    Claro640
+SSID requerido suarezcores
+Impresora      no alcanzable
+```
+
+Resultados:
+
+```text
+GetSSID          111 ms
+GetPrinter        37 ms
+Win32Printer     267 ms
+Ping            3872 ms
+TCP 9100       35416 ms
+TCP 80         34690 ms
+
+TOTAL          74447 ms
+```
+
+Las dos pruebas TCP consumían aproximadamente:
+
+```text
+70 segundos
+```
+
+de un total cercano a:
+
+```text
+74 segundos
+```
+
+---
+
+# 25.5 Hipótesis
+
+**[OBSERVADO]**
+
+El principal cuello de botella no era:
+
+```text
+QueueWatcher
+Get-Printer
+CIM
+consulta de SSID
+```
+
+sino:
+
+```text
+Test-NetConnection
+```
+
+utilizado como sonda de puertos TCP.
+
+PrintSwitch solamente necesitaba responder:
+
+```text
+¿puedo abrir este puerto?
+```
+
+por lo que el diagnóstico completo de Test-NetConnection resultaba excesivo para el ciclo operativo.
+
+---
+
+# 25.6 Sonda TCP rápida
+
+Se implementó experimentalmente una prueba mediante:
+
+```text
+System.Net.Sockets.TcpClient
+```
+
+con timeout controlado de:
+
+```text
+1200 ms
+```
+
+PerformanceAnalyzer v0.2 comparó ambos mecanismos.
+
+---
+
+## Caso negativo — Claro640
+
+### TCP 9100
+
+```text
+Test-NetConnection   35645 ms → False
+TcpClient rápido      1280 ms → False
+```
+
+### TCP 80
+
+```text
+Test-NetConnection   35248 ms → False
+TcpClient rápido      1251 ms → False
+```
+
+Ambos mecanismos produjeron exactamente la misma conclusión.
+
+---
+
+## Caso positivo — suarezcores
+
+### TCP 9100
+
+```text
+Test-NetConnection    9405 ms → True
+TcpClient rápido         8 ms → True
+```
+
+### TCP 80
+
+```text
+Test-NetConnection    9165 ms → True
+TcpClient rápido       104 ms → True
+```
+
+Nuevamente ambos mecanismos produjeron exactamente la misma conclusión.
+
+---
+
+# 25.7 ConnectivityAnalyzer v0.5
+
+A partir de estas mediciones se reemplazaron exclusivamente las pruebas TCP:
+
+```text
+TCP 9100
+TCP 80
+```
+
+por la estrategia FastTcp basada en:
+
+```text
+TcpClient
++
+timeout de 1200 ms
+```
+
+El resto del comportamiento de ConnectivityAnalyzer permaneció sin cambios.
+
+---
+
+# 25.8 Validación funcional
+
+## Red correcta
+
+Con:
+
+```text
+SSID actual    suarezcores
+```
+
+ConnectivityAnalyzer v0.5 obtuvo:
+
+```text
+Ping      True
+TCP 9100  True
+TCP 80    True
+```
+
+Clasificación:
+
+```text
+PRINTER_REACHABLE
+```
+
+---
+
+## Red incorrecta
+
+Con:
+
+```text
+SSID actual    Claro640
+```
+
+obtuvo:
+
+```text
+Ping      False
+TCP 9100  False
+TCP 80    False
+```
+
+Clasificación:
+
+```text
+NETWORK_MISMATCH
+```
+
+Por lo tanto:
+
+**[OBSERVADO]**
+
+La optimización redujo la latencia sin modificar las clasificaciones del core.
+
+---
+
+# 25.9 Validación end-to-end
+
+Se realizó una nueva prueba real:
+
+```text
+PC inicial      Claro640
+Red objetivo    suarezcores
+Impresora       Epson L365
+Recovery        habilitado
+```
+
+El log registró:
+
+```text
+20:51:29  PRINT_JOB_DETECTED
+20:51:36  NETWORK_MISMATCH
+20:51:41  NETWORK_SWITCH_VERIFIED
+20:51:42  RECOVERY_SUCCESS
+```
+
+Por lo tanto:
+
+```text
+PRINT_JOB_DETECTED
+        ↓
+NETWORK_MISMATCH
+≈ 7 segundos
+```
+
+y:
+
+```text
+PRINT_JOB_DETECTED
+        ↓
+RECOVERY_SUCCESS
+≈ 13 segundos
+```
+
+---
+
+# 25.10 Comparación
+
+Antes:
+
+```text
+PRINT_JOB_DETECTED
+        ↓
+NETWORK_MISMATCH
+≈ 80 segundos
+```
+
+Después:
+
+```text
+PRINT_JOB_DETECTED
+        ↓
+NETWORK_MISMATCH
+≈ 7 segundos
+```
+
+Recuperación completa actual:
+
+```text
+PRINT_JOB_DETECTED
+        ↓
+NETWORK_MISMATCH
+        ↓
+NETWORK_SWITCH_VERIFIED
+        ↓
+RECOVERY_SUCCESS
+≈ 13 segundos
+```
+
+---
+
+# 25.11 Frontera de responsabilidad temporal
+
+El tiempo posterior necesario para que la impresora:
+
+```text
+procese la cola
+despierte
+prepare el mecanismo
+comience físicamente a imprimir
+```
+
+no pertenece al tiempo de recuperación de PrintSwitch.
+
+Se distinguen dos métricas:
+
+```text
+PrintSwitch Recovery Time
+PRINT_JOB_DETECTED → RECOVERY_SUCCESS
+```
+
+y:
+
+```text
+Printer Completion Time
+RECOVERY_SUCCESS → impresión física/finalización
+```
+
+En la prueba realizada, PrintSwitch completó su responsabilidad en aproximadamente:
+
+```text
+13 segundos
+```
+
+aunque la impresora necesitó tiempo adicional para comenzar físicamente la impresión.
+
+---
+
+# 25.12 Decisión
+
+**[DECISIÓN]**
+
+El timeout FastTcp inicial se mantiene en:
+
+```text
+1200 ms
+```
+
+No se continuará reduciendo por ahora.
+
+La latencia grave ya fue eliminada y se prioriza estabilidad frente a optimizaciones marginales.
+
+El sistema podrá optimizarse nuevamente cuando exista evidencia experimental que lo justifique.
+
+---
+
+# 25.13 Conclusión
+
+La estrategia utilizada fue:
+
+```text
+medir
+  ↓
+identificar cuello de botella
+  ↓
+crear alternativa experimental
+  ↓
+comparar
+  ↓
+validar casos positivo y negativo
+  ↓
+integrar
+  ↓
+validar end-to-end
+```
+
+La mejora obtenida fue sustancial sin alterar el comportamiento funcional del core.
