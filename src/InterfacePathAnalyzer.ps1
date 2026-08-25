@@ -9,26 +9,8 @@ param (
 
 $ErrorActionPreference = "Continue"
 
-# ============================================================
-# PrintSwitch - InterfacePathAnalyzer v0.1
-#
-# Objetivo:
-# - enumerar interfaces IPv4 activas
-# - identificar redes/prefijos
-# - detectar posibles solapamientos
-# - identificar interfaces candidatas hacia un destino
-#
-# NO:
-# - modifica rutas
-# - cambia metricas
-# - cambia Wi-Fi
-# - toca Ethernet
-#
-# Solo observa y clasifica.
-# ============================================================
-
 Write-Host ""
-Write-Host "PrintSwitch - InterfacePathAnalyzer v0.1" `
+Write-Host "PrintSwitch - InterfacePathAnalyzer v0.2" `
     -ForegroundColor Cyan
 
 Write-Host "Modo: ANALISIS DE CAMINOS NO INTRUSIVO" `
@@ -36,7 +18,7 @@ Write-Host "Modo: ANALISIS DE CAMINOS NO INTRUSIVO" `
 
 Write-Host ""
 Write-Host "Destino analizado : $TargetIP"
-Write-Host "Puerto referencia : $TcpPort"
+Write-Host "Puerto TCP        : $TcpPort"
 Write-Host "Timeout TCP       : $TcpTimeoutMs ms"
 
 # ============================================================
@@ -63,7 +45,6 @@ function Get-NetworkAddress {
     }
 
     $MaskBytes = New-Object byte[] 4
-
     $RemainingBits = $PrefixLength
 
     for ($I = 0; $I -lt 4; $I++) {
@@ -106,7 +87,7 @@ function Get-NetworkAddress {
 }
 
 # ============================================================
-# FUNCION: DESTINO DENTRO DE PREFIJO
+# FUNCION: IP EN SUBRED
 # ============================================================
 
 function Test-IPInSubnet {
@@ -136,6 +117,128 @@ function Test-IPInSubnet {
     catch {
 
         return $false
+    }
+}
+
+# ============================================================
+# FUNCION: TCP LIGADO A IP LOCAL
+# ============================================================
+
+function Test-BoundTcpPath {
+
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$LocalIPAddress,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RemoteIPAddress,
+
+        [Parameter(Mandatory = $true)]
+        [int]$Port,
+
+        [Parameter(Mandatory = $true)]
+        [int]$TimeoutMs
+    )
+
+    $Stopwatch =
+        [System.Diagnostics.Stopwatch]::StartNew()
+
+    $Client = $null
+
+    try {
+
+        $LocalIP =
+            [System.Net.IPAddress]::Parse(
+                $LocalIPAddress
+            )
+
+        $RemoteIP =
+            [System.Net.IPAddress]::Parse(
+                $RemoteIPAddress
+            )
+
+        $LocalEndpoint =
+            New-Object System.Net.IPEndPoint(
+                $LocalIP,
+                0
+            )
+
+        $Client =
+            New-Object System.Net.Sockets.TcpClient(
+                [System.Net.Sockets.AddressFamily]::InterNetwork
+            )
+
+        # Fuerza al socket a utilizar esta IP local.
+        $Client.Client.Bind($LocalEndpoint)
+
+        $ConnectTask =
+            $Client.ConnectAsync(
+                $RemoteIP,
+                $Port
+            )
+
+        $Completed =
+            $ConnectTask.Wait(
+                $TimeoutMs
+            )
+
+        if (-not $Completed) {
+
+            return [PSCustomObject]@{
+                Reachable    = $false
+                ElapsedMs    = $Stopwatch.ElapsedMilliseconds
+                LocalIP      = $LocalIPAddress
+                RemoteIP     = $RemoteIPAddress
+                Port         = $Port
+                Result       = "TIMEOUT"
+                ErrorMessage = $null
+            }
+        }
+
+        if ($Client.Connected) {
+
+            return [PSCustomObject]@{
+                Reachable    = $true
+                ElapsedMs    = $Stopwatch.ElapsedMilliseconds
+                LocalIP      = $LocalIPAddress
+                RemoteIP     = $RemoteIPAddress
+                Port         = $Port
+                Result       = "CONNECTED"
+                ErrorMessage = $null
+            }
+        }
+
+        return [PSCustomObject]@{
+            Reachable    = $false
+            ElapsedMs    = $Stopwatch.ElapsedMilliseconds
+            LocalIP      = $LocalIPAddress
+            RemoteIP     = $RemoteIPAddress
+            Port         = $Port
+            Result       = "NOT_CONNECTED"
+            ErrorMessage = $null
+        }
+    }
+    catch {
+
+        return [PSCustomObject]@{
+            Reachable    = $false
+            ElapsedMs    = $Stopwatch.ElapsedMilliseconds
+            LocalIP      = $LocalIPAddress
+            RemoteIP     = $RemoteIPAddress
+            Port         = $Port
+            Result       = "ERROR"
+            ErrorMessage = $_.Exception.Message
+        }
+    }
+    finally {
+
+        $Stopwatch.Stop()
+
+        if ($null -ne $Client) {
+
+            $Client.Close()
+            $Client.Dispose()
+        }
     }
 }
 
@@ -253,7 +356,7 @@ $InterfaceResults |
         -AutoSize
 
 # ============================================================
-# 2. DETECTAR SOLAPAMIENTOS
+# 2. SOLAPAMIENTO
 # ============================================================
 
 Write-Host ""
@@ -263,17 +366,9 @@ Write-Host "========================================"
 
 $OverlapPairs = @()
 
-for (
-    $I = 0;
-    $I -lt $InterfaceResults.Count;
-    $I++
-) {
+for ($I = 0; $I -lt $InterfaceResults.Count; $I++) {
 
-    for (
-        $J = $I + 1;
-        $J -lt $InterfaceResults.Count;
-        $J++
-    ) {
+    for ($J = $I + 1; $J -lt $InterfaceResults.Count; $J++) {
 
         $A = $InterfaceResults[$I]
         $B = $InterfaceResults[$J]
@@ -291,18 +386,10 @@ for (
         if ($AInsideB -or $BInsideA) {
 
             $OverlapPairs += [PSCustomObject]@{
-
-                InterfaceA =
-                    $A.Name
-
-                PrefixA =
-                    $A.NetworkPrefix
-
-                InterfaceB =
-                    $B.Name
-
-                PrefixB =
-                    $B.NetworkPrefix
+                InterfaceA = $A.Name
+                PrefixA    = $A.NetworkPrefix
+                InterfaceB = $B.Name
+                PrefixB    = $B.NetworkPrefix
             }
         }
     }
@@ -321,7 +408,7 @@ foreach ($Pair in $OverlapPairs) {
 }
 
 # ============================================================
-# 3. INTERFACES CANDIDATAS
+# 3. CANDIDATOS DIRECTOS
 # ============================================================
 
 Write-Host ""
@@ -339,28 +426,99 @@ $DirectCandidates = @(
 if ($DirectCandidates.Count -eq 0) {
 
     Write-Host `
-        "No existe una interfaz con el destino en su subred local."
+        "No existen caminos locales directos."
 }
 else {
 
     foreach ($Candidate in $DirectCandidates) {
 
         Write-Host ""
-        Write-Host "Interfaz       : $($Candidate.Name)"
-        Write-Host "Tipo           : $($Candidate.InterfaceType)"
-        Write-Host "IPv4 local     : $($Candidate.IPv4Address)"
-        Write-Host "Red            : $($Candidate.NetworkPrefix)"
-        Write-Host "Destino local  : True"
+        Write-Host "Interfaz   : $($Candidate.Name)"
+        Write-Host "Tipo       : $($Candidate.InterfaceType)"
+        Write-Host "IPv4 local : $($Candidate.IPv4Address)"
+        Write-Host "Red        : $($Candidate.NetworkPrefix)"
     }
 }
 
 # ============================================================
-# 4. RUTA PREFERIDA DE WINDOWS
+# 4. PRUEBAS TCP POR INTERFAZ
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "4. RUTA PREFERIDA WINDOWS"
+Write-Host "4. ALCANZABILIDAD POR INTERFAZ"
+Write-Host "========================================"
+
+$PathTests = @()
+
+foreach ($Candidate in $DirectCandidates) {
+
+    Write-Host ""
+    Write-Host `
+        "Probando $($Candidate.Name) [$($Candidate.IPv4Address)] -> $TargetIP`:$TcpPort"
+
+    $TcpTest = Test-BoundTcpPath `
+        -LocalIPAddress $Candidate.IPv4Address `
+        -RemoteIPAddress $TargetIP `
+        -Port $TcpPort `
+        -TimeoutMs $TcpTimeoutMs
+
+    $PathTests += [PSCustomObject]@{
+
+        Name =
+            $Candidate.Name
+
+        InterfaceIndex =
+            $Candidate.InterfaceIndex
+
+        InterfaceType =
+            $Candidate.InterfaceType
+
+        LocalIP =
+            $Candidate.IPv4Address
+
+        NetworkPrefix =
+            $Candidate.NetworkPrefix
+
+        Reachable =
+            $TcpTest.Reachable
+
+        ElapsedMs =
+            $TcpTest.ElapsedMs
+
+        TcpResult =
+            $TcpTest.Result
+
+        ErrorMessage =
+            $TcpTest.ErrorMessage
+    }
+
+    Write-Host "Reachable : $($TcpTest.Reachable)"
+    Write-Host "Resultado : $($TcpTest.Result)"
+    Write-Host "Tiempo    : $($TcpTest.ElapsedMs) ms"
+
+    if ($TcpTest.ErrorMessage) {
+
+        Write-Host `
+            "Error     : $($TcpTest.ErrorMessage)" `
+            -ForegroundColor Yellow
+    }
+}
+
+$ReachablePaths = @(
+    $PathTests |
+        Where-Object {
+            $_.Reachable -eq $true
+        }
+)
+
+# ============================================================
+# 5. RUTA PREFERIDA WINDOWS
+# ============================================================
+
+Write-Host ""
+Write-Host "========================================"
+Write-Host "5. RUTA PREFERIDA WINDOWS"
 Write-Host "========================================"
 
 $BestRoute = $null
@@ -382,67 +540,58 @@ catch {
 
 if ($BestRoute) {
 
-    Write-Host `
-        "InterfaceAlias : $($BestRoute.InterfaceAlias)"
-
-    Write-Host `
-        "InterfaceIndex : $($BestRoute.InterfaceIndex)"
-
-    Write-Host `
-        "Prefix         : $($BestRoute.DestinationPrefix)"
-
-    Write-Host `
-        "NextHop        : $($BestRoute.NextHop)"
-}
-else {
-
-    Write-Host `
-        "No se pudo determinar ruta preferida." `
-        -ForegroundColor Yellow
+    Write-Host "InterfaceAlias : $($BestRoute.InterfaceAlias)"
+    Write-Host "InterfaceIndex : $($BestRoute.InterfaceIndex)"
+    Write-Host "Prefix         : $($BestRoute.DestinationPrefix)"
+    Write-Host "NextHop        : $($BestRoute.NextHop)"
 }
 
 # ============================================================
-# 5. CLASIFICACION
+# 6. CLASIFICACION
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "5. CLASIFICACION"
+Write-Host "6. CLASIFICACION"
 Write-Host "========================================"
 
 $Classification =
     "PATH_CONTEXT_UNKNOWN"
 
+$SelectedReachablePath =
+    $null
+
 if (
-    $OverlapDetected -and
-    $DirectCandidates.Count -gt 1
+    $ReachablePaths.Count -eq 1
 ) {
 
     $Classification =
-        "OVERLAPPED_DIRECT_PATHS"
+        "UNIQUE_REACHABLE_PATH"
+
+    $SelectedReachablePath =
+        $ReachablePaths[0]
 
 }
 elseif (
-    $DirectCandidates.Count -eq 1
+    $ReachablePaths.Count -gt 1
 ) {
 
     $Classification =
-        "SINGLE_DIRECT_PATH"
-
+        "MULTIPLE_REACHABLE_PATHS"
 }
 elseif (
-    $DirectCandidates.Count -gt 1
+    $DirectCandidates.Count -gt 0
 ) {
 
     $Classification =
-        "MULTIPLE_DIRECT_PATHS"
-
+        "CANDIDATE_PATHS_UNREACHABLE"
 }
-elseif ($null -ne $BestRoute) {
+elseif (
+    $null -ne $BestRoute
+) {
 
     $Classification =
         "ROUTED_PATH_ONLY"
-
 }
 else {
 
@@ -455,65 +604,68 @@ Write-Host `
     -ForegroundColor Green
 
 # ============================================================
-# 6. INTERPRETACION
+# 7. INTERPRETACION
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "6. INTERPRETACION PRINTSWITCH"
+Write-Host "7. INTERPRETACION PRINTSWITCH"
 Write-Host "========================================"
 
 switch ($Classification) {
 
-    "SINGLE_DIRECT_PATH" {
+    "UNIQUE_REACHABLE_PATH" {
 
         Write-Host `
-            "Existe un unico camino local evidente hacia el destino." `
+            "Existe un unico camino comprobado hacia la impresora." `
             -ForegroundColor Green
-    }
-
-    "OVERLAPPED_DIRECT_PATHS" {
 
         Write-Host `
-            "ADVERTENCIA: varias interfaces presentan redes solapadas." `
+            "Interfaz : $($SelectedReachablePath.Name)"
+
+        Write-Host `
+            "Tipo     : $($SelectedReachablePath.InterfaceType)"
+    }
+
+    "MULTIPLE_REACHABLE_PATHS" {
+
+        Write-Host `
+            "Varias interfaces alcanzan la impresora." `
             -ForegroundColor Yellow
 
         Write-Host `
-            "No debe inferirse el camino correcto solo por direccion IP."
-
-        Write-Host `
-            "Se requieren pruebas de alcanzabilidad por interfaz."
+            "No es necesario modificar rutas automaticamente."
     }
 
-    "MULTIPLE_DIRECT_PATHS" {
+    "CANDIDATE_PATHS_UNREACHABLE" {
 
         Write-Host `
-            "Existen multiples interfaces candidatas." `
+            "Existen caminos candidatos, pero ninguno responde." `
             -ForegroundColor Yellow
 
         Write-Host `
-            "Debe seleccionarse el camino usando evidencia adicional."
+            "Debe evaluarse recuperacion de conectividad."
     }
 
     "ROUTED_PATH_ONLY" {
 
         Write-Host `
-            "El destino no pertenece a una subred local directa."
+            "No existe camino local directo."
 
         Write-Host `
-            "Windows dispone de una ruta hacia el destino."
+            "Windows dispone de una ruta enrutada."
     }
 
     default {
 
         Write-Host `
-            "No existe evidencia suficiente para seleccionar camino." `
+            "No hay evidencia suficiente para seleccionar camino." `
             -ForegroundColor Yellow
     }
 }
 
 # ============================================================
-# 7. RESULTADO ESTRUCTURADO
+# 8. RESULTADO
 # ============================================================
 
 $PathResult = [PSCustomObject]@{
@@ -522,13 +674,16 @@ $PathResult = [PSCustomObject]@{
         "InterfacePathAnalyzer"
 
     Version =
-        "0.1"
+        "0.2"
 
     Timestamp =
         Get-Date
 
     TargetIP =
         $TargetIP
+
+    TcpPort =
+        $TcpPort
 
     Classification =
         $Classification
@@ -542,11 +697,20 @@ $PathResult = [PSCustomObject]@{
     DirectCandidateCount =
         $DirectCandidates.Count
 
+    ReachablePathCount =
+        $ReachablePaths.Count
+
+    SelectedReachableInterface =
+        $SelectedReachablePath.Name
+
+    SelectedReachableInterfaceType =
+        $SelectedReachablePath.InterfaceType
+
+    SelectedReachableLocalIP =
+        $SelectedReachablePath.LocalIP
+
     PreferredInterface =
         $BestRoute.InterfaceAlias
-
-    PreferredInterfaceIndex =
-        $BestRoute.InterfaceIndex
 
     Interfaces =
         $InterfaceResults
@@ -554,30 +718,47 @@ $PathResult = [PSCustomObject]@{
     DirectCandidates =
         $DirectCandidates
 
+    PathTests =
+        $PathTests
+
+    ReachablePaths =
+        $ReachablePaths
+
     Overlaps =
         $OverlapPairs
 }
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "7. RESULTADO ESTRUCTURADO"
+Write-Host "8. RESULTADO ESTRUCTURADO"
 Write-Host "========================================"
 
 Write-Host `
-    "Classification      : $($PathResult.Classification)"
+    "Classification              : $($PathResult.Classification)"
 
 Write-Host `
-    "OverlapDetected     : $($PathResult.OverlapDetected)"
+    "OverlapDetected             : $($PathResult.OverlapDetected)"
 
 Write-Host `
-    "DirectCandidates    : $($PathResult.DirectCandidateCount)"
+    "DirectCandidateCount        : $($PathResult.DirectCandidateCount)"
 
 Write-Host `
-    "PreferredInterface  : $($PathResult.PreferredInterface)"
+    "ReachablePathCount          : $($PathResult.ReachablePathCount)"
+
+Write-Host `
+    "SelectedReachableInterface  : $($PathResult.SelectedReachableInterface)"
+
+Write-Host `
+    "SelectedReachableType       : $($PathResult.SelectedReachableInterfaceType)"
+
+Write-Host `
+    "PreferredInterface          : $($PathResult.PreferredInterface)"
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "FIN INTERFACEPATHANALYZER v0.1"
+Write-Host "FIN INTERFACEPATHANALYZER v0.2"
 Write-Host "========================================"
 
 $PathResult
+
+
