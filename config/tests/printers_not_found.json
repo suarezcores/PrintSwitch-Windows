@@ -1,0 +1,9 @@
+{
+  "printers": [
+    {
+      "name": "HP Fantasma 9999",
+      "ip": "192.168.1.200",
+      "requiredSSID": "red_prueba"
+    }
+  ]
+}
