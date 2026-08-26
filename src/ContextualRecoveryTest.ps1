@@ -298,6 +298,88 @@ if (
 
     return $FinalResult
 }
+# ============================================================
+# 3.2 CAMINO EXISTENTE PERO IMPRESORA INALCANZABLE
+# ============================================================
+
+if (
+    $PathResult.Classification -eq "CANDIDATE_PATHS_UNREACHABLE" -and
+    $PathResult.DirectCandidateCount -gt 0
+) {
+
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "CAMINO EXISTENTE - IMPRESORA INALCANZABLE"
+    Write-Host "========================================"
+
+    Write-Host `
+        "Existe al menos un camino local hacia la red del destino."
+
+    Write-Host `
+        "La impresora no responde actualmente."
+
+    Write-Host ""
+    Write-Host `
+        "PrintSwitch NO autorizara un cambio de Wi-Fi." `
+        -ForegroundColor Yellow
+
+    Write-Host `
+        "La causa puede pertenecer a la propia impresora."
+
+    $FinalResult = [PSCustomObject]@{
+
+        Component =
+            "ContextualRecoveryTest"
+
+        Version =
+            "0.2"
+
+        ExecutionMode =
+            $(if ($Execute) {
+                "EXECUTE"
+            }
+            else {
+                "DRY_RUN"
+            })
+
+        PathClassification =
+            $PathResult.Classification
+
+        DirectCandidateCount =
+            $PathResult.DirectCandidateCount
+
+        ReachablePathCount =
+            $PathResult.ReachablePathCount
+
+        PreferredInterface =
+            $PathResult.PreferredInterface
+
+        SwitchDecision =
+            "NO_SWITCH_PRINTER_UNREACHABLE"
+
+        SwitchAuthorized =
+            $false
+
+        SwitchExecuted =
+            $false
+
+        PreserveEthernet =
+            $true
+
+        TargetSSID =
+            $TargetSSID
+
+        FinalClassification =
+            "EXISTING_PATH_PRINTER_UNREACHABLE"
+    }
+
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "FIN CONTEXTUALRECOVERYTEST v0.2"
+    Write-Host "========================================"
+
+    return $FinalResult
+}
 
 # ============================================================
 # 4. ROUTE ANALYZER
