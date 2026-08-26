@@ -75,6 +75,11 @@ $NetworkManagerPath = Join-Path `
     $PSScriptRoot `
     "NetworkManager.ps1"
 
+$RecoveryValidatorPath = Join-Path `
+    $PSScriptRoot `
+    "RecoveryValidator.ps1"
+
+
 $ConnectivityAnalyzerPath = Join-Path `
     $PSScriptRoot `
     "ConnectivityAnalyzer.ps1"
@@ -171,6 +176,7 @@ $RequiredComponents = @(
     $WiFiCandidatePath,
     $SwitchDecisionPath,
     $NetworkManagerPath,
+    $RecoveryValidatorPath,
     $ConnectivityAnalyzerPath
 )
 
@@ -222,7 +228,7 @@ Write-Host "ReachableInterface : $($PathResult.SelectedReachableInterface)"
 # ============================================================
 
 if (
-    $PathResult.Classification -eq "UNIQUE_REACHABLE_PATH"
+    $PathResult.ReachablePathCount -gt 0
 ) {
 
     Write-Host ""
@@ -230,11 +236,24 @@ if (
     Write-Host "CAMINO FUNCIONAL YA DISPONIBLE"
     Write-Host "========================================"
 
+   Write-Host `
+    "Caminos alcanzables : $($PathResult.ReachablePathCount)"
+
+if (
+    $PathResult.Classification -eq "UNIQUE_REACHABLE_PATH"
+) {
+
     Write-Host `
         "Interfaz : $($PathResult.SelectedReachableInterface)"
 
     Write-Host `
         "Tipo     : $($PathResult.SelectedReachableInterfaceType)"
+}
+else {
+
+    Write-Host `
+        "Varias interfaces alcanzan actualmente la impresora."
+}
 
     Write-Host ""
     Write-Host `
@@ -279,10 +298,14 @@ if (
             $false
 
         PreserveEthernet =
-            (
-                $PathResult.SelectedReachableInterfaceType `
-                    -eq "Ethernet"
-            )
+    (
+        @(
+            $PathResult.ReachablePaths |
+                Where-Object {
+                    $_.InterfaceType -eq "Ethernet"
+                }
+        ).Count -gt 0
+    )
 
         TargetSSID =
             $TargetSSID
@@ -636,7 +659,8 @@ $EthernetBefore = @(
                 "Ethernet|PCIe|GbE|Gigabit"
         }
 )
-
+$EthernetPresentBefore =
+    ($EthernetBefore.Count -gt 0)
 foreach ($EthernetAdapter in $EthernetBefore) {
 
     Write-Host `
@@ -678,7 +702,24 @@ Write-Host "========================================"
 Write-Host "10. VERIFICACION ETHERNET"
 Write-Host "========================================"
 
-$EthernetPreserved = $true
+$EthernetAfter = @(
+    Get-NetAdapter `
+        -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Status -eq "Up" -and
+            $_.InterfaceDescription -match
+                "Ethernet|PCIe|GbE|Gigabit"
+        }
+)
+
+$EthernetPresentAfter =
+    ($EthernetAfter.Count -gt 0)
+
+$EthernetPreserved =
+    (
+        $EthernetPresentBefore -eq $true -and
+        $EthernetPresentAfter -eq $true
+    )
 
 foreach ($PreviousAdapter in $EthernetBefore) {
 
@@ -694,9 +735,24 @@ foreach ($PreviousAdapter in $EthernetBefore) {
         $EthernetPreserved = $false
     }
 
-    Write-Host `
-        "$($PreviousAdapter.Name) : $($CurrentAdapter.Status)"
+    if ($null -ne $CurrentAdapter) {
+
+        Write-Host `
+            "$($PreviousAdapter.Name) : $($CurrentAdapter.Status)"
+    }
+    else {
+
+        Write-Host `
+            "$($PreviousAdapter.Name) : NO DISPONIBLE"
+    }
 }
+
+
+Write-Host `
+    "EthernetPresentBefore : $EthernetPresentBefore"
+
+Write-Host `
+    "EthernetPresentAfter  : $EthernetPresentAfter"
 
 Write-Host `
     "EthernetPreserved : $EthernetPreserved"
@@ -705,9 +761,37 @@ Write-Host `
 # 12. REVALIDAR CONNECTIVITY ANALYZER
 # ============================================================
 
+# ============================================================
+# 11. RECOVERY VALIDATOR
+# ============================================================
+
 Write-Host ""
 Write-Host "========================================"
-Write-Host "11. REVALIDACION DE IMPRESORA"
+Write-Host "11. RECOVERY VALIDATOR"
+Write-Host "========================================"
+
+$RecoveryValidation = & $RecoveryValidatorPath `
+    -TargetIP $TargetIP
+
+if ($null -eq $RecoveryValidation) {
+
+    Write-Host `
+        "ERROR: RecoveryValidator no devolvio resultado." `
+        -ForegroundColor Red
+
+    return
+}
+
+Write-Host ""
+Write-Host "RecoveryClassification : $($RecoveryValidation.Classification)"
+Write-Host "RecoveryConfirmed      : $($RecoveryValidation.RecoveryConfirmed)"
+Write-Host "CompletedWindow        : $($RecoveryValidation.CompletedWindow)"
+Write-Host "TotalElapsedMs         : $($RecoveryValidation.TotalElapsedMs)"
+
+
+Write-Host ""
+Write-Host "========================================"
+Write-Host "12. REVALIDACION DE IMPRESORA"
 Write-Host "========================================"
 
 $ConnectivityAfter = & $ConnectivityAnalyzerPath `
@@ -720,7 +804,7 @@ $ConnectivityAfter = & $ConnectivityAnalyzerPath `
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "12. REVALIDACION DE RUTA"
+Write-Host "13. REVALIDACION DE RUTA"
 Write-Host "========================================"
 
 $RouteAfter = & $RouteAnalyzerPath `
@@ -733,7 +817,7 @@ $RouteAfter = & $RouteAnalyzerPath `
 $RecoverySucceeded =
     (
         $NetworkResult.SwitchVerified -eq $true -and
-        $EthernetPreserved -eq $true -and
+        $RecoveryValidation.RecoveryConfirmed -eq $true -and
         $ConnectivityAfter.Classification -eq
             "PRINTER_REACHABLE"
     )
@@ -784,11 +868,29 @@ $FinalResult = [PSCustomObject]@{
     SwitchExecuted =
         $true
 
+    RecoveryValidationClassification =
+        $RecoveryValidation.Classification
+
+    RecoveryValidationConfirmed =
+        $RecoveryValidation.RecoveryConfirmed
+
+    RecoveryValidationWindow =
+        $RecoveryValidation.CompletedWindow
+
+    RecoveryValidationElapsedMs =
+        $RecoveryValidation.TotalElapsedMs
+
     NetworkSwitchVerified =
         $NetworkResult.SwitchVerified
 
     PreserveEthernet =
         $SwitchResult.PreserveEthernet
+
+    EthernetPresentBefore =
+        $EthernetPresentBefore
+
+    EthernetPresentAfter =
+        $EthernetPresentAfter
 
     EthernetPreserved =
         $EthernetPreserved
@@ -808,7 +910,7 @@ $FinalResult = [PSCustomObject]@{
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "13. RESULTADO FINAL"
+Write-Host "14. RESULTADO FINAL"
 Write-Host "========================================"
 
 Write-Host `
@@ -816,6 +918,12 @@ Write-Host `
 
 Write-Host `
     "NetworkSwitchVerified : $($FinalResult.NetworkSwitchVerified)"
+
+Write-Host `
+    "EthernetPresentBefore : $($FinalResult.EthernetPresentBefore)"
+
+Write-Host `
+    "EthernetPresentAfter  : $($FinalResult.EthernetPresentAfter)"
 
 Write-Host `
     "EthernetPreserved     : $($FinalResult.EthernetPreserved)"
@@ -831,6 +939,18 @@ Write-Host `
 
 Write-Host `
     "FinalClassification   : $($FinalResult.FinalClassification)"
+
+Write-Host `
+    "RecoveryValidation    : $($FinalResult.RecoveryValidationClassification)"
+
+Write-Host `
+    "RecoveryConfirmed     : $($FinalResult.RecoveryValidationConfirmed)"
+
+Write-Host `
+    "RecoveryWindow        : $($FinalResult.RecoveryValidationWindow)"
+
+Write-Host `
+    "RecoveryElapsedMs     : $($FinalResult.RecoveryValidationElapsedMs)"
 
 Write-Host ""
 Write-Host "========================================"
