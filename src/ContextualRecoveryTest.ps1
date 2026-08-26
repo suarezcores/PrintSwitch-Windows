@@ -13,7 +13,7 @@ param (
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - ContextualRecoveryTest v0.1
+# PrintSwitch - ContextualRecoveryTest v0.2
 #
 # Orquestador experimental.
 #
@@ -32,7 +32,7 @@ $ErrorActionPreference = "Continue"
 # ============================================================
 
 Write-Host ""
-Write-Host "PrintSwitch - ContextualRecoveryTest v0.1" `
+Write-Host "PrintSwitch - ContextualRecoveryTest v0.2" `
     -ForegroundColor Cyan
 
 if ($Execute) {
@@ -51,7 +51,10 @@ Write-Host ""
 # ============================================================
 # RUTAS DE COMPONENTES
 # ============================================================
-
+$InterfacePathAnalyzerPath = Join-Path `
+    $PSScriptRoot `
+    "InterfacePathAnalyzer.ps1"
+    
 $RouteAnalyzerPath = Join-Path `
     $PSScriptRoot `
     "RouteAnalyzer.ps1"
@@ -162,6 +165,7 @@ Write-Host "2. COMPONENTES"
 Write-Host "========================================"
 
 $RequiredComponents = @(
+    $InterfacePathAnalyzerPath,
     $RouteAnalyzerPath,
     $ConnectivityPolicyPath,
     $WiFiCandidatePath,
@@ -186,13 +190,123 @@ foreach ($ComponentPath in $RequiredComponents) {
 
 Write-Host "Componentes disponibles : True"
 
+
 # ============================================================
-# 3. ROUTE ANALYZER
+# 3. INTERFACE PATH ANALYZER
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "3. ROUTE ANALYZER"
+Write-Host "3. INTERFACE PATH ANALYZER"
+Write-Host "========================================"
+
+$PathResult = & $InterfacePathAnalyzerPath `
+    -TargetIP $TargetIP
+
+if ($null -eq $PathResult) {
+
+    Write-Host `
+        "ERROR: InterfacePathAnalyzer no devolvio resultado." `
+        -ForegroundColor Red
+
+    return
+}
+
+Write-Host ""
+Write-Host "PathClassification : $($PathResult.Classification)"
+Write-Host "ReachablePathCount : $($PathResult.ReachablePathCount)"
+Write-Host "ReachableInterface : $($PathResult.SelectedReachableInterface)"
+
+# ============================================================
+# 3.1 HAPPY PATH - CAMINO YA COMPROBADO
+# ============================================================
+
+if (
+    $PathResult.Classification -eq "UNIQUE_REACHABLE_PATH"
+) {
+
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "CAMINO FUNCIONAL YA DISPONIBLE"
+    Write-Host "========================================"
+
+    Write-Host `
+        "Interfaz : $($PathResult.SelectedReachableInterface)"
+
+    Write-Host `
+        "Tipo     : $($PathResult.SelectedReachableInterfaceType)"
+
+    Write-Host ""
+    Write-Host `
+        "PrintSwitch no modificara ninguna red." `
+        -ForegroundColor Green
+
+    $FinalResult = [PSCustomObject]@{
+
+        Component =
+            "ContextualRecoveryTest"
+
+        Version =
+            "0.2"
+
+        ExecutionMode =
+            $(if ($Execute) {
+                "EXECUTE"
+            }
+            else {
+                "DRY_RUN"
+            })
+
+        PathClassification =
+            $PathResult.Classification
+
+        ReachablePathCount =
+            $PathResult.ReachablePathCount
+
+        ReachableInterface =
+            $PathResult.SelectedReachableInterface
+
+        ReachableInterfaceType =
+            $PathResult.SelectedReachableInterfaceType
+
+        SwitchDecision =
+            "NO_ACTION"
+
+        SwitchAuthorized =
+            $false
+
+        SwitchExecuted =
+            $false
+
+        PreserveEthernet =
+            (
+                $PathResult.SelectedReachableInterfaceType `
+                    -eq "Ethernet"
+            )
+
+        TargetSSID =
+            $TargetSSID
+
+        FinalClassification =
+            "EXISTING_REACHABLE_PATH"
+    }
+
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "FIN CONTEXTUALRECOVERYTEST v0.2"
+    Write-Host "========================================"
+
+    return $FinalResult
+}
+
+# ============================================================
+# 4. ROUTE ANALYZER
+# ============================================================
+
+
+Write-Host ""
+Write-Host "========================================"
+Write-Host "4. ROUTE ANALYZER"
 Write-Host "========================================"
 
 $RouteResult = & $RouteAnalyzerPath `
@@ -344,7 +458,7 @@ if (-not $SwitchResult.ShouldExecuteSwitch) {
 
     Write-Host ""
     Write-Host "========================================"
-    Write-Host "FIN CONTEXTUALRECOVERYTEST v0.1"
+    Write-Host "FIN CONTEXTUALRECOVERYTEST v0.2"
     Write-Host "========================================"
 
     return $FinalResult
@@ -405,7 +519,7 @@ if (-not $Execute) {
 
     Write-Host ""
     Write-Host "========================================"
-    Write-Host "FIN CONTEXTUALRECOVERYTEST v0.1"
+    Write-Host "FIN CONTEXTUALRECOVERYTEST v0.2"
     Write-Host "========================================"
 
     return $FinalResult
@@ -627,7 +741,7 @@ Write-Host `
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "FIN CONTEXTUALRECOVERYTEST v0.1"
+Write-Host "FIN CONTEXTUALRECOVERYTEST v0.2"
 Write-Host "========================================"
 
 $FinalResult
