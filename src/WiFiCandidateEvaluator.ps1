@@ -2,13 +2,17 @@ param (
     [Parameter(Mandatory = $true)]
     [string]$TargetSSID,
 
-    [string]$WiFiInterfaceName = "Wi-Fi"
+    [string]$WiFiInterfaceName = "Wi-Fi",
+
+    [int]$VisibilityAttempts = 3,
+
+    [int]$VisibilityDelayMs = 1000
 )
 
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - WiFiCandidateEvaluator v0.1
+# PrintSwitch - WiFiCandidateEvaluator v0.2
 #
 # Objetivo:
 # determinar si Wi-Fi puede utilizarse como camino alternativo
@@ -25,7 +29,7 @@ $ErrorActionPreference = "Continue"
 # ============================================================
 
 Write-Host ""
-Write-Host "PrintSwitch - WiFiCandidateEvaluator v0.1" `
+Write-Host "PrintSwitch - WiFiCandidateEvaluator v0.2" `
     -ForegroundColor Cyan
 
 Write-Host "Modo: EVALUACION NO INTRUSIVA" `
@@ -174,34 +178,67 @@ Write-Host "4. VISIBILIDAD DE RED"
 Write-Host "========================================"
 
 $TargetVisible = $false
+$VisibilityAttemptsUsed = 0
 
-try {
+for (
+    $Attempt = 1;
+    $Attempt -le $VisibilityAttempts;
+    $Attempt++
+) {
 
-    $VisibleNetworks =
-        netsh wlan show networks mode=bssid
+    $VisibilityAttemptsUsed = $Attempt
 
-    $VisibleSSIDLines = $VisibleNetworks |
-        Select-String '^\s*SSID\s+\d+\s*:'
+    Write-Host `
+        "Escaneo $Attempt de $VisibilityAttempts..."
 
-    foreach ($Line in $VisibleSSIDLines) {
+    try {
 
-        $VisibleSSID = (
-            $Line.ToString().Split(":", 2)[1]
-        ).Trim()
+        $VisibleNetworks =
+            netsh wlan show networks mode=bssid
 
-        if ($VisibleSSID -eq $TargetSSID) {
+        $VisibleSSIDLines = $VisibleNetworks |
+            Select-String '^\s*SSID\s+\d+\s*:'
 
-            $TargetVisible = $true
-            break
+        foreach ($Line in $VisibleSSIDLines) {
+
+            $VisibleSSID = (
+                $Line.ToString().Split(":", 2)[1]
+            ).Trim()
+
+            if ($VisibleSSID -eq $TargetSSID) {
+
+                $TargetVisible = $true
+                break
+            }
         }
     }
-}
-catch {
+    catch {
 
-    $TargetVisible = $false
+        $TargetVisible = $false
+    }
+
+    if ($TargetVisible) {
+
+        Write-Host `
+            "Red objetivo encontrada." `
+            -ForegroundColor Green
+
+        break
+    }
+
+    if ($Attempt -lt $VisibilityAttempts) {
+
+        Write-Host `
+            "Red no detectada. Reintentando en $VisibilityDelayMs ms..."
+
+        Start-Sleep `
+            -Milliseconds $VisibilityDelayMs
+    }
 }
 
-Write-Host "Red visible : $TargetVisible"
+Write-Host ""
+Write-Host "Red visible       : $TargetVisible"
+Write-Host "Intentos usados   : $VisibilityAttemptsUsed"
 
 # ============================================================
 # 5. CLASIFICACION
@@ -319,7 +356,7 @@ $WiFiResult = [PSCustomObject]@{
         "WiFiCandidateEvaluator"
 
     Version =
-        "0.1"
+        "0.2"
 
     Timestamp =
         Get-Date
@@ -347,6 +384,12 @@ $WiFiResult = [PSCustomObject]@{
 
     TargetVisible =
         $TargetVisible
+
+    VisibilityAttemptsUsed =
+    $VisibilityAttemptsUsed
+
+    VisibilityAttemptsMax =
+        $VisibilityAttempts
 
     Classification =
         $Classification
@@ -380,7 +423,7 @@ Write-Host `
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "FIN WIFICANDIDATEEVALUATOR v0.1"
+Write-Host "FIN WIFICANDIDATEEVALUATOR v0.2"
 Write-Host "========================================"
 
 $WiFiResult

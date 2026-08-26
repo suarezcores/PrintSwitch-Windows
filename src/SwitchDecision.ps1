@@ -140,6 +140,37 @@ elseif (
 
 # ------------------------------------------------------------
 # CASO 3:
+# No hay Ethernet protector.
+# Wi-Fi es el camino de recuperacion disponible.
+# ------------------------------------------------------------
+
+elseif (
+    $PolicyResult.Decision `
+        -eq "EVALUATE_WIFI_RECOVERY" -and
+
+    $WiFiCandidateResult.Classification `
+        -eq "WIFI_SWITCH_CANDIDATE_AVAILABLE" -and
+
+    $WiFiCandidateResult.CanAttemptSwitch `
+        -eq $true
+) {
+
+    $Decision =
+        "SWITCH_WIFI_FOR_PRINTER"
+
+    $ShouldExecuteSwitch =
+        $true
+
+    $PreserveEthernet =
+        $false
+
+    $Reason =
+        "Printer is unreachable and Wi-Fi can safely attempt the target network."
+}
+
+
+# ------------------------------------------------------------
+# CASO 3:
 # Wi-Fi ya está en la red objetivo
 # ------------------------------------------------------------
 
@@ -209,6 +240,25 @@ Write-Host "2. DECISION FINAL"
 Write-Host "========================================"
 
 switch ($Decision) {
+
+        "SWITCH_WIFI_FOR_PRINTER" {
+
+        Write-Host `
+            "Decision : SWITCH_WIFI_FOR_PRINTER" `
+            -ForegroundColor Green
+
+        Write-Host `
+            "Wi-Fi puede cambiarse a '$($WiFiCandidateResult.TargetSSID)'."
+
+        Write-Host `
+            "No existe Ethernet protector."
+
+        Write-Host `
+            "El cambio puede interrumpir temporalmente la conectividad general."
+
+        Write-Host `
+            "El cambio todavia NO fue ejecutado."
+    }
 
     "NO_ACTION" {
 

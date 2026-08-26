@@ -560,8 +560,19 @@ if (-not $Execute) {
     Write-Host `
         "DRY-RUN: NetworkManager NO sera ejecutado."
 
+    if ($SwitchResult.PreserveEthernet) {
+
     Write-Host `
         "Ethernet debe permanecer intacto."
+}
+else {
+
+    Write-Host `
+        "No existe Ethernet protector activo."
+
+    Write-Host `
+        "El cambio de Wi-Fi puede interrumpir temporalmente la conectividad general."
+}
 
     $FinalResult = [PSCustomObject]@{
 
