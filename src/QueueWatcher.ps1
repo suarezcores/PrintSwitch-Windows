@@ -35,14 +35,10 @@ $ConfigValidatorPath = Join-Path `
     $PSScriptRoot `
     "ConfigValidator.ps1"
 
-$ConnectivityAnalyzerPath = Join-Path `
-    $PSScriptRoot `
-    "ConnectivityAnalyzer.ps1"
 
-$NetworkManagerPath = Join-Path `
+$PrintRecoveryOrchestratorPath = Join-Path `
     $PSScriptRoot `
-    "NetworkManager.ps1"
-
+    "PrintRecoveryOrchestrator.ps1"
 $KnownJobs = @{}
 
 # ============================================================
@@ -352,8 +348,7 @@ Write-Host "Impresora observada : $PrinterName"
 Write-Host "Intervalo           : $PollingMilliseconds ms"
 Write-Host "Logger              : $LoggerPath"
 Write-Host "ConfigValidator     : $ConfigValidatorPath"
-Write-Host "ConnectivityAnalyzer: $ConnectivityAnalyzerPath"
-Write-Host "NetworkManager      : $NetworkManagerPath"
+
 
 Write-PrintSwitchLog `
     -Component "QueueWatcher" `
@@ -393,74 +388,38 @@ function Get-PrintJobs {
 # FUNCION: ConnectivityAnalyzer
 # ============================================================
 
-function Invoke-ConnectivityAnalysis {
-
-    if (-not (Test-Path $ConnectivityAnalyzerPath)) {
-
-        Write-Host `
-            "ERROR: ConnectivityAnalyzer no encontrado." `
-            -ForegroundColor Red
-
-        return $null
-    }
-
-    try {
-
-        return & $ConnectivityAnalyzerPath `
-            -PrinterName $PrinterName `
-            -ConfigPath $ConfigPath
-    }
-    catch {
-
-        Write-Host `
-            "ERROR ejecutando ConnectivityAnalyzer." `
-            -ForegroundColor Red
-
-        Write-Host $_.Exception.Message
-
-        return $null
-    }
-}
 
 # ============================================================
 # FUNCION: resumen
 # ============================================================
 
-function Show-ConnectivitySummary {
 
-    param(
-        $Connectivity
-    )
+# ============================================================
+# VALIDAR PRINT RECOVERY ORCHESTRATOR
+# ============================================================
+
+if (-not (Test-Path $PrintRecoveryOrchestratorPath)) {
 
     Write-Host ""
-    Write-Host "----------------------------------------"
-    Write-Host "RESUMEN DE CONECTIVIDAD"
-    Write-Host "----------------------------------------"
+    Write-Host `
+        "ERROR: PrintRecoveryOrchestrator no encontrado." `
+        -ForegroundColor Red
 
     Write-Host `
-        "Clasificacion : $($Connectivity.Classification)"
+        "Ruta esperada: $PrintRecoveryOrchestratorPath"
 
-    Write-Host `
-        "Impresora     : $($Connectivity.PrinterName)"
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "RECOVERY_ORCHESTRATOR_NOT_FOUND" `
+        -Level "ERROR" `
+        -Data @{
+            Path = $PrintRecoveryOrchestratorPath
+        } |
+        Out-Null
 
-    Write-Host `
-        "IP            : $($Connectivity.PrinterIP)"
-
-    Write-Host `
-        "SSID actual   : $($Connectivity.CurrentSSID)"
-
-    Write-Host `
-        "SSID requerido: $($Connectivity.RequiredSSID)"
-
-    Write-Host `
-        "Ping          : $($Connectivity.PingSucceeded)"
-
-    Write-Host `
-        "TCP 9100      : $($Connectivity.Tcp9100Succeeded)"
-
-    Write-Host `
-        "HTTP 80       : $($Connectivity.Tcp80Succeeded)"
+    return
 }
+
 
 # ============================================================
 # LOOP PRINCIPAL
@@ -545,305 +504,82 @@ while ($true) {
             Write-Host "Documento   : $($Event.Document)"
             Write-Host "Propietario : $($Event.Owner)"
             Write-Host "Estado      : $($Event.JobStatus)"
-
             # =================================================
-            # FASE 1
-            # =================================================
+# NUEVO ORQUESTADOR - DRY RUN
+# =================================================
 
-            Write-Host ""
-            Write-Host "========================================"
-            Write-Host "FASE 1 - ANALISIS INICIAL"
-            Write-Host "========================================"
+Write-Host ""
+Write-Host "========================================"
+Write-Host "PRINT RECOVERY ORCHESTRATOR"
+Write-Host "========================================"
 
-            $Connectivity = Invoke-ConnectivityAnalysis
+try {
 
-            if ($null -eq $Connectivity) {
+    $OrchestratorResult = & $PrintRecoveryOrchestratorPath `
+        -PrinterName $PrinterName
+}
+catch {
 
-                Write-PrintSwitchLog `
-                    -Component "QueueWatcher" `
-                    -Event "CONNECTIVITY_ANALYSIS_FAILED" `
-                    -Level "ERROR" `
-                    -Data @{
-                        Printer = $PrinterName
-                        JobId   = $Event.JobId
-                    } |
-                    Out-Null
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "RECOVERY_ORCHESTRATOR_ERROR" `
+        -Level "ERROR" `
+        -Data @{
+            Printer = $PrinterName
+            JobId   = $Event.JobId
+            Message = $_.Exception.Message
+        } |
+        Out-Null
 
-                continue
-            }
+    Write-Host ""
+    Write-Host `
+        "ERROR ejecutando PrintRecoveryOrchestrator." `
+        -ForegroundColor Red
 
-            Show-ConnectivitySummary `
-                -Connectivity $Connectivity
+    continue
+}
 
-            # =================================================
-            # DECISION
-            # =================================================
+if ($null -eq $OrchestratorResult) {
 
-            switch ($Connectivity.Classification) {
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "RECOVERY_ORCHESTRATOR_NO_RESULT" `
+        -Level "ERROR" `
+        -Data @{
+            Printer = $PrinterName
+            JobId   = $Event.JobId
+        } |
+        Out-Null
 
-                "PRINTER_REACHABLE" {
+    continue
+}
 
-                    Write-PrintSwitchLog `
-                        -Component "QueueWatcher" `
-                        -Event "PRINTER_REACHABLE" `
-                        -Level "INFO" `
-                        -Data @{
-                            Printer = $PrinterName
-                            JobId   = $Event.JobId
-                            SSID    = $Connectivity.CurrentSSID
-                        } |
-                        Out-Null
+Write-Host ""
+Write-Host "Resultado del orquestador:"
+Write-Host "FinalClassification : $($OrchestratorResult.FinalClassification)"
+Write-Host "SwitchDecision      : $($OrchestratorResult.SwitchDecision)"
+Write-Host "SwitchAuthorized    : $($OrchestratorResult.SwitchAuthorized)"
+Write-Host "SwitchExecuted      : $($OrchestratorResult.SwitchExecuted)"
 
-                    Write-Host ""
-                    Write-Host "========================================"
-                    Write-Host "RESULTADO PRINTSWITCH"
-                    Write-Host "========================================"
+Write-PrintSwitchLog `
+    -Component "QueueWatcher" `
+    -Event "RECOVERY_ORCHESTRATOR_RESULT" `
+    -Level "INFO" `
+    -Data @{
+        Printer            = $PrinterName
+        JobId              = $Event.JobId
+        FinalClassification =
+            $OrchestratorResult.FinalClassification
+        SwitchDecision =
+            $OrchestratorResult.SwitchDecision
+        SwitchExecuted =
+            $OrchestratorResult.SwitchExecuted
+    } |
+    Out-Null
 
-                    Write-Host `
-                        "PRINTER_REACHABLE" `
-                        -ForegroundColor Green
+# Integracion inicial:
+# no ejecutar aun la logica legacy de QueueWatcher.
 
-                    Write-Host `
-                        "No se requiere intervencion de red."
-                }
-
-                "NETWORK_MISMATCH" {
-
-                    Write-PrintSwitchLog `
-                        -Component "QueueWatcher" `
-                        -Event "NETWORK_MISMATCH" `
-                        -Level "WARN" `
-                        -Data @{
-                            Printer     = $PrinterName
-                            JobId       = $Event.JobId
-                            CurrentSSID = $Connectivity.CurrentSSID
-                            TargetSSID  = $Connectivity.RequiredSSID
-                        } |
-                        Out-Null
-
-                    Write-Host ""
-                    Write-Host "========================================"
-                    Write-Host "FASE 2 - RECUPERACION DE RED"
-                    Write-Host "========================================"
-
-                    Write-Host `
-                        "La PC no esta en la red requerida."
-
-                    Write-Host `
-                        "Red requerida: $($Connectivity.RequiredSSID)"
-
-                    if (-not $EnableRecovery) {
-
-                        Write-Host ""
-                        Write-Host `
-                            "DRY-RUN: no se modifico la red."
-
-                        break
-                    }
-
-                    if (-not (Test-Path $NetworkManagerPath)) {
-
-                        Write-PrintSwitchLog `
-                            -Component "QueueWatcher" `
-                            -Event "NETWORK_MANAGER_NOT_FOUND" `
-                            -Level "ERROR" |
-                            Out-Null
-
-                        break
-                    }
-
-                    try {
-
-                        $NetworkResult = & $NetworkManagerPath `
-                            -TargetSSID $Connectivity.RequiredSSID `
-                            -AutoExecute
-                    }
-                    catch {
-
-                        Write-PrintSwitchLog `
-                            -Component "QueueWatcher" `
-                            -Event "NETWORK_MANAGER_ERROR" `
-                            -Level "ERROR" `
-                            -Data @{
-                                Message = $_.Exception.Message
-                            } |
-                            Out-Null
-
-                        break
-                    }
-
-                    if ($null -eq $NetworkResult) {
-
-                        Write-PrintSwitchLog `
-                            -Component "QueueWatcher" `
-                            -Event "NETWORK_MANAGER_NO_RESULT" `
-                            -Level "ERROR" |
-                            Out-Null
-
-                        break
-                    }
-
-                    if (-not $NetworkResult.SwitchVerified) {
-
-                        if (
-                            $NetworkResult.ExecutionResult `
-                                -eq "SWITCH_NOT_AVAILABLE"
-                        ) {
-
-                            Write-PrintSwitchLog `
-                                -Component "QueueWatcher" `
-                                -Event "NETWORK_RECOVERY_UNAVAILABLE" `
-                                -Level "WARN" `
-                                -Data @{
-                                    Classification =
-                                        $NetworkResult.Classification
-
-                                    TargetSSID =
-                                        $NetworkResult.TargetSSID
-                                } |
-                                Out-Null
-                        }
-                        else {
-
-                            Write-PrintSwitchLog `
-                                -Component "QueueWatcher" `
-                                -Event "RECOVERY_FAILED" `
-                                -Level "ERROR" `
-                                -Data @{
-                                    InitialSSID =
-                                        $NetworkResult.InitialSSID
-
-                                    TargetSSID =
-                                        $NetworkResult.TargetSSID
-                                } |
-                                Out-Null
-                        }
-
-                        break
-                    }
-
-                    Write-PrintSwitchLog `
-                        -Component "QueueWatcher" `
-                        -Event "NETWORK_SWITCH_VERIFIED" `
-                        -Level "INFO" `
-                        -Data @{
-                            InitialSSID =
-                                $NetworkResult.InitialSSID
-
-                            FinalSSID =
-                                $NetworkResult.FinalSSID
-                        } |
-                        Out-Null
-
-                    # =================================================
-                    # FASE 3
-                    # =================================================
-
-                    $ConnectivityAfterSwitch = `
-                        Invoke-ConnectivityAnalysis
-
-                    if ($null -eq $ConnectivityAfterSwitch) {
-
-                        Write-PrintSwitchLog `
-                            -Component "QueueWatcher" `
-                            -Event "RECOVERY_INDETERMINATE" `
-                            -Level "ERROR" |
-                            Out-Null
-
-                        break
-                    }
-
-                    if (
-                        $ConnectivityAfterSwitch.Classification `
-                            -eq "PRINTER_REACHABLE"
-                    ) {
-
-                        Write-PrintSwitchLog `
-                            -Component "QueueWatcher" `
-                            -Event "RECOVERY_SUCCESS" `
-                            -Level "INFO" `
-                            -Data @{
-                                Printer = $PrinterName
-                                JobId   = $Event.JobId
-                                SSID    =
-                                    $ConnectivityAfterSwitch.CurrentSSID
-                            } |
-                            Out-Null
-
-                        Write-Host ""
-                        Write-Host "========================================"
-
-                        Write-Host `
-                            "RECOVERY_SUCCESS" `
-                            -ForegroundColor Green
-
-                        Write-Host "========================================"
-
-                        Write-Host `
-                            "La impresora ahora resulta alcanzable."
-                    }
-                    else {
-
-                        Write-PrintSwitchLog `
-                            -Component "QueueWatcher" `
-                            -Event "PRINTER_UNREACHABLE_AFTER_SWITCH" `
-                            -Level "WARN" `
-                            -Data @{
-                                Printer =
-                                    $PrinterName
-
-                                Classification =
-                                    $ConnectivityAfterSwitch.Classification
-                            } |
-                            Out-Null
-
-                        Write-Host ""
-                        Write-Host `
-                            "NETWORK_SWITCH_OK_BUT_PRINTER_UNREACHABLE" `
-                            -ForegroundColor Yellow
-                    }
-                }
-
-                "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" {
-
-                    Write-PrintSwitchLog `
-                        -Component "QueueWatcher" `
-                        -Event "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" `
-                        -Level "WARN" `
-                        -Data @{
-                            Printer = $PrinterName
-                            JobId   = $Event.JobId
-                            SSID    = $Connectivity.CurrentSSID
-                        } |
-                        Out-Null
-
-                    Write-Host ""
-                    Write-Host `
-                        "PRINTER_UNREACHABLE_ON_TARGET_NETWORK" `
-                        -ForegroundColor Yellow
-
-                    Write-Host `
-                        "No se cambiara de red."
-                }
-
-                default {
-
-                    Write-PrintSwitchLog `
-                        -Component "QueueWatcher" `
-                        -Event "UNKNOWN_CLASSIFICATION" `
-                        -Level "WARN" `
-                        -Data @{
-                            Classification =
-                                $Connectivity.Classification
-                        } |
-                        Out-Null
-                }
-            }
-
-            Write-Host ""
-            Write-Host "========================================"
-            Write-Host "FIN DEL CICLO PRINTSWITCH"
-            Write-Host "========================================"
         }
     }
 
