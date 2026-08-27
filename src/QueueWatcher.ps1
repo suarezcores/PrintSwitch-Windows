@@ -326,20 +326,22 @@ Write-Host "========================================"
 if ($EnableRecovery) {
 
     Write-Host `
-        "Modo: RECUPERACION HABILITADA" `
+        "Modo: RECOVERY AUTOMATICO HABILITADO" `
         -ForegroundColor Yellow
 
     Write-Host `
-        "PrintSwitch puede modificar la interfaz Wi-Fi."
+        "Cambios de Wi-Fi permitidos." `
+        -ForegroundColor Yellow
 }
 else {
 
     Write-Host `
         "Modo: DRY-RUN" `
-        -ForegroundColor Yellow
+        -ForegroundColor Green
 
     Write-Host `
-        "No se modificara ninguna red Wi-Fi."
+        "No se modificara ninguna red Wi-Fi." `
+        -ForegroundColor Green
 }
 
 Write-Host ""
@@ -515,8 +517,17 @@ Write-Host "========================================"
 
 try {
 
-    $OrchestratorResult = & $PrintRecoveryOrchestratorPath `
-        -PrinterName $PrinterName
+   $OrchestratorParameters = @{
+    PrinterName = $PrinterName
+}
+
+if ($EnableRecovery) {
+
+    $OrchestratorParameters.Execute = $true
+}
+
+$OrchestratorResult = & $PrintRecoveryOrchestratorPath `
+    @OrchestratorParameters
 }
 catch {
 
@@ -577,8 +588,6 @@ Write-PrintSwitchLog `
     } |
     Out-Null
 
-# Integracion inicial:
-# no ejecutar aun la logica legacy de QueueWatcher.
 
         }
     }

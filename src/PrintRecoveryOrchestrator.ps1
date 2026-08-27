@@ -41,7 +41,7 @@ Write-Host "PrintSwitch - PrintRecoveryOrchestrator v0.1" `
 
 if ($Execute) {
 
-    Write-Host "Modo: EJECUCION CONTEXTUAL" `
+    Write-Host "Modo: EJECUCION OPERATIVA" `
         -ForegroundColor Yellow
 }
 else {
