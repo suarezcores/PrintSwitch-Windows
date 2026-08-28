@@ -9,6 +9,7 @@ theme:
 
 nav:
   - Inicio: index.md
+  - Estado Alpha: Alpha_Checkpoint.md
   - Metodología: Methodology.md
   - Base de conocimiento: Knowledge.md
   - Arquitectura observada: Architecture_Observed.md

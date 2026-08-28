@@ -1,4 +1,4 @@
-# PrintSwitch — Arquitectura observada
+﻿# PrintSwitch — Arquitectura observada
 
 **Documento:** ARC-001
 **Versión:** 0.1
@@ -904,3 +904,895 @@ para impresión en Windows
 ```
 
 El core existente constituye la primera estrategia funcional de esa arquitectura más amplia.
+---
+
+> **Nota de evolución documental — corte Alpha (27/08/2026)**
+>
+> Las secciones anteriores documentan la arquitectura observada y propuesta
+> durante las etapas iniciales del proyecto.
+>
+> Se conservan como registro histórico porque muestran cómo evolucionaron
+> las hipótesis, las pruebas y las decisiones técnicas.
+>
+> A partir de este punto se documenta la arquitectura efectivamente
+> implementada y validada durante el cierre del Alpha.
+>
+> Ante una contradicción, las secciones posteriores a este corte representan
+> el estado arquitectónico vigente.
+
+# Arquitectura Alpha implementada — 27/08/2026
+
+## 16. Cambio de estado arquitectónico
+
+Durante las primeras etapas, PrintSwitch fue una combinación de scripts de
+diagnóstico, observación de cola y experimentos de conectividad.
+
+En el Alpha, esas capacidades quedaron integradas en un flujo operativo
+completo.
+
+La arquitectura dejó de ser:
+
+```text
+QueueWatcher
+    |
+    +--> ConnectivityAnalyzer
+    |
+    +--> NetworkManager
+```
+
+para evolucionar hacia:
+
+```text
+QueueWatcher
+    |
+    v
+PrintRecoveryOrchestrator
+    |
+    +--> InterfacePathAnalyzer
+    +--> RouteAnalyzer
+    +--> ConnectivityPolicy
+    +--> WiFiCandidateEvaluator
+    +--> SwitchDecision
+    +--> NetworkManager
+    +--> RecoveryValidator
+    +--> ConnectivityAnalyzer
+```
+
+El cambio principal consiste en separar:
+
+```text
+detección
+análisis
+política
+decisión
+ejecución
+validación
+```
+
+---
+
+## 17. QueueWatcher como punto de entrada
+
+`QueueWatcher.ps1` continúa siendo el componente que observa la cola de
+impresión.
+
+Su responsabilidad actual es:
+
+```text
+detectar nuevo trabajo
+        |
+        v
+identificar impresora
+        |
+        v
+delegar recuperación
+```
+
+La lógica de recuperación ya no se implementa dentro del watcher.
+
+Cuando detecta un trabajo, construye los parámetros necesarios y llama a:
+
+```text
+PrintRecoveryOrchestrator.ps1
+```
+
+Esto elimina la duplicación de política entre el observador y el sistema de
+recuperación.
+
+---
+
+## 18. PrintRecoveryOrchestrator
+
+`PrintRecoveryOrchestrator.ps1` es el coordinador operativo de la recuperación
+Alpha.
+
+Recibe:
+
+```text
+PrinterName
+TargetIP
+TargetSSID
+ConfigPath
+```
+
+y opcionalmente:
+
+```text
+-Execute
+```
+
+Sin `-Execute` funciona como:
+
+```text
+DRY-RUN
+```
+
+Con `-Execute` puede autorizar componentes que realizan cambios reales.
+
+El orquestador no asume que un trabajo de impresión requiere automáticamente
+un cambio de red.
+
+Primero analiza el contexto.
+
+---
+
+## 19. Resolución de configuración
+
+El orquestador puede obtener:
+
+```text
+TargetIP
+TargetSSID
+```
+
+desde:
+
+```text
+config\printers.json
+```
+
+pero también acepta valores explícitos.
+
+Esto permite mantener la configuración actual basada en archivo y, al mismo
+tiempo, preparar la arquitectura para pruebas futuras con múltiples
+impresoras.
+
+La impresora Alpha de referencia es:
+
+```text
+L365 Series(Red)
+IP: 192.168.1.108
+SSID objetivo: suarezcores
+```
+
+---
+
+## 20. InterfacePathAnalyzer
+
+`InterfacePathAnalyzer.ps1` analiza las interfaces IPv4 activas y determina
+qué caminos locales podrían alcanzar la red de destino.
+
+Evalúa, entre otros elementos:
+
+```text
+interfaz
+dirección IPv4
+prefijo
+subred
+relación con TargetIP
+TCP 9100 ligado a interfaz
+```
+
+El objetivo es distinguir:
+
+```text
+camino candidato
+```
+
+de:
+
+```text
+camino realmente alcanzable
+```
+
+---
+
+## 21. Clasificaciones de caminos
+
+Las clasificaciones principales observadas en el Alpha son:
+
+```text
+UNIQUE_REACHABLE_PATH
+MULTIPLE_REACHABLE_PATHS
+CANDIDATE_PATHS_UNREACHABLE
+```
+
+### UNIQUE_REACHABLE_PATH
+
+Existe exactamente un camino validado hacia el servicio de impresión.
+
+Ejemplo:
+
+```text
+Ethernet 192.168.1.109
+        |
+        v
+Epson 192.168.1.108:9100
+```
+
+### MULTIPLE_REACHABLE_PATHS
+
+Más de una interfaz puede alcanzar la impresora.
+
+Ejemplo validado:
+
+```text
+Ethernet 192.168.1.109
+Wi-Fi   192.168.1.224
+
+ambas:
+192.168.1.0/24
+```
+
+### CANDIDATE_PATHS_UNREACHABLE
+
+Existe una interfaz compatible con la red de destino, pero el servicio no
+responde.
+
+Ejemplo:
+
+```text
+Ethernet en 192.168.1.0/24
+Epson apagada
+TCP 9100 no responde
+```
+
+---
+
+## 22. Solapamiento Ethernet + Wi-Fi
+
+Se validó un escenario donde Ethernet y Wi-Fi pertenecían simultáneamente a:
+
+```text
+192.168.1.0/24
+```
+
+y ambos podían alcanzar:
+
+```text
+192.168.1.108:9100
+```
+
+El resultado fue:
+
+```text
+MULTIPLE_REACHABLE_PATHS
+```
+
+La arquitectura no considera este solapamiento como motivo automático para
+intervenir.
+
+La regla operativa es:
+
+```text
+ReachablePathCount > 0
+        |
+        v
+NO_ACTION
+```
+
+---
+
+## 23. RouteAnalyzer
+
+`RouteAnalyzer.ps1` observa cómo Windows intenta alcanzar el destino.
+
+Analiza:
+
+```text
+ruta hacia TargetIP
+interfaz preferida
+dirección local
+gateway
+alcanzabilidad
+```
+
+Entre las clasificaciones observadas se encuentran:
+
+```text
+TARGET_REACHABLE_VIA_ETHERNET
+TARGET_REACHABLE_VIA_WIFI
+```
+
+El análisis de ruta complementa el análisis de interfaces, pero no lo
+reemplaza.
+
+---
+
+## 24. ConnectivityPolicy
+
+`ConnectivityPolicy.ps1` decide si corresponde:
+
+```text
+NO_ACTION
+```
+
+o:
+
+```text
+EVALUATE_WIFI_RECOVERY
+```
+
+La política Alpha evita iniciar recuperación Wi-Fi cuando ya existe un camino
+funcional hacia la impresora.
+
+Su función no es ejecutar acciones sino determinar si el contexto justifica
+seguir evaluando una intervención.
+
+---
+
+## 25. WiFiCandidateEvaluator
+
+`WiFiCandidateEvaluator.ps1` evalúa si el SSID objetivo constituye una
+alternativa válida.
+
+Comprueba:
+
+```text
+adaptador Wi-Fi
+SSID actual
+perfil conocido
+SSID objetivo visible
+```
+
+La visibilidad del SSID se trata como un dato temporal.
+
+Por ello se incorporaron reintentos antes de concluir que una red no está
+disponible.
+
+Una clasificación observada es:
+
+```text
+WIFI_SWITCH_CANDIDATE_AVAILABLE
+```
+
+---
+
+## 26. SwitchDecision
+
+`SwitchDecision.ps1` transforma la evidencia recolectada en una decisión
+explícita.
+
+Una decisión validada es:
+
+```text
+SWITCH_WIFI_FOR_PRINTER
+```
+
+La existencia de esta decisión no implica por sí sola que se ejecute el
+cambio.
+
+Debe existir además autorización de ejecución.
+
+---
+
+## 27. Autorización y ejecución son independientes
+
+La arquitectura separa:
+
+```text
+decidir
+```
+
+de:
+
+```text
+ejecutar
+```
+
+En `QueueWatcher.ps1`:
+
+```text
+-EnableRecovery
+```
+
+otorga permiso global para que el orquestador ejecute una recuperación si la
+política y la evidencia la justifican.
+
+En el orquestador:
+
+```text
+-Execute
+```
+
+habilita las acciones reales.
+
+Por lo tanto:
+
+```text
+RecoveryEnabled = True
+```
+
+no significa:
+
+```text
+SwitchExecuted = True
+```
+
+---
+
+## 28. NetworkManager
+
+`NetworkManager.ps1` es el componente encargado del cambio Wi-Fi real.
+
+La ejecución sólo ocurre cuando está explícitamente autorizada.
+
+Utiliza:
+
+```text
+netsh wlan connect
+```
+
+y posteriormente verifica que el SSID final sea el solicitado.
+
+Su salida estructurada incluye:
+
+```text
+InitialSSID
+TargetSSID
+FinalSSID
+SwitchAuthorized
+SwitchRequested
+CommandIssued
+SwitchVerified
+ExecutionResult
+```
+
+Un resultado validado fue:
+
+```text
+NETWORK_SWITCH_VERIFIED
+```
+
+---
+
+## 29. Preservación de Ethernet
+
+PrintSwitch Alpha adopta una regla explícita:
+
+```text
+Ethernet nunca es modificado por PrintSwitch
+```
+
+Antes y después de una recuperación se registra:
+
+```text
+EthernetPresentBefore
+EthernetPresentAfter
+EthernetPreserved
+```
+
+La semántica vigente es:
+
+```text
+si Ethernet estaba activo antes
+    debe continuar activo después
+```
+
+Si no existía Ethernet activo antes, el sistema no afirma falsamente que
+hubo preservación de una interfaz inexistente.
+
+---
+
+## 30. RecoveryValidator
+
+Verificar únicamente el SSID final no alcanza para confirmar una recuperación.
+
+Después del cambio, `RecoveryValidator.ps1` realiza polling sobre:
+
+```text
+ruta
+TCP 9100
+```
+
+hasta:
+
+```text
+confirmar recuperación
+```
+
+o:
+
+```text
+agotar la ventana temporal
+```
+
+Una recuperación real sólo se confirma cuando el servicio de impresión vuelve
+a estar alcanzable.
+
+---
+
+## 31. ConnectivityAnalyzer optimizado
+
+`ConnectivityAnalyzer.ps1` se utiliza para describir el estado de
+conectividad.
+
+Comprueba:
+
+```text
+SSID
+estado de impresora
+ping
+TCP 9100
+HTTP 80
+```
+
+Durante la evolución Alpha se reemplazó una dependencia lenta de
+`Test-NetConnection` por pruebas TCP más directas.
+
+Esto redujo significativamente el tiempo de diagnóstico y permitió usar el
+análisis dentro del flujo operativo.
+
+Una clasificación observada es:
+
+```text
+PRINTER_REACHABLE
+```
+
+---
+
+## 32. Principio de intervención mínima implementado
+
+La arquitectura Alpha prioriza no alterar conectividad cuando ya existe una
+solución válida.
+
+Flujo simplificado:
+
+```text
+¿hay camino alcanzable?
+        |
+   +----+----+
+   |         |
+  sí         no
+   |         |
+NO_ACTION    continuar análisis
+```
+
+Esto impide usar el SSID actual como único criterio de decisión.
+
+---
+
+## 33. Impresora apagada con camino existente
+
+Se validó el escenario:
+
+```text
+Ethernet activo
+Wi-Fi = Claro640
+Epson apagada
+SSID suarezcores visible
+RecoveryEnabled = True
+```
+
+Aunque la impresora no respondía, existía un camino local candidato por
+Ethernet hacia la red de destino.
+
+El sistema produjo:
+
+```text
+CANDIDATE_PATHS_UNREACHABLE
+EXISTING_PATH_PRINTER_UNREACHABLE
+NO_SWITCH_PRINTER_UNREACHABLE
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+El Wi-Fi permaneció en:
+
+```text
+Claro640
+```
+
+Esto evita interpretar una impresora apagada como un problema de selección de
+red.
+
+---
+
+## 34. Prueba de no interferencia con Jabber
+
+El escenario anterior fue reproducido mientras existía una videoconferencia
+activa en Jabber.
+
+Contexto:
+
+```text
+Jabber activo
+Ethernet disponible
+Wi-Fi = Claro640
+Epson apagada
+RecoveryEnabled = True
+```
+
+PrintSwitch detectó el trabajo de impresión, realizó el análisis y decidió no
+modificar la red.
+
+Resultado:
+
+```text
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+La prueba valida una propiedad arquitectónica importante:
+
+```text
+la capacidad de recuperación puede estar habilitada
+sin que ello implique interferencia automática
+con conectividad utilizada por otras aplicaciones
+```
+
+---
+
+## 35. Primer End-to-End Contextual Recovery exitoso
+
+El Alpha fue validado con un escenario real completo.
+
+Estado inicial:
+
+```text
+Epson encendida
+Ethernet desconectado
+Wi-Fi = Claro640
+SSID objetivo = suarezcores
+```
+
+Se ejecutó:
+
+```text
+QueueWatcher.ps1 -EnableRecovery
+```
+
+y se envió un trabajo pequeño desde Notepad.
+
+El flujo observado fue:
+
+```text
+QueueWatcher
+    |
+    v
+JobId 7 detectado
+    |
+    v
+PrintRecoveryOrchestrator
+    |
+    v
+sin camino actual hacia Epson
+    |
+    v
+EVALUATE_WIFI_RECOVERY
+    |
+    v
+WIFI_SWITCH_CANDIDATE_AVAILABLE
+    |
+    v
+SWITCH_WIFI_FOR_PRINTER
+    |
+    v
+NetworkManager
+    |
+    v
+Claro640 -> suarezcores
+    |
+    v
+NETWORK_SWITCH_VERIFIED
+    |
+    v
+RecoveryValidator
+    |
+    v
+TCP 9100 alcanzable
+    |
+    v
+RECOVERY_CONFIRMED_FAST
+    |
+    v
+CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+La recuperación fue confirmada aproximadamente a los:
+
+```text
+1496 ms
+```
+
+Los campos finales incluyeron:
+
+```text
+NetworkSwitchVerified = True
+ConnectivityAfter     = PRINTER_REACHABLE
+RouteAfter            = TARGET_REACHABLE_VIA_WIFI
+RecoverySucceeded     = True
+RecoveryConfirmed     = True
+SwitchAuthorized      = True
+SwitchExecuted        = True
+```
+
+La página física fue impresa correctamente.
+
+Este escenario constituye el primer:
+
+```text
+PrintSwitch Alpha
+End-to-End Contextual Recovery exitoso
+```
+
+---
+
+## 36. Regresión del happy path
+
+Después del End-to-End se probó:
+
+```text
+Epson encendida
+Ethernet desconectado
+Wi-Fi ya conectado a suarezcores
+RecoveryEnabled = True
+```
+
+Se detectó:
+
+```text
+JobId 8
+```
+
+El trabajo atravesó el mismo orquestador operativo.
+
+`InterfacePathAnalyzer` detectó:
+
+```text
+UNIQUE_REACHABLE_PATH
+```
+
+El resultado fue:
+
+```text
+EXISTING_REACHABLE_PATH
+NO_ACTION
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+El trabajo se imprimió correctamente.
+
+Esto confirma que el orquestador permanece en el camino operativo incluso
+cuando no necesita realizar ninguna recuperación.
+
+---
+
+## 37. Contrato uniforme del orquestador
+
+Las diferentes ramas de salida de `PrintRecoveryOrchestrator.ps1` fueron
+normalizadas.
+
+Todas incluyen:
+
+```text
+Component
+Version
+PrinterName
+TargetIP
+TargetSSID
+```
+
+El componente declara:
+
+```text
+Component = PrintRecoveryOrchestrator
+Version   = 0.1
+```
+
+A estos campos se agregan los resultados específicos de cada rama.
+
+Esto facilita:
+
+```text
+logging
+pruebas automáticas
+diagnóstico
+integración futura
+```
+
+---
+
+## 38. Arquitectura resultante
+
+La arquitectura operativa Alpha puede representarse así:
+
+```text
+Windows Print Queue
+        |
+        v
+QueueWatcher
+        |
+        v
+PrintRecoveryOrchestrator
+        |
+        +-----------------------------+
+        |                             |
+        v                             v
+InterfacePathAnalyzer           RouteAnalyzer
+        |                             |
+        +--------------+--------------+
+                       |
+                       v
+               ConnectivityPolicy
+                       |
+                       v
+              ¿requiere recuperación?
+                  |           |
+                 no           sí
+                  |           |
+                  v           v
+              NO_ACTION   WiFiCandidateEvaluator
+                              |
+                              v
+                        SwitchDecision
+                              |
+                              v
+                        NetworkManager
+                              |
+                              v
+                       RecoveryValidator
+                              |
+                              v
+                     ConnectivityAnalyzer
+                              |
+                              v
+                         resultado final
+```
+
+La idea central es:
+
+```text
+observar
+   |
+analizar
+   |
+decidir
+   |
+actuar sólo si corresponde
+   |
+verificar
+```
+
+---
+
+## 39. Límites de la arquitectura Alpha
+
+La arquitectura actual fue validada principalmente con:
+
+```text
+Windows
+Epson L365
+TCP 9100
+SSID suarezcores
+redes Claro640 / suarezcores
+```
+
+Todavía no puede considerarse validado:
+
+```text
+descubrimiento genérico de impresoras
+múltiples impresoras simultáneas
+otras marcas
+otros protocolos
+retorno automático al SSID anterior
+múltiples adaptadores Wi-Fi
+VPN complejas
+entornos corporativos
+otros sistemas operativos
+```
+
+Estos límites no invalidan el Alpha.
+
+Definen el alcance real de la evidencia obtenida hasta este punto.

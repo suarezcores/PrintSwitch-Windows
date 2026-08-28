@@ -1,4 +1,4 @@
-# PrintSwitch — Roadmap de desarrollo
+﻿# PrintSwitch — Roadmap de desarrollo
 
 **Documento:** RDM-001
 **Versión:** 0.1
@@ -880,3 +880,882 @@ gestión inteligente de conectividad
 [ ] publicación de documentación
 [ ] dominio y hosting del sitio
 ```
+---
+
+> **Nota de evolución documental — conciliación del Roadmap Alpha (27/08/2026)**
+>
+> Las secciones anteriores representan objetivos, hipótesis de evolución y
+> tareas planteadas durante etapas previas del proyecto.
+>
+> Se conservan como registro histórico.
+>
+> A partir de este punto se concilia ese Roadmap con el estado realmente
+> alcanzado durante el cierre del Alpha.
+>
+> Ante una contradicción, las secciones posteriores a este corte representan
+> el estado vigente de planificación.
+
+# Conciliación del Roadmap — cierre Alpha
+
+## 18. Propósito de la conciliación
+
+El desarrollo Alpha permitió completar o redefinir varios objetivos que
+anteriormente aparecían como pendientes.
+
+La arquitectura implementada incorporó:
+
+```text
+Interface / Route Awareness
+preservación de Ethernet
+política de intervención mínima
+evaluación contextual de Wi-Fi
+ejecución autorizada
+validación post-switch
+orquestación operativa
+```
+
+Por lo tanto, el Roadmap debe distinguir entre:
+
+```text
+objetivo histórico
+        |
+        v
+estado alcanzado
+        |
+        v
+siguiente evolución
+```
+
+---
+
+## 19. Interface / Route Awareness — alcanzado
+
+El objetivo de analizar interfaces y rutas antes de cambiar de red quedó
+implementado mediante:
+
+```text
+InterfacePathAnalyzer.ps1
+RouteAnalyzer.ps1
+```
+
+Se validaron escenarios con:
+
+```text
+camino Ethernet único
+camino Wi-Fi único
+múltiples caminos alcanzables
+camino candidato no alcanzable
+```
+
+Estado:
+
+```text
+ALCANZADO EN ALPHA
+```
+
+---
+
+## 20. Coexistencia Ethernet + Wi-Fi — alcanzado
+
+Se validó un escenario donde Ethernet y Wi-Fi pertenecían simultáneamente a:
+
+```text
+192.168.1.0/24
+```
+
+y ambas interfaces podían alcanzar la Epson L365.
+
+El sistema clasificó:
+
+```text
+MULTIPLE_REACHABLE_PATHS
+```
+
+sin intentar cambiar de red.
+
+Estado:
+
+```text
+ALCANZADO EN ALPHA
+```
+
+---
+
+## 21. Intervención mínima — alcanzado
+
+El sistema ya no considera que detectar un trabajo de impresión sea motivo
+suficiente para cambiar de Wi-Fi.
+
+La política vigente es:
+
+```text
+si existe camino funcional
+    NO_ACTION
+```
+
+y también:
+
+```text
+si existe camino local candidato
+pero la impresora no responde
+    NO_SWITCH_PRINTER_UNREACHABLE
+```
+
+Estado:
+
+```text
+ALCANZADO EN ALPHA
+```
+
+---
+
+## 22. Preservación de Ethernet — alcanzado
+
+La arquitectura establece que PrintSwitch:
+
+```text
+no modifica Ethernet
+```
+
+Se implementaron y validaron:
+
+```text
+EthernetPresentBefore
+EthernetPresentAfter
+EthernetPreserved
+```
+
+El script de simulación:
+
+```text
+scripts\Test-EthernetPreservation.ps1
+```
+
+obtuvo:
+
+```text
+4/4 PASS
+```
+
+Estado:
+
+```text
+ALCANZADO EN ALPHA
+```
+
+---
+
+## 23. Evolución de la estrategia inicial de cambio Wi-Fi
+
+Las primeras estrategias podían interpretarse como una relación directa:
+
+```text
+trabajo detectado
+        |
+        v
+SSID incorrecto
+        |
+        v
+cambiar Wi-Fi
+```
+
+La arquitectura Alpha reemplaza esa lógica por:
+
+```text
+trabajo detectado
+        |
+        v
+analizar caminos reales
+        |
+        v
+analizar rutas
+        |
+        v
+aplicar política
+        |
+        v
+evaluar Wi-Fi sólo si corresponde
+        |
+        v
+decidir
+        |
+        v
+ejecutar sólo si está autorizado
+        |
+        v
+validar recuperación
+```
+
+Estado:
+
+```text
+ESTRATEGIA REDEFINIDA E IMPLEMENTADA
+```
+
+---
+
+## 24. Recuperación End-to-End — alcanzada con Epson L365
+
+Se validó el flujo completo con:
+
+```text
+Epson encendida
+Ethernet desconectado
+Wi-Fi inicial = Claro640
+SSID objetivo = suarezcores
+```
+
+Resultado:
+
+```text
+Claro640
+   |
+   v
+suarezcores
+   |
+   v
+NETWORK_SWITCH_VERIFIED
+   |
+   v
+RECOVERY_CONFIRMED_FAST
+   |
+   v
+CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+La recuperación fue confirmada aproximadamente a los:
+
+```text
+1496 ms
+```
+
+y la página física fue impresa correctamente.
+
+Estado:
+
+```text
+ALCANZADO EN ALPHA
+```
+
+Alcance:
+
+```text
+Windows
+Epson L365
+TCP 9100
+entorno probado
+```
+
+---
+
+## 25. No intervención contextual — alcanzada
+
+Se validó que PrintSwitch pueda tener recuperación habilitada y, aun así,
+decidir no intervenir.
+
+Caso representativo:
+
+```text
+Jabber activo
+Ethernet disponible
+Wi-Fi = Claro640
+Epson apagada
+RecoveryEnabled = True
+```
+
+Resultado:
+
+```text
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+Estado:
+
+```text
+ALCANZADO EN ALPHA
+```
+
+---
+
+## 26. Happy path integrado — alcanzado
+
+Se validó el escenario donde:
+
+```text
+Epson encendida
+Ethernet desconectado
+Wi-Fi = suarezcores
+RecoveryEnabled = True
+```
+
+El trabajo atravesó el orquestador y produjo:
+
+```text
+UNIQUE_REACHABLE_PATH
+EXISTING_REACHABLE_PATH
+NO_ACTION
+```
+
+sin realizar cambios de red.
+
+Estado:
+
+```text
+ALCANZADO EN ALPHA
+```
+
+---
+
+## 27. Orquestación operativa — alcanzada
+
+La recuperación dejó de estar distribuida entre lógica experimental y lógica
+duplicada dentro de `QueueWatcher`.
+
+El flujo vigente es:
+
+```text
+QueueWatcher
+    |
+    v
+PrintRecoveryOrchestrator
+```
+
+El orquestador coordina:
+
+```text
+InterfacePathAnalyzer
+RouteAnalyzer
+ConnectivityPolicy
+WiFiCandidateEvaluator
+SwitchDecision
+NetworkManager
+RecoveryValidator
+ConnectivityAnalyzer
+```
+
+`ContextualRecoveryTest.ps1` queda como antecedente experimental.
+
+Estado:
+
+```text
+ALCANZADO EN ALPHA
+```
+
+---
+
+## 28. Estado conciliado de objetivos históricos
+
+| Objetivo | Estado al cierre Alpha |
+|---|---|
+| Detectar trabajos de impresión | Alcanzado |
+| Observar cola en tiempo real | Alcanzado |
+| Analizar conectividad | Alcanzado |
+| Distinguir Ethernet y Wi-Fi | Alcanzado |
+| Analizar caminos por interfaz | Alcanzado |
+| Analizar ruta efectiva | Alcanzado |
+| Detectar múltiples caminos | Alcanzado |
+| Preservar Ethernet | Alcanzado |
+| Aplicar política de intervención mínima | Alcanzado |
+| Evaluar SSID objetivo | Alcanzado |
+| Detectar perfil Wi-Fi conocido | Alcanzado |
+| Considerar visibilidad Wi-Fi temporal | Alcanzado |
+| Decidir cambio de Wi-Fi | Alcanzado |
+| Ejecutar cambio autorizado | Alcanzado |
+| Verificar cambio de SSID | Alcanzado |
+| Validar recuperación TCP después del cambio | Alcanzado |
+| Integrar recuperación en QueueWatcher | Alcanzado |
+| Imprimir físicamente después de recuperación | Alcanzado |
+| No intervenir si ya existe camino válido | Alcanzado |
+| No cambiar red por impresora apagada | Alcanzado |
+| Descubrir impresora automáticamente | Pendiente |
+| Soportar múltiples impresoras | Pendiente |
+| Validar otra marca de impresora | Pendiente |
+| Retornar automáticamente al estado de red previo | Pendiente |
+| Soportar protocolos distintos de TCP 9100 | Pendiente |
+| Crear interfaz gráfica | Pendiente |
+| Implementar versión Android | Pendiente |
+
+---
+
+## 29. Lección del Roadmap Alpha
+
+El Alpha mostró que la dificultad principal no era:
+
+```text
+cómo cambiar de Wi-Fi
+```
+
+sino:
+
+```text
+cómo decidir correctamente
+si debe cambiarse
+```
+
+El foco futuro debe continuar priorizando:
+
+```text
+conocimiento del contexto
++
+intervención mínima
++
+validación posterior
+```
+
+antes que agregar automatizaciones más agresivas.
+
+---
+
+# Roadmap Post-Alpha
+
+## 30. Criterio para la siguiente etapa
+
+El siguiente ciclo no debe comenzar agregando características indiscriminadas.
+
+La prioridad es convertir el Alpha funcional en una base reproducible y
+generalizable.
+
+Secuencia recomendada:
+
+```text
+cerrar documentación
+        |
+        v
+crear regresiones
+        |
+        v
+validar segundo hardware
+        |
+        v
+generalizar identidad
+        |
+        v
+generalizar protocolos
+        |
+        v
+ampliar automatización
+```
+
+---
+
+## 31. Consolidación documental inmediata
+
+Objetivo:
+
+```text
+cerrar formalmente el estado Alpha
+```
+
+Tareas:
+
+```text
+actualizar documentación arquitectónica
+actualizar conocimiento
+actualizar pruebas experimentales
+conciliar Roadmap
+actualizar metodología
+crear checkpoint Alpha
+actualizar índice MkDocs
+validar build
+```
+
+Criterio de cierre:
+
+```text
+documentación reproducible
+sin contradicciones no señalizadas
+build MkDocs correcto
+Git limpio después del commit
+```
+
+Prioridad:
+
+```text
+INMEDIATA
+```
+
+---
+
+## 32. Batería de regresión Alpha
+
+Crear un conjunto de pruebas repetibles para escenarios ya validados.
+
+Mínimo:
+
+```text
+1. Ethernet único y Epson accesible
+2. Ethernet + Wi-Fi ambos accesibles
+3. Epson apagada con camino Ethernet candidato
+4. sin Ethernet + Wi-Fi incorrecto
+5. Wi-Fi ya correcto
+6. SSID objetivo no visible
+7. recuperación en dry-run
+8. recuperación autorizada
+9. preservación Ethernet
+```
+
+Objetivo:
+
+```text
+detectar regresiones antes de agregar nuevas funciones
+```
+
+Prioridad:
+
+```text
+ALTA
+```
+
+---
+
+## 33. Segunda impresora / hardware diferente
+
+La primera expansión importante debe ser validar el modelo con una segunda
+impresora.
+
+Preferentemente:
+
+```text
+otro fabricante
+```
+
+por ejemplo:
+
+```text
+HP
+```
+
+Objetivo:
+
+```text
+separar conocimiento realmente genérico
+de comportamiento específico Epson
+```
+
+Se debe relevar:
+
+```text
+tipo de puerto
+protocolo
+descubrimiento
+dirección IP
+driver
+estado de cola
+respuesta ante impresora apagada
+```
+
+Prioridad:
+
+```text
+ALTA
+```
+
+---
+
+## 34. PrinterDiscovery
+
+Actualmente la identidad operativa de la Epson está configurada explícitamente.
+
+Evolución propuesta:
+
+```text
+PrinterDiscovery
+```
+
+Responsabilidades posibles:
+
+```text
+enumerar impresoras instaladas
+identificar puerto
+identificar IP
+detectar protocolo
+detectar hostname
+obtener propiedades de Windows
+asociar impresora con configuración PrintSwitch
+```
+
+El descubrimiento no debe depender exclusivamente de una IP fija.
+
+Prioridad:
+
+```text
+ALTA DESPUÉS DE SEGUNDO HARDWARE
+```
+
+---
+
+## 35. Identidad dinámica de impresora
+
+La configuración actual usa:
+
+```text
+IP conocida
+SSID conocido
+```
+
+La evolución debe permitir identificar una impresora por una combinación de:
+
+```text
+nombre de cola
+hostname
+MAC cuando sea observable
+IP
+puerto
+protocolo
+identidad del driver
+```
+
+Objetivo:
+
+```text
+reducir dependencia de configuraciones manuales rígidas
+```
+
+Debe contemplarse DHCP dinámico.
+
+Prioridad:
+
+```text
+MEDIA-ALTA
+```
+
+---
+
+## 36. Estrategias por protocolo
+
+El Alpha fue validado principalmente con:
+
+```text
+RAW TCP 9100
+```
+
+La evolución debe abstraer la comprobación de servicio.
+
+Modelo futuro:
+
+```text
+PrinterReachabilityStrategy
+        |
+        +--> Raw9100
+        +--> IPP
+        +--> LPR
+        +--> WSD
+        +--> otras estrategias
+```
+
+Cada estrategia debe definir su propia evidencia positiva de alcanzabilidad.
+
+Prioridad:
+
+```text
+MEDIA
+```
+
+---
+
+## 37. Retorno a la conectividad previa
+
+El Alpha puede cambiar:
+
+```text
+Claro640 -> suarezcores
+```
+
+pero todavía no implementa un retorno automático general.
+
+Una futura estrategia debe considerar:
+
+```text
+SSID previo
+estado previo
+trabajo finalizado
+conectividad de Internet
+otras aplicaciones
+tiempo de gracia
+```
+
+No debe implementarse simplemente como:
+
+```text
+imprimió
+   |
+   v
+volver inmediatamente
+```
+
+La restauración debe ser contextual y validada.
+
+Prioridad:
+
+```text
+MEDIA
+```
+
+---
+
+## 38. Múltiples impresoras
+
+El orquestador ya acepta:
+
+```text
+PrinterName
+TargetIP
+TargetSSID
+```
+
+lo que prepara parte de la arquitectura.
+
+Sin embargo, el soporte multi-impresora requerirá:
+
+```text
+configuración por impresora
+política por dispositivo
+trabajos simultáneos
+destinos en diferentes redes
+prioridades
+conflictos entre recuperaciones
+```
+
+Ejemplo de conflicto futuro:
+
+```text
+Printer A requiere SSID A
+Printer B requiere SSID B
+```
+
+La solución debe evitar oscilaciones de red.
+
+Prioridad:
+
+```text
+MEDIA
+```
+
+---
+
+## 39. Evolución hacia producto
+
+La interfaz gráfica no es prioridad inmediata.
+
+Debe aparecer después de estabilizar:
+
+```text
+motor de decisión
+configuración
+descubrimiento
+regresiones
+logging
+```
+
+Una futura UI podría mostrar:
+
+```text
+impresoras observadas
+estado
+red requerida
+camino actual
+última recuperación
+acciones disponibles
+historial
+```
+
+El core debe continuar funcionando independientemente de la UI.
+
+Prioridad:
+
+```text
+POSTERIOR
+```
+
+---
+
+## 40. Línea paralela Android
+
+La investigación Android continúa siendo una posible evolución separada.
+
+Problema observado:
+
+```text
+Epson iPrint
++
+red local sin Internet
+```
+
+puede producir una experiencia distinta a Windows.
+
+Una versión Android requerirá estudiar:
+
+```text
+selección de Wi-Fi
+restricciones del sistema operativo
+permisos
+APIs de conectividad
+mantenimiento de Internet
+descubrimiento local
+impresión desde aplicaciones
+```
+
+No debe asumirse que la arquitectura Windows puede trasladarse directamente.
+
+Prioridad:
+
+```text
+PARALELA / EXPERIMENTAL
+```
+
+---
+
+## 41. Criterio aproximado para una etapa Pre-Beta
+
+PrintSwitch no debería considerarse Pre-Beta sólo porque el Alpha funciona con
+la Epson L365.
+
+Un posible criterio mínimo sería:
+
+```text
+Alpha estable
++
+regresiones automatizadas
++
+segunda impresora validada
++
+al menos dos fabricantes
++
+identidad menos dependiente de IP fija
++
+abstracción básica de protocolos
++
+configuración multi-impresora inicial
++
+logging consolidado
++
+documentación reproducible
+```
+
+La denominación de etapa deberá depender de evidencia real, no de calendario.
+
+---
+
+## 42. Dirección Post-Alpha
+
+La dirección inmediata del proyecto es:
+
+```text
+menos supuestos
+más descubrimiento
+
+menos configuración rígida
+más identidad contextual
+
+menos decisiones basadas en SSID
+más decisiones basadas en alcanzabilidad
+
+menos automatización ciega
+más intervención mínima verificable
+```
+
+El objetivo Post-Alpha no es que PrintSwitch cambie redes con mayor frecuencia.
+
+El objetivo es que pueda decidir correctamente en una variedad mayor de
+entornos y dispositivos.

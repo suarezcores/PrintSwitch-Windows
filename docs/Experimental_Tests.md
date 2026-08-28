@@ -1,4 +1,4 @@
-# PrintSwitch — Registro de pruebas experimentales
+﻿# PrintSwitch — Registro de pruebas experimentales
 
 ## 1. Objetivo
 
@@ -3261,3 +3261,811 @@ validar end-to-end
 ```
 
 La mejora obtenida fue sustancial sin alterar el comportamiento funcional del core.
+
+---
+
+> **Nota de evolución documental — fase de integración Alpha (27/08/2026)**
+>
+> Las pruebas anteriores corresponden a etapas experimentales previas del
+> proyecto.
+>
+> Se conservan porque documentan hipótesis, fallos, validaciones parciales y
+> decisiones que dieron origen a la arquitectura actual.
+>
+> A partir de este punto se registran las pruebas de integración y validación
+> realizadas para cerrar el Alpha funcional.
+
+# 26. Validación de Route / Interface Awareness
+
+## Objetivo
+
+Validar que PrintSwitch pueda distinguir el SSID actual de los caminos
+reales disponibles hacia la impresora.
+
+El escenario probado fue:
+
+```text
+Wi-Fi = Claro640
+Ethernet = 192.168.1.109
+Epson = 192.168.1.108
+```
+
+La impresora estaba encendida.
+
+Resultado esperado:
+
+```text
+detectar que Ethernet ya ofrece un camino válido
+evitar cambio de Wi-Fi
+```
+
+Resultado observado:
+
+```text
+UNIQUE_REACHABLE_PATH
+EXISTING_REACHABLE_PATH
+NO_ACTION
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+La impresión pudo utilizar el camino existente por Ethernet.
+
+Conclusión:
+
+```text
+SSID actual != único criterio de alcanzabilidad
+```
+
+---
+
+# 27. Validación de múltiples caminos alcanzables
+
+## Objetivo
+
+Validar el comportamiento cuando Ethernet y Wi-Fi pueden alcanzar
+simultáneamente la impresora.
+
+Configuración:
+
+```text
+Ethernet = 192.168.1.109
+Wi-Fi    = 192.168.1.224
+Epson    = 192.168.1.108
+```
+
+Ambas interfaces pertenecían a:
+
+```text
+192.168.1.0/24
+```
+
+y ambas pudieron alcanzar:
+
+```text
+TCP 9100
+```
+
+Resultado:
+
+```text
+OverlapDetected = True
+ReachablePathCount > 1
+MULTIPLE_REACHABLE_PATHS
+```
+
+El orquestador no intentó modificar ninguna red.
+
+Conclusión:
+
+```text
+múltiples caminos válidos
+        |
+        v
+NO_ACTION
+```
+
+---
+
+# 28. Validación de preservación Ethernet
+
+## Objetivo
+
+Comprobar que la lógica de recuperación Wi-Fi no modifique el estado de las
+interfaces Ethernet.
+
+Se creó:
+
+```text
+scripts\Test-EthernetPreservation.ps1
+```
+
+con pruebas de simulación sobre distintos estados iniciales y finales.
+
+Resultado:
+
+```text
+4/4 PASS
+```
+
+La semántica validada fue:
+
+```text
+si existía Ethernet activo antes
+    debe continuar activo después
+```
+
+Los campos utilizados son:
+
+```text
+EthernetPresentBefore
+EthernetPresentAfter
+EthernetPreserved
+```
+
+Durante esta validación se corrigió una condición donde
+`EthernetPreserved` podía permanecer en `False` por inicialización aun cuando
+el estado Ethernet había sido correctamente conservado.
+
+---
+
+# 29. Epson apagada con camino Ethernet existente
+
+## Objetivo
+
+Determinar si PrintSwitch intentaría cambiar de Wi-Fi cuando la impresora no
+responde pero existe una interfaz local coherente con la red de destino.
+
+Condiciones:
+
+```text
+Epson = apagada
+Ethernet = activo
+Wi-Fi = Claro640
+SSID objetivo = suarezcores
+```
+
+Se ejecutaron trabajos reales de impresión.
+
+Windows mostró estados como:
+
+```text
+Error | Imprimiendo
+```
+
+y también se observaron mensajes del monitor Epson.
+
+`InterfacePathAnalyzer` encontró una interfaz candidata dentro de:
+
+```text
+192.168.1.0/24
+```
+
+pero:
+
+```text
+TCP 9100 = no alcanzable
+```
+
+Clasificación:
+
+```text
+CANDIDATE_PATHS_UNREACHABLE
+```
+
+Resultado final del orquestador:
+
+```text
+FinalClassification = EXISTING_PATH_PRINTER_UNREACHABLE
+SwitchDecision      = NO_SWITCH_PRINTER_UNREACHABLE
+SwitchAuthorized    = False
+SwitchExecuted      = False
+```
+
+El Wi-Fi permaneció en:
+
+```text
+Claro640
+```
+
+Conclusión:
+
+```text
+impresora apagada
+!=
+motivo suficiente para cambiar de Wi-Fi
+```
+
+---
+
+# 30. Prueba de no interferencia durante videoconferencia Jabber
+
+## Objetivo
+
+Validar que PrintSwitch pueda permanecer inactivo frente a una recuperación
+no justificada mientras otra aplicación utiliza la conectividad disponible.
+
+Condiciones:
+
+```text
+Jabber = videoconferencia activa
+Ethernet = disponible
+Wi-Fi = Claro640
+Epson = apagada
+RecoveryEnabled = True
+```
+
+Se envió un trabajo real de impresión.
+
+PrintSwitch detectó el trabajo y ejecutó el análisis contextual.
+
+Resultado:
+
+```text
+FinalClassification = EXISTING_PATH_PRINTER_UNREACHABLE
+SwitchDecision      = NO_SWITCH_PRINTER_UNREACHABLE
+SwitchAuthorized    = False
+SwitchExecuted      = False
+```
+
+No se modificó la conectividad durante la videoconferencia.
+
+Conclusión experimental:
+
+```text
+RecoveryEnabled = permiso
+RecoveryEnabled != cambio obligatorio
+```
+
+La prueba se considera una validación de:
+
+```text
+Non-interference / contextual preservation
+```
+
+---
+
+# 31. Promoción de PrintRecoveryOrchestrator a componente operativo
+
+## Objetivo
+
+Centralizar la política de recuperación en un único componente operativo.
+
+Se creó:
+
+```text
+src\PrintRecoveryOrchestrator.ps1
+```
+
+El orquestador integra:
+
+```text
+InterfacePathAnalyzer
+RouteAnalyzer
+ConnectivityPolicy
+WiFiCandidateEvaluator
+SwitchDecision
+NetworkManager
+RecoveryValidator
+ConnectivityAnalyzer
+```
+
+Su comportamiento por defecto es:
+
+```text
+DRY-RUN
+```
+
+y con:
+
+```text
+-Execute
+```
+
+puede realizar acciones reales.
+
+Se normalizó además el contrato de salida para todas las ramas.
+
+Campos comunes:
+
+```text
+Component
+Version
+PrinterName
+TargetIP
+TargetSSID
+```
+
+También se incorporó la posibilidad de pasar explícitamente:
+
+```text
+-TargetIP
+-TargetSSID
+```
+
+manteniendo la resolución desde configuración como comportamiento habitual.
+
+---
+
+# 32. Integración de QueueWatcher con el orquestador
+
+## Objetivo
+
+Eliminar la lógica de recuperación duplicada dentro de `QueueWatcher.ps1`.
+
+Antes existía una secuencia local que invocaba directamente componentes de
+análisis y cambio de red.
+
+La integración final quedó:
+
+```text
+QueueWatcher
+    |
+    v
+PrintRecoveryOrchestrator
+```
+
+`QueueWatcher` construye:
+
+```text
+PrinterName
+TargetIP
+TargetSSID
+ConfigPath
+```
+
+y cuando se inicia con:
+
+```text
+-EnableRecovery
+```
+
+agrega:
+
+```text
+Execute = True
+```
+
+La lógica anterior duplicada fue eliminada.
+
+También fueron retiradas referencias internas ya innecesarias a:
+
+```text
+ConnectivityAnalyzerPath
+NetworkManagerPath
+Invoke-ConnectivityAnalysis
+Show-ConnectivitySummary
+```
+
+El parser de PowerShell quedó limpio después de la refactorización.
+
+---
+
+# 33. Reintentos de visibilidad Wi-Fi
+
+## Objetivo
+
+Reducir falsos negativos cuando el SSID objetivo no aparece en una única
+consulta de redes.
+
+Se observó que:
+
+```text
+netsh wlan show networks
+```
+
+puede producir resultados transitorios.
+
+Se incorporaron reintentos en:
+
+```text
+WiFiCandidateEvaluator.ps1
+NetworkManager.ps1
+```
+
+Resultado esperado:
+
+```text
+una ausencia momentánea
+no debe clasificarse inmediatamente
+como ausencia definitiva
+```
+
+Esta lógica fue utilizada durante las pruebas End-to-End posteriores.
+
+---
+
+# 34. Validación post-switch con RecoveryValidator
+
+## Objetivo
+
+Evitar considerar exitosa una recuperación únicamente porque Windows informa
+que el SSID cambió.
+
+Se creó:
+
+```text
+src\RecoveryValidator.ps1
+```
+
+Después de un cambio autorizado, el componente realiza polling sobre:
+
+```text
+ruta hacia TargetIP
+TCP 9100
+```
+
+Resultado positivo:
+
+```text
+RecoveryConfirmed = True
+```
+
+Una clasificación observada es:
+
+```text
+RECOVERY_CONFIRMED_FAST
+```
+
+Esta validación permite separar:
+
+```text
+NETWORK_SWITCH_VERIFIED
+```
+
+de:
+
+```text
+recuperación real del servicio de impresión
+```
+
+---
+
+# 35. Primer End-to-End Contextual Recovery completo
+
+## Objetivo
+
+Validar por primera vez el flujo completo:
+
+```text
+trabajo real
++
+detección
++
+análisis
++
+decisión
++
+cambio Wi-Fi
++
+validación
++
+impresión física
+```
+
+## Estado inicial
+
+```text
+Epson = encendida
+Ethernet = desconectado
+Wi-Fi inicial = Claro640
+SSID objetivo = suarezcores
+Printer IP = 192.168.1.108
+```
+
+Se inició:
+
+```text
+QueueWatcher.ps1 -EnableRecovery
+```
+
+y se envió desde Notepad un trabajo pequeño.
+
+El trabajo detectado fue:
+
+```text
+JobId = 7
+```
+
+## Secuencia observada
+
+`InterfacePathAnalyzer` determinó que no existía un camino local alcanzable
+hacia la impresora.
+
+`RouteAnalyzer` observó:
+
+```text
+Wi-Fi = Claro640
+IPv4 = 192.168.100.7
+Gateway = 192.168.100.1
+Target = no alcanzable
+```
+
+`ConnectivityPolicy` produjo:
+
+```text
+EVALUATE_WIFI_RECOVERY
+```
+
+`WiFiCandidateEvaluator` observó:
+
+```text
+CurrentSSID  = Claro640
+TargetSSID   = suarezcores
+ProfileKnown = True
+TargetVisible = True
+```
+
+Clasificación:
+
+```text
+WIFI_SWITCH_CANDIDATE_AVAILABLE
+```
+
+`SwitchDecision` produjo:
+
+```text
+SWITCH_WIFI_FOR_PRINTER
+```
+
+`NetworkManager` registró:
+
+```text
+InitialSSID      = Claro640
+TargetSSID       = suarezcores
+FinalSSID        = suarezcores
+SwitchAuthorized = True
+SwitchRequested  = True
+CommandIssued    = True
+SwitchVerified   = True
+ExecutionResult  = NETWORK_SWITCH_VERIFIED
+```
+
+`RecoveryValidator` comenzó inmediatamente después del cambio.
+
+En las primeras comprobaciones existía ruta pero todavía no existía respuesta
+TCP.
+
+Aproximadamente a los:
+
+```text
+1488 ms
+```
+
+TCP 9100 respondió.
+
+Resultado:
+
+```text
+RECOVERY_CONFIRMED_FAST
+RecoveryConfirmed = True
+RecoveryElapsedMs = 1496
+```
+
+`ConnectivityAnalyzer` observó después:
+
+```text
+SSID = suarezcores
+Ping = OK
+TCP 9100 = OK
+HTTP 80 = OK
+Classification = PRINTER_REACHABLE
+```
+
+`RouteAnalyzer` confirmó:
+
+```text
+Wi-Fi = 192.168.1.224
+TARGET_REACHABLE_VIA_WIFI
+```
+
+Resultado final:
+
+```text
+NetworkSwitchVerified = True
+ConnectivityAfter     = PRINTER_REACHABLE
+RouteAfter            = TARGET_REACHABLE_VIA_WIFI
+RecoverySucceeded     = True
+FinalClassification   = CONTEXTUAL_RECOVERY_SUCCESS
+RecoveryValidation    = RECOVERY_CONFIRMED_FAST
+RecoveryConfirmed     = True
+SwitchAuthorized      = True
+SwitchExecuted        = True
+```
+
+## Validación física
+
+La página fue impresa correctamente.
+
+Resultado experimental:
+
+```text
+PASS
+```
+
+Este ensayo constituye:
+
+```text
+PrintSwitch Alpha
+primer End-to-End Contextual Recovery exitoso
+```
+
+---
+
+# 36. Regresión del happy path después del End-to-End
+
+## Objetivo
+
+Confirmar que la integración del orquestador no afecte el caso donde la
+impresora ya es alcanzable.
+
+Condiciones:
+
+```text
+Epson = encendida
+Ethernet = desconectado
+Wi-Fi = suarezcores
+RecoveryEnabled = True
+```
+
+Se envió un nuevo trabajo.
+
+Trabajo detectado:
+
+```text
+JobId = 8
+```
+
+`InterfacePathAnalyzer` observó:
+
+```text
+Wi-Fi = 192.168.1.224
+Target = 192.168.1.108:9100
+Reachable = True
+```
+
+Clasificación:
+
+```text
+UNIQUE_REACHABLE_PATH
+```
+
+Resultado del orquestador:
+
+```text
+FinalClassification = EXISTING_REACHABLE_PATH
+SwitchDecision      = NO_ACTION
+SwitchAuthorized    = False
+SwitchExecuted      = False
+```
+
+El trabajo fue impreso y desapareció normalmente de la cola.
+
+Resultado:
+
+```text
+PASS
+```
+
+Conclusión:
+
+```text
+el mismo orquestador operativo
+también gobierna el happy path
+sin introducir cambios innecesarios
+```
+
+---
+
+# 37. Matriz consolidada de escenarios Alpha
+
+| Escenario | Camino disponible | Impresora | Cambio Wi-Fi | Resultado |
+|---|---|---|---|---|
+| Ethernet y Wi-Fi alcanzables | Sí, múltiples | Encendida | No | PASS |
+| Sólo Ethernet alcanzable | Sí, único | Encendida | No | PASS |
+| Ethernet candidato, Epson apagada | Candidato no alcanzable | Apagada | No | PASS |
+| Jabber activo + Epson apagada | Candidato no alcanzable | Apagada | No | PASS |
+| Sin Ethernet + Wi-Fi incorrecto | No | Encendida | Sí | PASS |
+| Wi-Fi ya correcto | Sí, único | Encendida | No | PASS |
+
+La matriz confirma una propiedad central:
+
+```text
+PrintSwitch no cambia Wi-Fi
+por el simple hecho de existir un trabajo
+```
+
+El cambio sólo ocurre cuando el contexto lo justifica.
+
+---
+
+# 38. Cierre de integración Alpha
+
+Después de las pruebas funcionales se realizó limpieza de integración.
+
+Se verificó que `QueueWatcher.ps1` no conservara referencias activas a:
+
+```text
+ContextualRecoveryTest
+DRY-RUN CONTEXTUAL
+EJECUCION CONTEXTUAL
+legacy
+TODO
+FIXME
+```
+
+La búsqueda no encontró coincidencias relevantes.
+
+El banner operativo quedó diferenciado entre:
+
+```text
+Modo: DRY-RUN
+No se modificara ninguna red Wi-Fi.
+```
+
+y:
+
+```text
+Modo: RECOVERY AUTOMATICO HABILITADO
+Cambios de Wi-Fi permitidos.
+```
+
+El banner del orquestador fue actualizado a:
+
+```text
+EJECUCION OPERATIVA
+```
+
+La integración fue validada y sincronizada en `main`.
+
+Commit de referencia del cierre de integración:
+
+```text
+8526d3a
+```
+
+---
+
+# 39. Conclusión experimental del Alpha
+
+El conjunto de pruebas permite afirmar, dentro del entorno validado, que
+PrintSwitch puede:
+
+```text
+detectar trabajos reales
+analizar interfaces
+analizar rutas
+distinguir caminos candidatos y alcanzables
+preservar Ethernet
+evitar cambios innecesarios
+evaluar una red alternativa
+autorizar un cambio contextual
+cambiar de Wi-Fi
+verificar el cambio
+esperar recuperación real
+permitir la impresión física
+```
+
+También se validó que:
+
+```text
+habilitar recuperación
+!=
+forzar intervención
+```
+
+y que un fallo del dispositivo:
+
+```text
+impresora apagada
+```
+
+no debe confundirse automáticamente con:
+
+```text
+problema de red
+```
+
+El Alpha queda experimentalmente cerrado con un flujo End-to-End funcional y
+con evidencia positiva tanto de intervención correcta como de no intervención
+correcta.
