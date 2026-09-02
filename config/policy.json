@@ -1,0 +1,11 @@
+{
+  "version": "0.1",
+  "queues": {
+    "L365 Series(Red)": {
+      "wifiRecovery": {
+        "enabled": true,
+        "requiredSSID": "suarezcores"
+      }
+    }
+  }
+}

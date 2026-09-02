@@ -1,311 +1,107 @@
 param (
-    [switch]$IncludeVirtual
+    [switch]$IncludeVirtual,
+
+    [string]$OutputPath
 )
 
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - PrinterDiscovery v0.3
+# PrintSwitch - PrinterDiscovery v0.4
 #
-# Descubre impresoras instaladas y genera candidatos
-# estructurados para PrintSwitch.
+# Responsabilidad:
+# - Enumerar colas instaladas en Windows.
+# - Obtener contexto general de cada cola.
+# - Filtrar impresoras virtuales opcionalmente.
+# - Delegar la resolucion del endpoint a
+#   PrinterEndpointResolver.
+# - Construir QueueContext normalizado.
+# - Opcionalmente persistir el discovery como JSON.
 #
-# Estados:
-# - DESTINATION_RESOLVED
-# - DESTINATION_UNKNOWN
-# - VIRTUAL_PRINTER
+# NO:
+# - modifica impresoras
+# - modifica puertos
+# - modifica red
+# - decide politicas de recovery
+# - intenta cambiar Wi-Fi
 #
-# No modifica configuracion, red ni impresoras.
+# El JSON generado es discovery/cache.
+# NO constituye policy de PrintSwitch.
 # ============================================================
 
 Write-Host ""
-Write-Host "PrintSwitch - PrinterDiscovery v0.3" `
+Write-Host "PrintSwitch - PrinterDiscovery v0.4" `
     -ForegroundColor Cyan
 
-Write-Host "Modo: DESCUBRIMIENTO NO INTRUSIVO" `
+Write-Host "Modo: DISCOVERY NO INTRUSIVO" `
     -ForegroundColor Yellow
 
 Write-Host ""
 
 # ============================================================
-# FUNCION: NORMALIZAR MAC
+# RUTAS
 # ============================================================
 
-function Format-MacAddress {
+$PrinterEndpointResolverPath = Join-Path `
+    $PSScriptRoot `
+    "PrinterEndpointResolver.ps1"
 
-    param (
-        [string]$MacAddress
-    )
+if (-not (Test-Path -LiteralPath $PrinterEndpointResolverPath)) {
 
-    if ([string]::IsNullOrWhiteSpace($MacAddress)) {
-        return $null
-    }
+    Write-Host `
+        "ERROR: PrinterEndpointResolver no encontrado." `
+        -ForegroundColor Red
 
-    $Clean = (
-        $MacAddress -replace '[^0-9A-Fa-f]', ''
-    ).ToUpper()
+    Write-Host $PrinterEndpointResolverPath
 
-    if ($Clean.Length -ne 12) {
-        return $MacAddress
-    }
+    return
+}
 
-    $Pairs = @()
+try {
 
-    for ($Index = 0; $Index -lt 12; $Index += 2) {
-        $Pairs += $Clean.Substring($Index, 2)
-    }
+    . $PrinterEndpointResolverPath
+}
+catch {
 
-    return ($Pairs -join ":")
+    Write-Host `
+        "ERROR cargando PrinterEndpointResolver." `
+        -ForegroundColor Red
+
+    Write-Host $_.Exception.Message
+
+    return
 }
 
 # ============================================================
-# FUNCION: STANDARD TCP/IP
+# FUNCION: OBTENER PROPIEDAD DE FORMA SEGURA
 # ============================================================
 
-function Resolve-StandardTcpIpPort {
+function Get-PrintSwitchPropertyValue {
 
     param (
-        $PrinterPort
+        [Parameter(Mandatory)]
+        $Object,
+
+        [Parameter(Mandatory)]
+        [string]$PropertyName
     )
 
-    if ($null -eq $PrinterPort) {
+    if ($null -eq $Object) {
         return $null
     }
 
-    if (
-        $PrinterPort.CimClass.CimClassName `
-            -ne "MSFT_TcpIpPrinterPort"
-    ) {
+    $Property =
+        $Object.PSObject.Properties[$PropertyName]
+
+    if ($null -eq $Property) {
         return $null
     }
 
-    return [PSCustomObject]@{
-
-        PortType =
-            "StandardTcpIp"
-
-        Resolver =
-            "StandardTcpIp"
-
-        Destination =
-            [string]$PrinterPort.PrinterHostAddress
-
-        Protocol =
-            [string]$PrinterPort.Protocol
-
-        PortNumber =
-            $PrinterPort.PortNumber
-
-        MacAddress =
-            $null
-
-        SnmpEnabled =
-            $PrinterPort.SNMPEnabled
-    }
+    return $Property.Value
 }
 
 # ============================================================
-# FUNCION: EPSONNET
-# ============================================================
-
-function Resolve-EpsonNetPort {
-
-    param (
-        [string]$PortName
-    )
-
-    if ([string]::IsNullOrWhiteSpace($PortName)) {
-        return $null
-    }
-
-    $RegistryPath = Join-Path `
-        "HKLM:\SYSTEM\CurrentControlSet\Control\Print\Monitors\EpsonNet Print Port\Ports" `
-        $PortName
-
-    if (-not (Test-Path $RegistryPath)) {
-        return $null
-    }
-
-    try {
-
-        $EpsonConfig = Get-ItemProperty `
-            $RegistryPath `
-            -ErrorAction Stop
-    }
-    catch {
-
-        return $null
-    }
-
-    return [PSCustomObject]@{
-
-        PortType =
-            "VendorSpecific"
-
-        Resolver =
-            "EpsonNetRegistry"
-
-        Destination =
-            [string]$EpsonConfig.IpAddress
-
-        Protocol =
-            [string]$EpsonConfig.ProtocolID
-
-        PortNumber =
-            $null
-
-        MacAddress =
-            Format-MacAddress `
-                -MacAddress ([string]$EpsonConfig.MacAddress)
-
-        SnmpEnabled =
-            $null
-    }
-}
-
-# ============================================================
-# FUNCION: RESOLVER DESTINO
-# ============================================================
-
-function Resolve-PrinterDestination {
-
-    param (
-        [string]$PortName,
-        $PrinterPort
-    )
-
-    $PortMonitor = $null
-    $PortDescription = $null
-
-    if ($null -ne $PrinterPort) {
-
-        $PortMonitor =
-            [string]$PrinterPort.PortMonitor
-
-        $PortDescription =
-            [string]$PrinterPort.Description
-    }
-
-    # --------------------------------------------------------
-    # Standard TCP/IP
-    # --------------------------------------------------------
-
-    $StandardResult = Resolve-StandardTcpIpPort `
-        -PrinterPort $PrinterPort
-
-    if ($null -ne $StandardResult) {
-
-        return [PSCustomObject]@{
-
-            PortType =
-                $StandardResult.PortType
-
-            PortMonitor =
-                $PortMonitor
-
-            PortDescription =
-                $PortDescription
-
-            Resolver =
-                $StandardResult.Resolver
-
-            Destination =
-                $StandardResult.Destination
-
-            Protocol =
-                $StandardResult.Protocol
-
-            PortNumber =
-                $StandardResult.PortNumber
-
-            MacAddress =
-                $StandardResult.MacAddress
-
-            SnmpEnabled =
-                $StandardResult.SnmpEnabled
-        }
-    }
-
-    # --------------------------------------------------------
-    # EpsonNet
-    # --------------------------------------------------------
-
-    if ($PortMonitor -eq "EpsonNet Print Port") {
-
-        $EpsonResult = Resolve-EpsonNetPort `
-            -PortName $PortName
-
-        if ($null -ne $EpsonResult) {
-
-            return [PSCustomObject]@{
-
-                PortType =
-                    $EpsonResult.PortType
-
-                PortMonitor =
-                    $PortMonitor
-
-                PortDescription =
-                    $PortDescription
-
-                Resolver =
-                    $EpsonResult.Resolver
-
-                Destination =
-                    $EpsonResult.Destination
-
-                Protocol =
-                    $EpsonResult.Protocol
-
-                PortNumber =
-                    $EpsonResult.PortNumber
-
-                MacAddress =
-                    $EpsonResult.MacAddress
-
-                SnmpEnabled =
-                    $EpsonResult.SnmpEnabled
-            }
-        }
-    }
-
-    # --------------------------------------------------------
-    # No resuelto
-    # --------------------------------------------------------
-
-    return [PSCustomObject]@{
-
-        PortType =
-            "Unknown"
-
-        PortMonitor =
-            $PortMonitor
-
-        PortDescription =
-            $PortDescription
-
-        Resolver =
-            "None"
-
-        Destination =
-            $null
-
-        Protocol =
-            $null
-
-        PortNumber =
-            $null
-
-        MacAddress =
-            $null
-
-        SnmpEnabled =
-            $null
-    }
-}
-
-# ============================================================
-# FUNCION: DETECTAR VIRTUAL
+# FUNCION: DETECTAR IMPRESORA VIRTUAL
 # ============================================================
 
 function Test-ProbablyVirtualPrinter {
@@ -348,11 +144,11 @@ function Test-ProbablyVirtualPrinter {
 }
 
 # ============================================================
-# 1. IMPRESORAS
+# 1. ENUMERAR COLAS WINDOWS
 # ============================================================
 
 Write-Host "========================================"
-Write-Host "1. IMPRESORAS"
+Write-Host "1. COLAS WINDOWS"
 Write-Host "========================================"
 
 try {
@@ -368,92 +164,86 @@ catch {
         "ERROR: no se pudo consultar Get-Printer." `
         -ForegroundColor Red
 
+    Write-Host $_.Exception.Message
+
     return
 }
 
-Write-Host "Cantidad detectada: $($PrinterList.Count)"
+Write-Host "Colas detectadas : $($PrinterList.Count)"
 
 # ============================================================
-# 2. WIN32_PRINTER
+# 2. CONTEXTO WIN32_PRINTER
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "2. WIN32_PRINTER"
+Write-Host "2. CONTEXTO WINDOWS"
 Write-Host "========================================"
 
 try {
 
     $CimPrinterList = @(
         Get-CimInstance `
-            Win32_Printer `
+            -ClassName Win32_Printer `
             -ErrorAction Stop
     )
+
+    Write-Host "Win32_Printer disponible : True"
 }
 catch {
 
-    Write-Host `
-        "ERROR: no se pudo consultar Win32_Printer." `
-        -ForegroundColor Red
+    $CimPrinterList = @()
 
-    return
+    Write-Host `
+        "Win32_Printer disponible : False" `
+        -ForegroundColor Yellow
+
+    Write-Host `
+        "Discovery continuara con Get-Printer."
 }
 
 # ============================================================
-# 3. PUERTOS
+# 3. CONSTRUIR QUEUE CONTEXT
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "3. PUERTOS"
+Write-Host "3. RESOLUCION DE ENDPOINTS"
 Write-Host "========================================"
-
-try {
-
-    $PrinterPorts = @(
-        Get-PrinterPort `
-            -ErrorAction Stop
-    )
-}
-catch {
-
-    Write-Host `
-        "ERROR: no se pudo consultar Get-PrinterPort." `
-        -ForegroundColor Red
-
-    return
-}
-
-Write-Host "Puertos detectados: $($PrinterPorts.Count)"
-
-# ============================================================
-# 4. GENERAR CANDIDATOS
-# ============================================================
 
 $DiscoveryResults = @()
 
 foreach ($Printer in $PrinterList) {
 
-    $CimMatch = $CimPrinterList |
-        Where-Object {
-            $_.Name -eq $Printer.Name
-        } |
-        Select-Object -First 1
+    $QueueName =
+        [string]$Printer.Name
 
-    $PortMatch = $PrinterPorts |
-        Where-Object {
-            $_.Name -eq $Printer.PortName
-        } |
-        Select-Object -First 1
+    $DriverName =
+        [string]$Printer.DriverName
 
-    $IsProbablyVirtual = Test-ProbablyVirtualPrinter `
-        -PrinterName $Printer.Name `
-        -DriverName $Printer.DriverName `
-        -PortName $Printer.PortName
+    $PortName =
+        [string]$Printer.PortName
 
-    $DestinationInfo = Resolve-PrinterDestination `
-        -PortName $Printer.PortName `
-        -PrinterPort $PortMatch
+    $IsProbablyVirtual =
+        Test-ProbablyVirtualPrinter `
+            -PrinterName $QueueName `
+            -DriverName $DriverName `
+            -PortName $PortName
+
+    if (
+        $IsProbablyVirtual -and
+        -not $IncludeVirtual
+    ) {
+
+        continue
+    }
+
+    $CimMatch =
+        $CimPrinterList |
+            Where-Object {
+                $_.Name -eq $QueueName
+            } |
+            Select-Object -First 1
 
     $IsDefault = $false
     $WorkOffline = $null
@@ -467,48 +257,70 @@ foreach ($Printer in $PrinterList) {
             $CimMatch.WorkOffline
     }
 
-    # --------------------------------------------------------
-    # DISCOVERY STATUS
-    # --------------------------------------------------------
+    $Endpoint = $null
+    $EndpointResolutionError = $null
+
+    if (-not $IsProbablyVirtual) {
+
+        try {
+
+            $Endpoint =
+                Resolve-PrintSwitchEndpoint `
+                    -PrinterName $QueueName
+        }
+        catch {
+
+            $EndpointResolutionError =
+                $_.Exception.Message
+        }
+    }
 
     if ($IsProbablyVirtual) {
 
         $DiscoveryStatus =
             "VIRTUAL_PRINTER"
+    }
+    elseif ($null -eq $Endpoint) {
 
+        $DiscoveryStatus =
+            "ENDPOINT_UNKNOWN"
     }
     elseif (
-        -not [string]::IsNullOrWhiteSpace(
-            [string]$DestinationInfo.Destination
-        )
+        (
+            Get-PrintSwitchPropertyValue `
+                -Object $Endpoint `
+                -PropertyName "OperationalMinimumSatisfied"
+        ) -eq $true
     ) {
 
         $DiscoveryStatus =
-            "DESTINATION_RESOLVED"
-
+            "ENDPOINT_RESOLVED"
     }
     else {
 
         $DiscoveryStatus =
-            "DESTINATION_UNKNOWN"
+            "ENDPOINT_PARTIAL"
     }
 
     $Candidate = [PSCustomObject]@{
 
         Component =
-            "PrinterDiscovery"
+            "QueueContext"
 
         Version =
-            "0.3"
+            "0.4"
 
         DiscoveryStatus =
             $DiscoveryStatus
 
-        Name =
-            $Printer.Name
+        QueueName =
+            $QueueName
 
         DriverName =
-            $Printer.DriverName
+            $DriverName
+
+        PortName =
+            $PortName
 
         Default =
             $IsDefault
@@ -522,56 +334,108 @@ foreach ($Printer in $PrinterList) {
         JobCount =
             $Printer.JobCount
 
-        PortName =
-            $Printer.PortName
-
-        PortType =
-            $DestinationInfo.PortType
-
-        PortMonitor =
-            $DestinationInfo.PortMonitor
-
-        PortDescription =
-            $DestinationInfo.PortDescription
-
-        Destination =
-            $DestinationInfo.Destination
-
-        Protocol =
-            $DestinationInfo.Protocol
-
-        PortNumber =
-            $DestinationInfo.PortNumber
-
-        MacAddress =
-            $DestinationInfo.MacAddress
-
-        Resolver =
-            $DestinationInfo.Resolver
-
-        SnmpEnabled =
-            $DestinationInfo.SnmpEnabled
-
         IsProbablyVirtual =
             $IsProbablyVirtual
+
+        TransportType =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "TransportType"
+            })
+
+        Protocol =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "Protocol"
+            })
+
+        ConfiguredDestination =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "ConfiguredDestination"
+            })
+
+        AddressType =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "AddressType"
+            })
+
+        TcpPort =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "TcpPort"
+            })
+
+        ServiceQueue =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "ServiceQueue"
+            })
+
+        ReachabilityStrategy =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "ReachabilityStrategy"
+            })
+
+        DiscoverySource =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "DiscoverySource"
+            })
+
+        Confidence =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "Confidence"
+            })
+
+        OperationalMinimumSatisfied =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "OperationalMinimumSatisfied"
+            })
+
+        MissingRequirements =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "MissingRequirements"
+            })
+
+        EndpointEvidence =
+            $(if ($null -ne $Endpoint) {
+                Get-PrintSwitchPropertyValue `
+                    -Object $Endpoint `
+                    -PropertyName "Evidence"
+            })
+
+        EndpointResolutionError =
+            $EndpointResolutionError
     }
 
-    if (
-        $IncludeVirtual -or
-        -not $IsProbablyVirtual
-    ) {
-
-        $DiscoveryResults += $Candidate
-    }
+    $DiscoveryResults +=
+        $Candidate
 }
 
 # ============================================================
-# 5. RESULTADOS
+# 4. RESULTADOS
 # ============================================================
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "5. CANDIDATOS DESCUBIERTOS"
+Write-Host "4. QUEUE CONTEXTS"
 Write-Host "========================================"
 
 foreach ($Item in $DiscoveryResults) {
@@ -579,77 +443,164 @@ foreach ($Item in $DiscoveryResults) {
     Write-Host ""
     Write-Host "----------------------------------------"
 
-    Write-Host "Nombre          : $($Item.Name)"
-    Write-Host "Estado discovery: $($Item.DiscoveryStatus)"
-    Write-Host "Predeterminada  : $($Item.Default)"
-    Write-Host "Driver          : $($Item.DriverName)"
-    Write-Host "Puerto          : $($Item.PortName)"
-    Write-Host "Tipo puerto     : $($Item.PortType)"
-    Write-Host "Monitor         : $($Item.PortMonitor)"
-    Write-Host "Destino         : $($Item.Destination)"
-    Write-Host "MAC             : $($Item.MacAddress)"
-    Write-Host "Resolver        : $($Item.Resolver)"
-    Write-Host "Virtual         : $($Item.IsProbablyVirtual)"
+    Write-Host "QueueName             : $($Item.QueueName)"
+    Write-Host "DiscoveryStatus       : $($Item.DiscoveryStatus)"
+    Write-Host "DriverName            : $($Item.DriverName)"
+    Write-Host "PortName              : $($Item.PortName)"
+    Write-Host "TransportType         : $($Item.TransportType)"
+    Write-Host "Protocol              : $($Item.Protocol)"
+    Write-Host "ConfiguredDestination : $($Item.ConfiguredDestination)"
+    Write-Host "AddressType           : $($Item.AddressType)"
+    Write-Host "TcpPort               : $($Item.TcpPort)"
+    Write-Host "ServiceQueue          : $($Item.ServiceQueue)"
+    Write-Host "ReachabilityStrategy  : $($Item.ReachabilityStrategy)"
+    Write-Host "DiscoverySource       : $($Item.DiscoverySource)"
+    Write-Host "Confidence            : $($Item.Confidence)"
+    Write-Host "Default               : $($Item.Default)"
+    Write-Host "Virtual               : $($Item.IsProbablyVirtual)"
+
+    if (
+        -not [string]::IsNullOrWhiteSpace(
+            [string]$Item.EndpointResolutionError
+        )
+    ) {
+
+        Write-Host `
+            "ResolutionError        : $($Item.EndpointResolutionError)" `
+            -ForegroundColor Yellow
+    }
 }
 
 # ============================================================
-# 6. RESUMEN
+# 5. RESUMEN
 # ============================================================
 
-$ResolvedCandidates = @(
-    $DiscoveryResults |
-        Where-Object {
-            $_.DiscoveryStatus -eq "DESTINATION_RESOLVED"
-        }
-)
+$ResolvedCount =
+    @(
+        $DiscoveryResults |
+            Where-Object {
+                $_.DiscoveryStatus -eq "ENDPOINT_RESOLVED"
+            }
+    ).Count
 
-$UnknownCandidates = @(
-    $DiscoveryResults |
-        Where-Object {
-            $_.DiscoveryStatus -eq "DESTINATION_UNKNOWN"
-        }
-)
+$PartialCount =
+    @(
+        $DiscoveryResults |
+            Where-Object {
+                $_.DiscoveryStatus -eq "ENDPOINT_PARTIAL"
+            }
+    ).Count
 
-$VirtualCandidates = @(
-    $DiscoveryResults |
-        Where-Object {
-            $_.DiscoveryStatus -eq "VIRTUAL_PRINTER"
-        }
-)
+$UnknownCount =
+    @(
+        $DiscoveryResults |
+            Where-Object {
+                $_.DiscoveryStatus -eq "ENDPOINT_UNKNOWN"
+            }
+    ).Count
 
-$DefaultCandidate = $DiscoveryResults |
-    Where-Object {
-        $_.Default -eq $true
-    } |
-    Select-Object -First 1
-
-Write-Host ""
-Write-Host "========================================"
-Write-Host "6. RESUMEN"
-Write-Host "========================================"
-
-Write-Host "Total mostrados       : $($DiscoveryResults.Count)"
-Write-Host "Destino resuelto      : $($ResolvedCandidates.Count)"
-Write-Host "Destino desconocido   : $($UnknownCandidates.Count)"
-Write-Host "Virtuales             : $($VirtualCandidates.Count)"
-
-if ($null -ne $DefaultCandidate) {
-
-    Write-Host `
-        "Predeterminada         : $($DefaultCandidate.Name)"
-
-    Write-Host `
-        "Estado predeterminada  : $($DefaultCandidate.DiscoveryStatus)"
-}
-else {
-
-    Write-Host `
-        "Predeterminada         : no detectada"
-}
+$VirtualCount =
+    @(
+        $DiscoveryResults |
+            Where-Object {
+                $_.DiscoveryStatus -eq "VIRTUAL_PRINTER"
+            }
+    ).Count
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "FIN PRINTERDISCOVERY v0.3"
+Write-Host "5. RESUMEN"
 Write-Host "========================================"
+
+Write-Host "QueueContexts       : $($DiscoveryResults.Count)"
+Write-Host "EndpointResolved    : $ResolvedCount"
+Write-Host "EndpointPartial     : $PartialCount"
+Write-Host "EndpointUnknown     : $UnknownCount"
+Write-Host "VirtualPrinters     : $VirtualCount"
+
+# ============================================================
+# 6. JSON OPCIONAL
+# ============================================================
+
+if (
+    -not [string]::IsNullOrWhiteSpace($OutputPath)
+) {
+
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "6. DISCOVERY JSON"
+    Write-Host "========================================"
+
+    try {
+
+        $ResolvedOutputPath =
+            [System.IO.Path]::GetFullPath($OutputPath)
+
+        $OutputDirectory =
+            Split-Path `
+                -Path $ResolvedOutputPath `
+                -Parent
+
+        if (
+            -not [string]::IsNullOrWhiteSpace($OutputDirectory) -and
+            -not (Test-Path -LiteralPath $OutputDirectory)
+        ) {
+
+            New-Item `
+                -ItemType Directory `
+                -Path $OutputDirectory `
+                -Force `
+                -ErrorAction Stop |
+                Out-Null
+        }
+
+        $Snapshot = [PSCustomObject]@{
+
+            Component =
+                "PrinterDiscoverySnapshot"
+
+            Version =
+                "0.4"
+
+            GeneratedAt =
+                (Get-Date).ToString("o")
+
+            ComputerName =
+                $env:COMPUTERNAME
+
+            QueueCount =
+                $DiscoveryResults.Count
+
+            Queues =
+                @($DiscoveryResults)
+        }
+
+        $Json =
+            $Snapshot |
+                ConvertTo-Json `
+                    -Depth 10
+
+        [System.IO.File]::WriteAllText(
+            $ResolvedOutputPath,
+            $Json + [Environment]::NewLine,
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        Write-Host "JSON generado:"
+        Write-Host $ResolvedOutputPath
+    }
+    catch {
+
+        Write-Host `
+            "ERROR generando discovery JSON." `
+            -ForegroundColor Red
+
+        Write-Host $_.Exception.Message
+    }
+}
+
+# ============================================================
+# 7. SALIDA ESTRUCTURADA
+# ============================================================
 
 $DiscoveryResults

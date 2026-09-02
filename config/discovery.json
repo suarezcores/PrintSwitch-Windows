@@ -1,0 +1,222 @@
+{
+    "Component":  "PrinterDiscoverySnapshot",
+    "Version":  "0.4",
+    "GeneratedAt":  "2026-09-01T16:54:45.5100655-03:00",
+    "ComputerName":  "DESKTOP-4K0N9PA",
+    "QueueCount":  3,
+    "Queues":  [
+                   {
+                       "Component":  "QueueContext",
+                       "Version":  "0.4",
+                       "DiscoveryStatus":  "ENDPOINT_RESOLVED",
+                       "QueueName":  "Brother HL-1210W series",
+                       "DriverName":  "Brother HL-1210W series",
+                       "PortName":  "BRWC48E8F7B140F",
+                       "Default":  false,
+                       "PrinterStatus":  128,
+                       "WorkOffline":  false,
+                       "JobCount":  0,
+                       "IsProbablyVirtual":  false,
+                       "TransportType":  "NETWORK",
+                       "Protocol":  "LPR",
+                       "ConfiguredDestination":  "BRWC48E8F7B140F",
+                       "AddressType":  "HOSTNAME",
+                       "TcpPort":  515,
+                       "ServiceQueue":  "BINARY_P1",
+                       "ReachabilityStrategy":  "LPR_TCP",
+                       "DiscoverySource":  "WINDOWS_PRINTER_PORT",
+                       "Confidence":  "HIGH",
+                       "OperationalMinimumSatisfied":  true,
+                       "MissingRequirements":  {
+
+                                               },
+                       "EndpointEvidence":  [
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "QueueName",
+                                                    "Value":  "Brother HL-1210W series",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "DriverName",
+                                                    "Value":  "Brother HL-1210W series",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "PortName",
+                                                    "Value":  "BRWC48E8F7B140F",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-PrinterPort",
+                                                    "Field":  "PortMonitor",
+                                                    "Value":  "TCPMON.DLL",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-PrinterPort",
+                                                    "Field":  "PrinterHostAddress",
+                                                    "Value":  "BRWC48E8F7B140F",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-PrinterPort",
+                                                    "Field":  "Protocol",
+                                                    "Value":  "LPR",
+                                                    "Kind":  "OBSERVED"
+                                                }
+                                            ],
+                       "EndpointResolutionError":  null
+                   },
+                   {
+                       "Component":  "QueueContext",
+                       "Version":  "0.4",
+                       "DiscoveryStatus":  "ENDPOINT_RESOLVED",
+                       "QueueName":  "Brother HL-1210W series USB",
+                       "DriverName":  "Brother HL-1210W series",
+                       "PortName":  "USB001",
+                       "Default":  false,
+                       "PrinterStatus":  0,
+                       "WorkOffline":  false,
+                       "JobCount":  0,
+                       "IsProbablyVirtual":  false,
+                       "TransportType":  "USB",
+                       "Protocol":  "USB",
+                       "ConfiguredDestination":  "USB001",
+                       "AddressType":  "DEVICE",
+                       "TcpPort":  null,
+                       "ServiceQueue":  null,
+                       "ReachabilityStrategy":  "USB_PRESENCE",
+                       "DiscoverySource":  "WINDOWS_PRINTING",
+                       "Confidence":  "HIGH",
+                       "OperationalMinimumSatisfied":  true,
+                       "MissingRequirements":  {
+
+                                               },
+                       "EndpointEvidence":  [
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "QueueName",
+                                                    "Value":  "Brother HL-1210W series USB",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "DriverName",
+                                                    "Value":  "Brother HL-1210W series",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "PortName",
+                                                    "Value":  "USB001",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-PrinterPort",
+                                                    "Field":  "PortMonitor",
+                                                    "Value":  "Dynamic Print Monitor",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "TransportType",
+                                                    "Value":  "USB",
+                                                    "Kind":  "INFERRED"
+                                                }
+                                            ],
+                       "EndpointResolutionError":  null
+                   },
+                   {
+                       "Component":  "QueueContext",
+                       "Version":  "0.4",
+                       "DiscoveryStatus":  "ENDPOINT_RESOLVED",
+                       "QueueName":  "L365 Series(Red)",
+                       "DriverName":  "EPSON L365 Series",
+                       "PortName":  "EPE2EB06:L365 SERIES",
+                       "Default":  true,
+                       "PrinterStatus":  0,
+                       "WorkOffline":  false,
+                       "JobCount":  0,
+                       "IsProbablyVirtual":  false,
+                       "TransportType":  "NETWORK",
+                       "Protocol":  "LPR",
+                       "ConfiguredDestination":  "192.168.1.108",
+                       "AddressType":  "IPV4",
+                       "TcpPort":  515,
+                       "ServiceQueue":  "ENPQueue",
+                       "ReachabilityStrategy":  "LPR_TCP",
+                       "DiscoverySource":  "EPSONNET_PRINT_MONITOR",
+                       "Confidence":  "HIGH",
+                       "OperationalMinimumSatisfied":  true,
+                       "MissingRequirements":  {
+
+                                               },
+                       "EndpointEvidence":  [
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "QueueName",
+                                                    "Value":  "L365 Series(Red)",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "DriverName",
+                                                    "Value":  "EPSON L365 Series",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-Printer",
+                                                    "Field":  "PortName",
+                                                    "Value":  "EPE2EB06:L365 SERIES",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Get-PrinterPort",
+                                                    "Field":  "PortMonitor",
+                                                    "Value":  "EpsonNet Print Port",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Print Monitor Registry",
+                                                    "Field":  "MonitorName",
+                                                    "Value":  "EpsonNet Print Port",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Print Monitor Registry",
+                                                    "Field":  "RegistryPath",
+                                                    "Value":  "Microsoft.PowerShell.Core\\Registry::HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Print\\Monitors\\EpsonNet Print Port\\Ports\\EPE2EB06:L365 SERIES",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "Print Monitor Registry",
+                                                    "Field":  "IpAddress",
+                                                    "Value":  "192.168.1.108",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "EpsonNet Print Port Registry",
+                                                    "Field":  "ProtocolID",
+                                                    "Value":  1,
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "EpsonNet Print Port Registry",
+                                                    "Field":  "QueueName",
+                                                    "Value":  "ENPQueue",
+                                                    "Kind":  "OBSERVED"
+                                                },
+                                                {
+                                                    "Source":  "EpsonNet Experimental Mapping",
+                                                    "Field":  "NormalizedProtocol",
+                                                    "Value":  "LPR",
+                                                    "Kind":  "INFERRED"
+                                                }
+                                            ],
+                       "EndpointResolutionError":  null
+                   }
+               ]
+}

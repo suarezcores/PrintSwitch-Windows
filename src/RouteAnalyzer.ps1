@@ -247,7 +247,8 @@ $InterfaceResults |
         InterfaceMetric,
         HasDefaultRoute,
         DefaultRouteMetric `
-        -AutoSize
+        -AutoSize |
+    Out-Host
 
 # ============================================================
 # 3. RUTA HACIA EL DESTINO

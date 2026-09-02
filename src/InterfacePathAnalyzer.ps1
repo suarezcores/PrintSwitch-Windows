@@ -353,7 +353,8 @@ $InterfaceResults |
         NetworkPrefix,
         Gateway,
         TargetInsideLocalSubnet `
-        -AutoSize
+        -AutoSize |
+    Out-Host
 
 # ============================================================
 # 2. SOLAPAMIENTO
@@ -701,13 +702,28 @@ $PathResult = [PSCustomObject]@{
         $ReachablePaths.Count
 
     SelectedReachableInterface =
+    $(if ($null -ne $SelectedReachablePath) {
         $SelectedReachablePath.Name
+    }
+    else {
+        $null
+    })
 
     SelectedReachableInterfaceType =
+    $(if ($null -ne $SelectedReachablePath) {
         $SelectedReachablePath.InterfaceType
+    }
+    else {
+        $null
+    })
 
     SelectedReachableLocalIP =
+    $(if ($null -ne $SelectedReachablePath) {
         $SelectedReachablePath.LocalIP
+    }
+    else {
+        $null
+    })
 
     PreferredInterface =
         $BestRoute.InterfaceAlias

@@ -1,15 +1,20 @@
 param (
-
     [string]$PrinterName,
 
     [string]$TargetIP,
 
     [string]$TargetSSID,
-    
+
     [string]$ConfigPath = (
         Join-Path `
-            (Split-Path $PSScriptRoot -Parent) `
-            "config\printers.json"
+            $PSScriptRoot `
+            "..\config\printers.json"
+    ),
+
+    [string]$PolicyPath = (
+        Join-Path `
+            $PSScriptRoot `
+            "..\config\policy.json"
     ),
 
     [switch]$Execute
@@ -87,6 +92,13 @@ $RecoveryValidatorPath = Join-Path `
 $ConnectivityAnalyzerPath = Join-Path `
     $PSScriptRoot `
     "ConnectivityAnalyzer.ps1"
+$PrinterEndpointResolverPath = Join-Path `
+    $PSScriptRoot `
+    "PrinterEndpointResolver.ps1"
+
+$PrinterEndpointReachabilityPath = Join-Path `
+    $PSScriptRoot `
+    "PrinterEndpointReachability.ps1"
 
 # ============================================================
 # 1. CARGAR CONFIGURACION
@@ -96,28 +108,170 @@ Write-Host "========================================"
 Write-Host "1. CONFIGURACION"
 Write-Host "========================================"
 
-if (-not (Test-Path $ConfigPath)) {
+# ============================================================
+# POLICY OPCIONAL
+# ============================================================
+
+$Policy = $null
+$QueuePolicy = $null
+$PolicyFound = $false
+$WifiRecoveryEnabled = $false
+
+if (Test-Path -LiteralPath $PolicyPath) {
+
+    try {
+
+        $Policy =
+            Get-Content `
+                -LiteralPath $PolicyPath `
+                -Raw `
+                -Encoding UTF8 `
+                -ErrorAction Stop |
+            ConvertFrom-Json `
+                -ErrorAction Stop
+    }
+    catch {
+
+        Write-Host `
+            "ERROR leyendo policy.json." `
+            -ForegroundColor Red
+
+        Write-Host $_.Exception.Message
+
+        return
+    }
+}
+else {
 
     Write-Host `
-        "ERROR: no existe la configuracion." `
+        "Policy PrintSwitch no encontrada." `
+        -ForegroundColor Yellow
+
+    Write-Host `
+        "Se continuara sin autorizacion especial de recovery."
+}
+
+# ============================================================
+# DETERMINAR COLA
+# ============================================================
+
+if ([string]::IsNullOrWhiteSpace($PrinterName)) {
+
+    try {
+
+        $DefaultPrinter =
+            Get-CimInstance `
+                -ClassName Win32_Printer `
+                -ErrorAction Stop |
+            Where-Object {
+                $_.Default -eq $true
+            } |
+            Select-Object -First 1
+
+        if ($null -ne $DefaultPrinter) {
+
+            $PrinterName =
+                [string]$DefaultPrinter.Name
+        }
+    }
+    catch {
+
+        Write-Host `
+            "No se pudo determinar la impresora predeterminada." `
+            -ForegroundColor Yellow
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($PrinterName)) {
+
+    Write-Host `
+        "ERROR: no se pudo determinar PrinterName." `
         -ForegroundColor Red
 
     return
 }
 
+# ============================================================
+# RESOLVER POLICY DE LA COLA
+# ============================================================
+
+if (
+    $null -ne $Policy -and
+    $null -ne $Policy.queues
+) {
+
+    $QueuePolicyProperty =
+        $Policy.queues.PSObject.Properties[$PrinterName]
+
+    if ($null -ne $QueuePolicyProperty) {
+
+        $QueuePolicy =
+            $QueuePolicyProperty.Value
+
+        $PolicyFound = $true
+    }
+}
+
+if (
+    $PolicyFound -and
+    $null -ne $QueuePolicy.wifiRecovery
+) {
+
+    $WifiRecoveryEnabled =
+        ($QueuePolicy.wifiRecovery.enabled -eq $true)
+
+    if (
+        [string]::IsNullOrWhiteSpace($TargetSSID) -and
+        -not [string]::IsNullOrWhiteSpace(
+            [string]$QueuePolicy.wifiRecovery.requiredSSID
+        )
+    ) {
+
+        $TargetSSID =
+            [string]$QueuePolicy.wifiRecovery.requiredSSID
+    }
+}
+
+Write-Host "PrinterName         : $PrinterName"
+Write-Host "PolicyFound         : $PolicyFound"
+Write-Host "WifiRecoveryEnabled : $WifiRecoveryEnabled"
+Write-Host "TargetIP override   : $TargetIP"
+Write-Host "TargetSSID          : $TargetSSID"
+
+# ============================================================
+# 1.1 RESOLVER ENDPOINT OPERATIVO
+# ============================================================
+
+Write-Host ""
+Write-Host "========================================"
+Write-Host "1.1 ENDPOINT OPERATIVO"
+Write-Host "========================================"
+
 try {
 
-    $Config = Get-Content `
-        $ConfigPath `
-        -Raw `
-        -ErrorAction Stop |
-        ConvertFrom-Json `
-            -ErrorAction Stop
+    . $PrinterEndpointResolverPath
+    . $PrinterEndpointReachabilityPath
+
+    $Endpoint =
+        Resolve-PrintSwitchEndpoint `
+            -PrinterName $PrinterName
+
+    if ($null -eq $Endpoint) {
+        throw "PrinterEndpointResolver no devolvio resultado."
+    }
+
+    $EndpointReachability =
+        Test-PrintSwitchEndpointReachability `
+            -Endpoint $Endpoint
+
+    if ($null -eq $EndpointReachability) {
+        throw "PrinterEndpointReachability no devolvio resultado."
+    }
 }
 catch {
 
     Write-Host `
-        "ERROR leyendo configuracion." `
+        "ERROR resolviendo endpoint operativo." `
         -ForegroundColor Red
 
     Write-Host $_.Exception.Message
@@ -125,51 +279,193 @@ catch {
     return
 }
 
-$PrinterProfile = $null
+Write-Host "TransportType         : $($Endpoint.TransportType)"
+Write-Host "Protocol              : $($Endpoint.Protocol)"
+Write-Host "ReachabilityStrategy  : $($Endpoint.ReachabilityStrategy)"
+Write-Host "ConfiguredDestination : $($Endpoint.ConfiguredDestination)"
+Write-Host "TcpPort               : $($Endpoint.TcpPort)"
+Write-Host "ReachabilityState     : $($EndpointReachability.ReachabilityState)"
+Write-Host "ProbeResult           : $($EndpointReachability.ProbeResult)"
 
-if ($PrinterName) {
+$OperationalTargetIP = $null
+$OperationalTcpPort = $null
 
-    $PrinterProfile = @(
-        $Config.printers |
-            Where-Object {
-                $_.name -eq $PrinterName
+if ($Endpoint.TransportType -eq "NETWORK") {
+
+    if (
+        $EndpointReachability.ReachabilityState -eq "UNKNOWN" -and
+        [string]::IsNullOrWhiteSpace(
+            [string]$EndpointReachability.ResolvedDestination
+        )
+    ) {
+
+        Write-Host ""
+        Write-Host `
+            "No fue posible resolver el destino de red del endpoint." `
+            -ForegroundColor Yellow
+
+        Write-Host `
+            "PrintSwitch no autorizara cambios de red sin evidencia suficiente." `
+            -ForegroundColor Yellow
+
+        $FinalResult = [PSCustomObject]@{
+
+            Component =
+                "PrintRecoveryOrchestrator"
+
+            Version =
+                "0.2"
+
+            PrinterName =
+                $PrinterName
+
+            TransportType =
+                $Endpoint.TransportType
+
+            ReachabilityStrategy =
+                $Endpoint.ReachabilityStrategy
+
+            ConfiguredDestination =
+                $Endpoint.ConfiguredDestination
+
+            OperationalTargetIP =
+                $null
+
+            OperationalTcpPort =
+                $Endpoint.TcpPort
+
+            EndpointReachabilityState =
+                $EndpointReachability.ReachabilityState
+
+            EndpointProbeResult =
+                $EndpointReachability.ProbeResult
+
+            TargetSSID =
+                $TargetSSID
+
+            ExecutionMode =
+                $(if ($Execute) {
+                    "EXECUTE"
+                }
+                else {
+                    "DRY_RUN"
+                })
+
+            SwitchDecision =
+                "NO_ACTION_INSUFFICIENT_ENDPOINT_EVIDENCE"
+
+            SwitchAuthorized =
+                $false
+
+            SwitchExecuted =
+                $false
+
+            FinalClassification =
+                "NETWORK_DESTINATION_UNRESOLVED"
+        }
+
+        return $FinalResult
+    }
+
+    $OperationalTargetIP =
+        [string]$EndpointReachability.ResolvedDestination
+
+    $OperationalTcpPort =
+        [int]$Endpoint.TcpPort
+
+    Write-Host ""
+    Write-Host "OperationalTargetIP   : $OperationalTargetIP"
+    Write-Host "OperationalTcpPort    : $OperationalTcpPort"
+}
+elseif ($Endpoint.TransportType -eq "USB") {
+
+    Write-Host ""
+    Write-Host "Endpoint USB detectado."
+    Write-Host "La rama USB no requiere analisis IP ni recuperacion Wi-Fi."
+
+    $UsbReachable =
+        (
+            $EndpointReachability.ReachabilityState -eq "REACHABLE"
+        )
+
+    $FinalResult = [PSCustomObject]@{
+
+        Component =
+            "PrintRecoveryOrchestrator"
+
+        Version =
+            "0.2"
+
+        PrinterName =
+            $PrinterName
+
+        TransportType =
+            $Endpoint.TransportType
+
+        ReachabilityStrategy =
+            $Endpoint.ReachabilityStrategy
+
+        ConfiguredDestination =
+            $Endpoint.ConfiguredDestination
+
+        OperationalTargetIP =
+            $null
+
+        OperationalTcpPort =
+            $null
+
+        EndpointReachabilityState =
+            $EndpointReachability.ReachabilityState
+
+        EndpointProbeResult =
+            $EndpointReachability.ProbeResult
+
+        TargetSSID =
+            $TargetSSID
+
+        ExecutionMode =
+            $(if ($Execute) {
+                "EXECUTE"
             }
-    ) |
-        Select-Object -First 1
+            else {
+                "DRY_RUN"
+            })
+
+        SwitchDecision =
+            "NO_WIFI_ACTION"
+
+        SwitchAuthorized =
+            $false
+
+        SwitchExecuted =
+            $false
+
+        FinalClassification =
+            $(if ($UsbReachable) {
+                "USB_ENDPOINT_REACHABLE"
+            }
+            elseif (
+                $EndpointReachability.ReachabilityState -eq
+                    "UNREACHABLE"
+            ) {
+                "USB_ENDPOINT_UNREACHABLE"
+            }
+            else {
+                "USB_ENDPOINT_UNKNOWN"
+            })
+    }
+
+    return $FinalResult
 }
 else {
 
-    $PrinterProfile = @($Config.printers)[0]
-}
-
-if ($null -eq $PrinterProfile) {
-
+    Write-Host ""
     Write-Host `
-        "ERROR: perfil de impresora no encontrado." `
-        -ForegroundColor Red
+        "Transporte no soportado por el Orchestrator actual: $($Endpoint.TransportType)" `
+        -ForegroundColor Yellow
 
     return
 }
-
-$PrinterName =
-    [string]$PrinterProfile.name
-
-if (-not $TargetIP) {
-
-    $TargetIP =
-        [string]$PrinterProfile.ip
-}
-
-if (-not $TargetSSID) {
-
-    $TargetSSID =
-        [string]$PrinterProfile.requiredSSID
-}
-
-Write-Host "PrinterName : $PrinterName"
-Write-Host "TargetIP    : $TargetIP"
-Write-Host "TargetSSID  : $TargetSSID"
-
 # ============================================================
 # 2. VALIDAR COMPONENTES
 # ============================================================
@@ -188,6 +484,8 @@ $RequiredComponents = @(
     $NetworkManagerPath,
     $RecoveryValidatorPath,
     $ConnectivityAnalyzerPath
+    $PrinterEndpointResolverPath,
+    $PrinterEndpointReachabilityPath
 )
 
 foreach ($ComponentPath in $RequiredComponents) {
@@ -217,7 +515,8 @@ Write-Host "3. INTERFACE PATH ANALYZER"
 Write-Host "========================================"
 
 $PathResult = & $InterfacePathAnalyzerPath `
-    -TargetIP $TargetIP
+    -TargetIP $OperationalTargetIP `
+    -TcpPort $OperationalTcpPort
 
 if ($null -eq $PathResult) {
 
@@ -282,7 +581,13 @@ else {
             $PrinterName
 
         TargetIP =
-            $TargetIP
+            $OperationalTargetIP
+
+        OperationalTargetIP =
+            $OperationalTargetIP
+
+        OperationalTcpPort =
+            $OperationalTcpPort
 
         
         ExecutionMode =
@@ -431,6 +736,125 @@ if (
 }
 
 # ============================================================
+# 3.3 AUTORIZACION DE RECUPERACION WIFI
+# ============================================================
+
+if (
+    -not $PolicyFound -or
+    -not $WifiRecoveryEnabled -or
+    [string]::IsNullOrWhiteSpace($TargetSSID)
+) {
+
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "RECUPERACION WIFI NO AUTORIZADA"
+    Write-Host "========================================"
+
+    $RecoveryPolicyReason =
+        if (-not $PolicyFound) {
+
+            "POLICY_NOT_FOUND"
+        }
+        elseif (-not $WifiRecoveryEnabled) {
+
+            "WIFI_RECOVERY_DISABLED"
+        }
+        elseif (
+            [string]::IsNullOrWhiteSpace($TargetSSID)
+        ) {
+
+            "TARGET_SSID_NOT_DEFINED"
+        }
+        else {
+
+            "RECOVERY_NOT_AUTHORIZED"
+        }
+
+    Write-Host "PolicyFound         : $PolicyFound"
+    Write-Host "WifiRecoveryEnabled : $WifiRecoveryEnabled"
+    Write-Host "TargetSSID          : $TargetSSID"
+    Write-Host "Reason              : $RecoveryPolicyReason"
+
+    Write-Host ""
+    Write-Host `
+        "PrintSwitch no modificara ninguna red." `
+        -ForegroundColor Yellow
+
+    $FinalResult = [PSCustomObject]@{
+
+        Component =
+            "PrintRecoveryOrchestrator"
+
+        Version =
+            "0.2"
+
+        PrinterName =
+            $PrinterName
+
+        TargetIP =
+            $OperationalTargetIP
+
+        OperationalTargetIP =
+            $OperationalTargetIP
+
+        OperationalTcpPort =
+            $OperationalTcpPort
+
+        TargetSSID =
+            $TargetSSID
+
+        PolicyFound =
+            $PolicyFound
+
+        WifiRecoveryEnabled =
+            $WifiRecoveryEnabled
+
+        RecoveryPolicyReason =
+            $RecoveryPolicyReason
+
+        ExecutionMode =
+            $(if ($Execute) {
+                "EXECUTE"
+            }
+            else {
+                "DRY_RUN"
+            })
+
+        PathClassification =
+            $PathResult.Classification
+
+        DirectCandidateCount =
+            $PathResult.DirectCandidateCount
+
+        ReachablePathCount =
+            $PathResult.ReachablePathCount
+
+        SwitchDecision =
+            "NO_WIFI_ACTION"
+
+        SwitchAuthorized =
+            $false
+
+        SwitchExecuted =
+            $false
+
+        PreserveEthernet =
+            $true
+
+        FinalClassification =
+            "WIFI_RECOVERY_NOT_AUTHORIZED"
+    }
+
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.2"
+    Write-Host "========================================"
+
+    return $FinalResult
+}
+
+
+# ============================================================
 # 4. ROUTE ANALYZER
 # ============================================================
 
@@ -441,7 +865,8 @@ Write-Host "4. ROUTE ANALYZER"
 Write-Host "========================================"
 
 $RouteResult = & $RouteAnalyzerPath `
-    -TargetIP $TargetIP
+    -TargetIP $OperationalTargetIP `
+    -TcpPort $OperationalTcpPort
 
 if ($null -eq $RouteResult) {
 
@@ -558,7 +983,13 @@ if (-not $SwitchResult.ShouldExecuteSwitch) {
             $PrinterName
 
         TargetIP =
-            $TargetIP
+            $OperationalTargetIP
+
+        OperationalTargetIP =
+            $OperationalTargetIP
+
+        OperationalTcpPort =
+            $OperationalTcpPort
 
         TargetSSID =
             $TargetSSID
@@ -643,7 +1074,14 @@ else {
             $PrinterName
 
         TargetIP =
-            $TargetIP
+            $OperationalTargetIP
+
+        OperationalTargetIP =
+            $OperationalTargetIP
+
+        OperationalTcpPort =
+            $OperationalTcpPort
+
         TargetSSID =
             $TargetSSID
 
@@ -811,7 +1249,8 @@ Write-Host "11. RECOVERY VALIDATOR"
 Write-Host "========================================"
 
 $RecoveryValidation = & $RecoveryValidatorPath `
-    -TargetIP $TargetIP
+    -TargetIP $OperationalTargetIP `
+    -TcpPort $OperationalTcpPort
 
 if ($null -eq $RecoveryValidation) {
 
@@ -848,7 +1287,8 @@ Write-Host "13. REVALIDACION DE RUTA"
 Write-Host "========================================"
 
 $RouteAfter = & $RouteAnalyzerPath `
-    -TargetIP $TargetIP
+    -TargetIP $OperationalTargetIP `
+    -TcpPort $OperationalTcpPort
 
 # ============================================================
 # 14. RESULTADO FINAL
@@ -858,8 +1298,7 @@ $RecoverySucceeded =
     (
         $NetworkResult.SwitchVerified -eq $true -and
         $RecoveryValidation.RecoveryConfirmed -eq $true -and
-        $ConnectivityAfter.Classification -eq
-            "PRINTER_REACHABLE"
+        $RouteAfter.TargetReachable -eq $true
     )
 
 if ($RecoverySucceeded) {
@@ -885,7 +1324,13 @@ $FinalResult = [PSCustomObject]@{
         $PrinterName
 
     TargetIP =
-        $TargetIP
+        $OperationalTargetIP
+
+    OperationalTargetIP =
+        $OperationalTargetIP
+
+    OperationalTcpPort =
+        $OperationalTcpPort
 
     TargetSSID =
         $TargetSSID
