@@ -1,4 +1,4 @@
-param (
+﻿param (
     [string]$PrinterName,
 
     [string]$TargetIP,
@@ -23,7 +23,7 @@ param (
 $ErrorActionPreference = "Continue"
 
 # ============================================================
-# PrintSwitch - PrintRecoveryOrchestrator v0.1
+# PrintSwitch - PrintRecoveryOrchestrator v0.2
 # Orquestador operativo de recuperacion de conectividad
 #
 # Integra:
@@ -41,7 +41,7 @@ $ErrorActionPreference = "Continue"
 # ============================================================
 
 Write-Host ""
-Write-Host "PrintSwitch - PrintRecoveryOrchestrator v0.1" `
+Write-Host "PrintSwitch - PrintRecoveryOrchestrator v0.2" `
     -ForegroundColor Cyan
 
 if ($Execute) {
@@ -367,8 +367,16 @@ if ($Endpoint.TransportType -eq "NETWORK") {
         return $FinalResult
     }
 
-    $OperationalTargetIP =
-        [string]$EndpointReachability.ResolvedDestination
+        if (-not [string]::IsNullOrWhiteSpace([string]$TargetIP)) {
+
+        $OperationalTargetIP =
+            [string]$TargetIP
+    }
+    else {
+
+        $OperationalTargetIP =
+            [string]$EndpointReachability.ResolvedDestination
+    }
 
     $OperationalTcpPort =
         [int]$Endpoint.TcpPort
@@ -483,10 +491,10 @@ $RequiredComponents = @(
     $SwitchDecisionPath,
     $NetworkManagerPath,
     $RecoveryValidatorPath,
-    $ConnectivityAnalyzerPath
     $PrinterEndpointResolverPath,
     $PrinterEndpointReachabilityPath
 )
+
 
 foreach ($ComponentPath in $RequiredComponents) {
 
@@ -503,6 +511,19 @@ foreach ($ComponentPath in $RequiredComponents) {
 }
 
 Write-Host "Componentes disponibles : True"
+
+$ConnectivityAnalyzerAvailable =
+    Test-Path $ConnectivityAnalyzerPath
+
+Write-Host `
+    "ConnectivityAnalyzer disponible : $ConnectivityAnalyzerAvailable"
+
+if (-not $ConnectivityAnalyzerAvailable) {
+
+    Write-Host `
+        "ADVERTENCIA: ConnectivityAnalyzer no disponible. Se continuara sin diagnostico adicional." `
+        -ForegroundColor Yellow
+}
 
 
 # ============================================================
@@ -575,7 +596,7 @@ else {
             "PrintRecoveryOrchestrator"
 
         Version =
-            "0.1"
+            "0.2"
 
         PrinterName =
             $PrinterName
@@ -638,7 +659,7 @@ else {
 
     Write-Host ""
     Write-Host "========================================"
-    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.1"
+    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.2"
     Write-Host "========================================"
 
     return $FinalResult
@@ -677,13 +698,19 @@ if (
             "PrintRecoveryOrchestrator"
 
         Version =
-            "0.1"
+            "0.2"
 
         PrinterName =
             $PrinterName
 
         TargetIP =
-            $TargetIP
+            $OperationalTargetIP
+
+        OperationalTargetIP =
+            $OperationalTargetIP
+
+        OperationalTcpPort =
+            $OperationalTcpPort
 
         TargetSSID =
             $TargetSSID
@@ -729,7 +756,7 @@ if (
 
     Write-Host ""
     Write-Host "========================================"
-    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.1"
+    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.2"
     Write-Host "========================================"
 
     return $FinalResult
@@ -977,7 +1004,7 @@ if (-not $SwitchResult.ShouldExecuteSwitch) {
             "PrintRecoveryOrchestrator"
 
         Version =
-            "0.1"
+            "0.2"
 
         PrinterName =
             $PrinterName
@@ -1028,7 +1055,7 @@ if (-not $SwitchResult.ShouldExecuteSwitch) {
 
     Write-Host ""
     Write-Host "========================================"
-    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.1"
+    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.2"
     Write-Host "========================================"
 
     return $FinalResult
@@ -1068,7 +1095,7 @@ else {
             "PrintRecoveryOrchestrator"
 
         Version =
-            "0.1"
+            "0.2"
 
         PrinterName =
             $PrinterName
@@ -1113,7 +1140,7 @@ else {
 
     Write-Host ""
     Write-Host "========================================"
-    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.1"
+    Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.2"
     Write-Host "========================================"
 
     return $FinalResult
@@ -1193,11 +1220,16 @@ $EthernetAfter = @(
 $EthernetPresentAfter =
     ($EthernetAfter.Count -gt 0)
 
-$EthernetPreserved =
-    (
-        $EthernetPresentBefore -eq $true -and
-        $EthernetPresentAfter -eq $true
-    )
+if ($EthernetPresentBefore -eq $false) {
+
+    $EthernetPreserved = $null
+    $EthernetPreservationStatus = "NOT_APPLICABLE"
+}
+else {
+
+    $EthernetPreserved = $true
+    $EthernetPreservationStatus = "PRESERVED"
+}
 
 foreach ($PreviousAdapter in $EthernetBefore) {
 
@@ -1211,6 +1243,7 @@ foreach ($PreviousAdapter in $EthernetBefore) {
     ) {
 
         $EthernetPreserved = $false
+        $EthernetPreservationStatus = "FAILED"
     }
 
     if ($null -ne $CurrentAdapter) {
@@ -1235,9 +1268,10 @@ Write-Host `
 Write-Host `
     "EthernetPreserved : $EthernetPreserved"
 
-# ============================================================
-# 12. REVALIDAR CONNECTIVITY ANALYZER
-# ============================================================
+Write-Host `
+    "EthernetPreservationStatus : $EthernetPreservationStatus"
+
+
 
 # ============================================================
 # 11. RECOVERY VALIDATOR
@@ -1268,14 +1302,66 @@ Write-Host "CompletedWindow        : $($RecoveryValidation.CompletedWindow)"
 Write-Host "TotalElapsedMs         : $($RecoveryValidation.TotalElapsedMs)"
 
 
+# ============================================================
+# 12. DIAGNOSTICO OPCIONAL - CONNECTIVITY ANALYZER
+# ============================================================
+
 Write-Host ""
 Write-Host "========================================"
-Write-Host "12. REVALIDACION DE IMPRESORA"
+Write-Host "12. DIAGNOSTICO OPCIONAL DE IMPRESORA"
 Write-Host "========================================"
 
-$ConnectivityAfter = & $ConnectivityAnalyzerPath `
-    -PrinterName $PrinterName `
-    -ConfigPath $ConfigPath
+$ConnectivityAfter = $null
+$ConnectivityAfterClassification = "NOT_AVAILABLE"
+
+if ($ConnectivityAnalyzerAvailable) {
+
+    try {
+
+        $ConnectivityAfter = & $ConnectivityAnalyzerPath `
+            -PrinterName $PrinterName `
+            -ConfigPath $ConfigPath
+
+        if (
+            $null -ne $ConnectivityAfter -and
+            -not [string]::IsNullOrWhiteSpace(
+                [string]$ConnectivityAfter.Classification
+            )
+        ) {
+
+            $ConnectivityAfterClassification =
+                [string]$ConnectivityAfter.Classification
+        }
+        else {
+
+            $ConnectivityAfterClassification =
+                "NO_RESULT"
+
+            Write-Host `
+                "ADVERTENCIA: ConnectivityAnalyzer no devolvio un diagnostico util." `
+                -ForegroundColor Yellow
+        }
+    }
+    catch {
+
+        $ConnectivityAfterClassification =
+            "DIAGNOSTIC_ERROR"
+
+        Write-Host `
+            "ADVERTENCIA: ConnectivityAnalyzer fallo. El recovery operacional continuara." `
+            -ForegroundColor Yellow
+
+        Write-Host `
+            $_.Exception.Message `
+            -ForegroundColor DarkYellow
+    }
+}
+else {
+
+    Write-Host `
+        "ConnectivityAnalyzer omitido: componente diagnostico no disponible." `
+        -ForegroundColor Yellow
+}
 
 # ============================================================
 # 13. REVALIDAR ROUTE ANALYZER
@@ -1318,7 +1404,7 @@ $FinalResult = [PSCustomObject]@{
         "PrintRecoveryOrchestrator"
 
     Version =
-        "0.1"
+        "0.2"
 
     PrinterName =
         $PrinterName
@@ -1384,8 +1470,11 @@ $FinalResult = [PSCustomObject]@{
     EthernetPreserved =
         $EthernetPreserved
 
+    EthernetPreservationStatus =
+        $EthernetPreservationStatus
+
     ConnectivityAfter =
-        $ConnectivityAfter.Classification
+        $ConnectivityAfterClassification
 
     RouteAfter =
         $RouteAfter.Classification
@@ -1418,6 +1507,9 @@ Write-Host `
     "EthernetPreserved     : $($FinalResult.EthernetPreserved)"
 
 Write-Host `
+    "EthernetPreservationStatus : $($FinalResult.EthernetPreservationStatus)"
+
+Write-Host `
     "ConnectivityAfter     : $($FinalResult.ConnectivityAfter)"
 
 Write-Host `
@@ -1443,7 +1535,7 @@ Write-Host `
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.1"
+Write-Host "FIN PRINTRECOVERYORCHESTRATOR v0.2"
 Write-Host "========================================"
 
 $FinalResult
