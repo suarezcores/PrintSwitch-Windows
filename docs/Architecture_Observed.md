@@ -1796,3 +1796,852 @@ otros sistemas operativos
 Estos límites no invalidan el Alpha.
 
 Definen el alcance real de la evidencia obtenida hasta este punto.
+
+---
+
+# Actualización de arquitectura — Septiembre 2026
+
+> **Estado documental**
+>
+> Todo el contenido anterior de este documento se conserva como registro
+> histórico de las etapas previas de PrintSwitch-Windows.
+>
+> Las descripciones anteriores de la arquitectura Alpha, sus componentes,
+> dependencias, protocolos y criterios de validación representan el estado
+> real del proyecto en esas etapas, pero no deben interpretarse como la
+> arquitectura operacional vigente.
+>
+> Esta sección documenta la evolución posterior y toma como referencia el
+> estado del proyecto alcanzado en el commit:
+>
+> ```text
+> 55316dd
+> FEAT: consolida recovery operacional y diagnostico opcional
+> ```
+
+---
+
+## 40. Cambio de unidad operacional
+
+Durante el Alpha, gran parte del análisis podía representarse mediante una
+relación relativamente directa:
+
+```text
+impresora
+   |
+   v
+dirección IP
+   |
+   v
+alcanzabilidad
+```
+
+La investigación posterior mostró que esta representación era insuficiente.
+
+Windows no entrega simplemente un trabajo a una dirección IP.
+
+La unidad operacional real comienza en la cola de impresión y continúa hacia
+el endpoint configurado para esa cola.
+
+La arquitectura vigente se representa conceptualmente como:
+
+```text
+Trabajo de impresión
+        |
+        v
+Cola Windows
+        |
+        v
+QueueContext
+        |
+        v
+Endpoint lógico
+        |
+        v
+Transporte / protocolo
+        |
+        v
+Reachability
+        |
+        v
+Paths disponibles
+        |
+        v
+Policy
+        |
+        v
+Acción mínima necesaria
+```
+
+Por lo tanto, PrintSwitch deja de considerar una IP fija como identidad
+suficiente de una impresora.
+
+La cola Windows pasa a ser el objeto operacional primario desde el cual se
+descubre el destino real.
+
+---
+
+## 41. Separación entre cola, endpoint y dispositivo físico
+
+La arquitectura vigente distingue tres conceptos que anteriormente podían
+aparecer mezclados.
+
+### Cola Windows
+
+Representa el objeto al que Windows entrega el trabajo.
+
+Ejemplos observados:
+
+```text
+L365 Series(Red)
+
+Brother HL-1210W series
+
+Brother HL-1210W series USB
+```
+
+### Endpoint
+
+Representa el mecanismo mediante el cual una cola intenta alcanzar su destino.
+
+Puede ser:
+
+```text
+USB
+RAW / TCP
+LPR
+IPP
+WSD
+protocolo propietario
+```
+
+El endpoint contiene la información operacional necesaria para seleccionar
+una estrategia de reachability.
+
+### Dispositivo físico
+
+Representa la impresora física real.
+
+La correlación entre diferentes colas y un mismo dispositivo físico es una
+capacidad futura y no es necesaria para resolver todos los casos actuales.
+
+Por ello:
+
+```text
+QueueContext
+      |
+      v
+Endpoint
+```
+
+es obligatorio para la operación actual, mientras que:
+
+```text
+PrinterIdentity
+```
+
+es una capa opcional que podrá incorporarse cuando sea necesario correlacionar
+múltiples endpoints pertenecientes al mismo hardware.
+
+---
+
+## 42. PrinterEndpointResolver
+
+`PrinterEndpointResolver.ps1` introduce una capa explícita entre la cola
+Windows y los analizadores de conectividad.
+
+Su responsabilidad es responder:
+
+```text
+¿Cómo intenta imprimir realmente esta cola?
+```
+
+El resolver no decide si debe cambiarse una red.
+
+Tampoco decide si la impresora está disponible.
+
+Su función es normalizar la información observada en Windows y producir un
+endpoint operacional.
+
+Entre los campos relevantes se encuentran conceptualmente:
+
+```text
+Transport
+Protocol
+Destination
+DestinationType
+TcpPort
+QueueName
+ReachabilityStrategy
+DiscoverySource
+Confidence
+```
+
+Esto permite que los componentes posteriores trabajen sobre una
+representación común independientemente del fabricante.
+
+---
+
+## 43. Evidencia Epson: LPR TCP 515
+
+La evolución endpoint-aware permitió identificar una diferencia importante
+respecto de la arquitectura Alpha.
+
+Durante Alpha:
+
+```text
+TCP 9100
+```
+
+fue utilizado exitosamente como evidencia de liveness de la Epson L365.
+
+Ese resultado sigue siendo válido como evidencia experimental histórica.
+
+Sin embargo, la inspección posterior del puerto configurado por EpsonNet
+demostró que la cola:
+
+```text
+L365 Series(Red)
+```
+
+utiliza operacionalmente:
+
+```text
+Transport       = NETWORK
+Protocol        = LPR
+Destination     = 192.168.1.108
+TcpPort         = 515
+QueueName       = ENPQueue
+Reachability    = LPR_TCP
+```
+
+Por lo tanto:
+
+```text
+TCP 9100
+```
+
+no debe considerarse universalmente equivalente al servicio de impresión
+configurado por una cola.
+
+Puede continuar utilizándose como señal diagnóstica cuando corresponda, pero
+la decisión operacional debe utilizar el endpoint descubierto.
+
+---
+
+## 44. PrinterEndpointReachability
+
+`PrinterEndpointReachability.ps1` evalúa la disponibilidad utilizando la
+estrategia definida por el endpoint.
+
+El contrato normalizado utiliza tres estados:
+
+```text
+REACHABLE
+UNREACHABLE
+UNKNOWN
+```
+
+La distinción es importante.
+
+```text
+REACHABLE
+```
+
+indica evidencia positiva de disponibilidad.
+
+```text
+UNREACHABLE
+```
+
+indica que el endpoint pudo ser evaluado pero no respondió según la estrategia
+correspondiente.
+
+```text
+UNKNOWN
+```
+
+indica que no existe evidencia suficiente para realizar una afirmación segura.
+
+La arquitectura evita convertir automáticamente `UNKNOWN` en una autorización
+para modificar conectividad.
+
+---
+
+## 45. Reachability dependiente del transporte
+
+La estrategia de reachability ya no debe asumir que toda impresora es un host
+TCP.
+
+Para endpoints de red pueden utilizarse:
+
+```text
+destino resuelto
++
+puerto operacional
+```
+
+Por ejemplo:
+
+```text
+192.168.1.108:515
+```
+
+para la Epson L365 configurada mediante LPR.
+
+Para USB, la estrategia es diferente.
+
+La presencia del dispositivo puede verificarse mediante la identidad PnP
+asociada a la cola.
+
+Por lo tanto:
+
+```text
+NETWORK
+   |
+   +--> reachability de servicio
+
+USB
+   |
+   +--> presencia del dispositivo
+```
+
+son estrategias diferentes dentro del mismo modelo de endpoint.
+
+---
+
+## 46. OperationalTargetIP y OperationalTcpPort
+
+El Orchestrator separa actualmente el destino configurado o descubierto del
+destino operacional utilizado durante el análisis.
+
+Los campos centrales son:
+
+```text
+OperationalTargetIP
+OperationalTcpPort
+```
+
+Para una cola de red normal, estos valores provienen del endpoint resuelto.
+
+Cuando existe un `TargetIP` explícito proporcionado al Orchestrator, ese valor
+tiene precedencia como destino operacional.
+
+La precedencia validada es:
+
+```text
+TargetIP explícito
+        |
+        +--> sí --> OperationalTargetIP = TargetIP
+        |
+        +--> no --> OperationalTargetIP = destino resuelto del endpoint
+```
+
+El puerto operacional continúa derivándose del endpoint:
+
+```text
+OperationalTcpPort = Endpoint.TcpPort
+```
+
+Esto permite mantener separadas:
+
+```text
+evidencia de discovery
+```
+
+y:
+
+```text
+decisión operacional
+```
+
+sin alterar retroactivamente lo observado en la configuración de Windows.
+
+---
+
+## 47. InterfacePathAnalyzer y RouteAnalyzer endpoint-aware
+
+`InterfacePathAnalyzer.ps1` y `RouteAnalyzer.ps1` dejaron de depender
+operacionalmente de un TCP 9100 implícito.
+
+Ambos pueden recibir:
+
+```text
+OperationalTargetIP
+OperationalTcpPort
+```
+
+y analizar el servicio correspondiente al endpoint real.
+
+Esto permite distinguir entre:
+
+```text
+camino existente y alcanzable
+camino existente pero servicio no alcanzable
+ruta disponible sin camino directo
+múltiples caminos alcanzables
+```
+
+sin asumir un protocolo de impresión único.
+
+Una propiedad de seguridad se mantiene:
+
+> Si existe un camino válido y alcanzable hacia el endpoint, PrintSwitch no
+> debe modificar la conectividad.
+
+---
+
+## 48. Separación entre Discovery y Policy
+
+La arquitectura actual separa dos tipos de información que anteriormente
+convivían en `config/printers.json`.
+
+### Discovery
+
+Describe lo que Windows y el sistema permiten observar.
+
+Ejemplos:
+
+```text
+nombre de cola
+driver
+puerto
+monitor
+transporte
+protocolo
+destino
+puerto TCP
+identidad USB
+```
+
+`PrinterDiscovery.ps1` construye esta información automáticamente.
+
+El archivo:
+
+```text
+config/discovery.json
+```
+
+puede utilizarse como snapshot o cache regenerable.
+
+No constituye la fuente primaria de verdad.
+
+### Policy
+
+Describe intención del usuario o autorización de comportamiento.
+
+Ejemplo:
+
+```text
+la cola Epson puede utilizar suarezcores
+como red de recuperación Wi-Fi
+```
+
+Esta información pertenece a:
+
+```text
+config/policy.json
+```
+
+La separación conceptual es:
+
+```text
+Discovery
+   =
+lo que existe
+
+Policy
+   =
+lo que PrintSwitch está autorizado a hacer
+```
+
+La ausencia de una policy para una cola no significa que la cola sea
+desconocida ni inválida.
+
+Significa que no existe una autorización especial asociada a ella.
+
+---
+
+## 49. Estado de config/printers.json
+
+`config/printers.json` se conserva temporalmente por compatibilidad con
+componentes Alpha.
+
+No representa el modelo arquitectónico objetivo.
+
+Su función actual es legacy y no debe utilizarse para concluir que una cola
+necesita un perfil PrintSwitch para ser descubierta.
+
+La transición es:
+
+```text
+ANTES
+
+config/printers.json
+        |
+        +--> identidad
+        +--> IP
+        +--> SSID requerido
+
+
+ACTUAL
+
+Windows / Registry / PnP
+        |
+        v
+PrinterDiscovery
+        |
+        v
+QueueContext / Endpoint
+
+
+config/policy.json
+        |
+        v
+autorización de recuperación
+```
+
+La eliminación definitiva de `printers.json` sólo deberá realizarse cuando
+ningún componente vigente dependa de él.
+
+---
+
+## 50. ConnectivityAnalyzer pasa a diagnóstico opcional
+
+Durante Alpha, `ConnectivityAnalyzer.ps1` formaba parte del flujo utilizado
+para caracterizar el estado de conectividad.
+
+En la arquitectura vigente continúa siendo útil como fuente diagnóstica y de
+telemetría, pero dejó de ser una autoridad obligatoria para determinar el
+éxito operacional de una recuperación.
+
+El Orchestrator puede completar una recuperación incluso si
+`ConnectivityAnalyzer.ps1` no está disponible.
+
+Los estados diagnósticos contemplados incluyen:
+
+```text
+clasificación real del analyzer
+NOT_AVAILABLE
+NO_RESULT
+DIAGNOSTIC_ERROR
+```
+
+Ninguno de estos estados reemplaza la validación operacional del endpoint.
+
+El éxito de recovery se determina mediante evidencia operacional:
+
+```text
+NetworkSwitchVerified
+        +
+RecoveryValidator.RecoveryConfirmed
+        +
+RouteAfter.TargetReachable
+```
+
+Esto fue validado experimentalmente ejecutando una recuperación completa con
+`ConnectivityAnalyzer.ps1` temporalmente ausente.
+
+El resultado fue:
+
+```text
+ConnectivityAfter   = NOT_AVAILABLE
+RecoverySucceeded   = True
+FinalClassification = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+Por lo tanto:
+
+> Un diagnóstico auxiliar puede enriquecer la observabilidad sin convertirse
+> en una dependencia del mecanismo que intenta observar.
+
+---
+
+## 51. Semántica explícita de preservación Ethernet
+
+La preservación de Ethernet continúa siendo una propiedad de seguridad del
+sistema.
+
+PrintSwitch no modifica interfaces Ethernet durante una recuperación Wi-Fi.
+
+La semántica de validación fue refinada para distinguir tres situaciones:
+
+```text
+No existía Ethernet activa antes
+    EthernetPreserved = null
+    EthernetPreservationStatus = NOT_APPLICABLE
+
+Existía Ethernet activa y continúa activa
+    EthernetPreserved = True
+    EthernetPreservationStatus = PRESERVED
+
+Existía Ethernet activa y dejó de estar disponible
+    EthernetPreserved = False
+    EthernetPreservationStatus = FAILED
+```
+
+Esto evita interpretar:
+
+```text
+no había Ethernet
+```
+
+como:
+
+```text
+falló la preservación de Ethernet
+```
+
+---
+
+## 52. Contrato de -Execute
+
+El parámetro:
+
+```text
+-Execute
+```
+
+no significa:
+
+```text
+forzar cambio de Wi-Fi
+```
+
+Significa:
+
+```text
+autorizar acciones reales si el motor determina que son necesarias
+```
+
+Por ello, incluso con `-Execute`, si el endpoint ya es alcanzable:
+
+```text
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+La existencia de permiso para actuar no reemplaza la decisión contextual.
+
+---
+
+## 53. Recuperación endpoint-aware validada
+
+La recuperación completa fue nuevamente validada utilizando el endpoint real
+de la Epson.
+
+Condiciones iniciales:
+
+```text
+Ethernet desconectado
+Wi-Fi = Claro640
+Epson L365 encendida
+suarezcores conocido y visible
+Endpoint = 192.168.1.108:515
+```
+
+Estado inicial:
+
+```text
+EndpointReachability = UNREACHABLE
+InterfacePathAnalyzer = ROUTED_PATH_ONLY
+RouteAnalyzer = TARGET_ROUTE_EXISTS_BUT_UNREACHABLE
+```
+
+La policy autorizó evaluar recuperación Wi-Fi.
+
+El flujo continuó:
+
+```text
+WiFiCandidateEvaluator
+        |
+        v
+SwitchDecision
+        |
+        v
+SWITCH_WIFI_FOR_PRINTER
+        |
+        v
+NetworkManager
+        |
+        v
+Claro640 -> suarezcores
+        |
+        v
+RecoveryValidator
+        |
+        v
+192.168.1.108:515 alcanzable
+```
+
+Resultado:
+
+```text
+NetworkSwitchVerified = True
+RecoverySucceeded     = True
+FinalClassification   = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+La prueba demuestra que la recuperación ya no depende del TCP 9100 utilizado
+como señal durante Alpha.
+
+Utiliza el endpoint operacional descubierto para la cola.
+
+---
+
+## 54. Regresión de camino Ethernet existente
+
+También se validó el caso:
+
+```text
+Ethernet = 192.168.1.109
+Wi-Fi = Claro640
+Epson = encendida
+Endpoint = 192.168.1.108:515
+```
+
+El endpoint era alcanzable mediante Ethernet.
+
+El sistema clasificó:
+
+```text
+UNIQUE_REACHABLE_PATH
+```
+
+y finalizó:
+
+```text
+FinalClassification = EXISTING_REACHABLE_PATH
+SwitchAuthorized     = False
+SwitchExecuted       = False
+```
+
+La misma conducta se mantuvo incluso ejecutando el Orchestrator con:
+
+```text
+-Execute
+```
+
+Esto valida nuevamente el principio:
+
+> Una ruta funcional existente tiene prioridad sobre cualquier recuperación
+> mediante cambio de Wi-Fi.
+
+---
+
+## 55. Arquitectura operacional vigente
+
+Al cierre de este checkpoint, la arquitectura puede representarse así:
+
+```text
+Windows / Registry / PnP / Spooler
+                |
+                v
+        PrinterDiscovery
+                |
+                v
+           QueueContext
+                |
+                v
+     PrinterEndpointResolver
+                |
+                v
+             Endpoint
+                |
+                v
+  PrinterEndpointReachability
+                |
+                v
+      +-------------------+
+      |                   |
+      v                   v
+InterfacePathAnalyzer  RouteAnalyzer
+      |                   |
+      +---------+---------+
+                |
+                v
+        ¿ya es alcanzable?
+          |            |
+         sí            no
+          |            |
+          v            v
+      NO_ACTION   RecoveryPolicy
+                       |
+                       v
+              ¿Wi-Fi autorizado?
+                  |         |
+                 no        sí
+                  |         |
+                  v         v
+            NO_WIFI_ACTION
+                            |
+                            v
+                 WiFiCandidateEvaluator
+                            |
+                            v
+                      SwitchDecision
+                            |
+                            v
+                      NetworkManager
+                            |
+                            v
+                    RecoveryValidator
+                            |
+                            v
+                       RouteAfter
+                            |
+                            v
+                   resultado operacional
+
+ConnectivityAnalyzer
+        |
+        +--> diagnóstico opcional
+```
+
+La regla central continúa siendo intervención mínima.
+
+La diferencia respecto del Alpha es que ahora esa decisión se construye sobre
+la cola y su endpoint real, no sobre una asociación rígida entre impresora,
+IP y TCP 9100.
+
+---
+
+## 56. Estado del checkpoint — Septiembre 2026
+
+A la fecha de este checkpoint se consideran alcanzados:
+
+```text
+[OK] resolución de endpoint por cola
+[OK] reachability dependiente del transporte
+[OK] Epson L365 identificada operacionalmente como LPR / TCP 515
+[OK] analizadores de caminos endpoint-aware
+[OK] separación entre discovery y policy
+[OK] policy opcional
+[OK] TargetIP explícito con precedencia operacional
+[OK] OperationalTargetIP / OperationalTcpPort
+[OK] semántica Ethernet PRESERVED / FAILED / NOT_APPLICABLE
+[OK] ConnectivityAnalyzer convertido en diagnóstico opcional
+[OK] recovery Epson real Claro640 -> suarezcores mediante LPR / 515
+[OK] regresión de no intervención cuando Ethernet ya alcanza la Epson
+```
+
+El estado de referencia del código es:
+
+```text
+commit 55316dd
+FEAT: consolida recovery operacional y diagnostico opcional
+```
+
+El siguiente objetivo formal es validar una segunda impresora dentro del mismo
+modelo arquitectónico, sin introducir excepciones específicas por fabricante.
+
+La candidata de validación es:
+
+```text
+Brother HL-1212W
+```
+
+expuesta actualmente en Windows mediante colas de red y USB.
+
+Esa validación pertenece a la etapa siguiente y no se considera completada en
+este checkpoint.

@@ -1759,3 +1759,850 @@ El objetivo Post-Alpha no es que PrintSwitch cambie redes con mayor frecuencia.
 
 El objetivo es que pueda decidir correctamente en una variedad mayor de
 entornos y dispositivos.
+
+
+---
+
+# Roadmap vigente — Septiembre 2026
+
+> **Estado documental**
+>
+> Todo el roadmap anterior se conserva como registro histórico de la
+> planificación y evolución de PrintSwitch-Windows.
+>
+> Los objetivos, prioridades y estados anteriores representan decisiones
+> reales tomadas durante Alpha y Post-Alpha y no deben ser reescritos
+> retroactivamente.
+>
+> Esta sección establece el estado vigente del roadmap a partir del
+> checkpoint:
+>
+> ```text
+> commit 55316dd
+> FEAT: consolida recovery operacional y diagnostico opcional
+> ```
+
+---
+
+## 43. Criterio de avance desde este checkpoint
+
+La evolución inmediata de PrintSwitch debe continuar siendo incremental.
+
+No se avanzará directamente hacia:
+
+```text
+UI
+instalador
+servicio residente
+multi-impresora completa
+correlación física compleja
+```
+
+antes de validar suficientemente el motor operacional.
+
+La secuencia vigente es:
+
+```text
+1. cerrar milestone endpoint-aware
+        |
+        v
+2. consolidar inconsistencias del recovery
+        |
+        v
+3. validar Brother dentro del mismo modelo
+        |
+        v
+4. consolidar Discovery + Policy
+        |
+        v
+5. integrar QueueWatcher
+        |
+        v
+6. regresiones y casos raros
+        |
+        v
+7. aplicación / UI
+        |
+        v
+8. multi-impresora y otros fabricantes
+```
+
+Cada etapa debe producir evidencia antes de habilitar la siguiente.
+
+---
+
+## 44. Punto 1 — Cierre del milestone endpoint-aware
+
+Estado:
+
+```text
+COMPLETADO
+```
+
+El objetivo era abandonar la dependencia operacional de una asociación rígida:
+
+```text
+impresora
++
+IP fija
++
+TCP 9100
+```
+
+y pasar a:
+
+```text
+cola
+   |
+   v
+endpoint
+   |
+   v
+reachability strategy
+```
+
+Se incorporaron y validaron componentes específicos para esta abstracción:
+
+```text
+PrinterEndpointResolver.ps1
+PrinterEndpointReachability.ps1
+PrinterServiceProbe.ps1
+PrinterDiscovery.ps1
+```
+
+Los analizadores de caminos fueron adaptados para utilizar:
+
+```text
+OperationalTargetIP
+OperationalTcpPort
+```
+
+en lugar de asumir TCP 9100 como puerto operacional universal.
+
+---
+
+## 45. Evidencia de cierre del Punto 1
+
+La Epson L365 permitió validar el modelo endpoint-aware.
+
+La cola:
+
+```text
+L365 Series(Red)
+```
+
+fue resuelta como:
+
+```text
+Transport    = NETWORK
+Protocol     = LPR
+Destination  = 192.168.1.108
+TcpPort      = 515
+QueueName    = ENPQueue
+Strategy     = LPR_TCP
+```
+
+Posteriormente se ejecutó una recuperación física completa:
+
+```text
+Claro640
+   |
+   v
+suarezcores
+```
+
+utilizando como objetivo operacional:
+
+```text
+192.168.1.108:515
+```
+
+Resultado:
+
+```text
+RecoverySucceeded     = True
+FinalClassification   = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+Por lo tanto:
+
+```text
+PUNTO 1 = CERRADO
+```
+
+---
+
+## 46. Punto 2 — Consolidación de inconsistencias
+
+Estado:
+
+```text
+COMPLETADO
+```
+
+El objetivo fue estabilizar el contrato del Orchestrator antes de introducir
+formalmente una segunda impresora.
+
+Se trabajó sobre:
+
+```text
+semántica de preservación Ethernet
+versionado del Orchestrator
+TargetIP vs OperationalTargetIP
+OperationalTcpPort
+policy opcional
+dependencias obligatorias
+ConnectivityAnalyzer
+```
+
+---
+
+## 47. EthernetPreservationStatus
+
+La semántica quedó definida como:
+
+```text
+Ethernet no existía antes
+    -> NOT_APPLICABLE
+
+Ethernet existía y continúa activa
+    -> PRESERVED
+
+Ethernet existía y se perdió
+    -> FAILED
+```
+
+El campo:
+
+```text
+EthernetPreserved
+```
+
+queda asociado a:
+
+```text
+null
+True
+False
+```
+
+respectivamente.
+
+Esto evita considerar un escenario sin Ethernet inicial como un fallo de
+preservación.
+
+---
+
+## 48. TargetIP y destino operacional
+
+La precedencia quedó definida como:
+
+```text
+TargetIP explícito
+        |
+        +--> existe
+        |      |
+        |      v
+        | OperationalTargetIP = TargetIP
+        |
+        +--> no existe
+               |
+               v
+OperationalTargetIP = destino resuelto del endpoint
+```
+
+El puerto operacional se obtiene del endpoint:
+
+```text
+OperationalTcpPort = Endpoint.TcpPort
+```
+
+La precedencia fue validada en dry-run mediante un destino alternativo,
+confirmando que los analizadores posteriores utilizaron el override y no la
+dirección configurada originalmente en la cola.
+
+---
+
+## 49. ConnectivityAnalyzer deja de ser dependencia operacional
+
+`ConnectivityAnalyzer.ps1` continúa disponible como componente diagnóstico.
+
+Sin embargo:
+
+```text
+NO
+```
+
+es un requisito para determinar el éxito del recovery.
+
+La recuperación operacional se determina mediante:
+
+```text
+NetworkSwitchVerified
+        +
+RecoveryValidator.RecoveryConfirmed
+        +
+RouteAfter.TargetReachable
+```
+
+Se realizó una prueba E2E con:
+
+```text
+ConnectivityAnalyzer.ps1
+```
+
+temporalmente ausente.
+
+Resultado:
+
+```text
+ConnectivityAfter     = NOT_AVAILABLE
+RecoverySucceeded     = True
+FinalClassification   = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+Por lo tanto:
+
+```text
+ConnectivityAnalyzer
+        |
+        v
+diagnóstico opcional
+```
+
+queda separado de:
+
+```text
+autoridad operacional de recovery
+```
+
+---
+
+## 50. Cierre formal del Punto 2
+
+El estado de código utilizado para cerrar esta etapa es:
+
+```text
+commit 55316dd
+FEAT: consolida recovery operacional y diagnostico opcional
+```
+
+Los checks previos al commit fueron:
+
+```text
+PowerShell Parser = PASS
+git diff --check  = PASS
+```
+
+El commit fue publicado en:
+
+```text
+main
+origin/main
+```
+
+y el working tree quedó limpio.
+
+Por lo tanto:
+
+```text
+PUNTO 2 = CERRADO
+```
+
+No deben incorporarse nuevas correcciones funcionales pertenecientes a este
+punto salvo que una regresión posterior demuestre un defecto real.
+
+---
+
+## 51. Punto 3 — Validación Brother dentro del mismo modelo
+
+Estado:
+
+```text
+SIGUIENTE ETAPA
+```
+
+Hardware disponible:
+
+```text
+Brother HL-1212W
+```
+
+Windows expone actualmente dos colas relevantes:
+
+```text
+Brother HL-1210W series
+Brother HL-1210W series USB
+```
+
+El objetivo de esta etapa no es agregar soporte especial para Brother.
+
+El objetivo es comprobar si la arquitectura genérica existente puede
+interpretar correctamente ambas colas.
+
+---
+
+## 52. Caso Brother USB
+
+El modelo esperado es:
+
+```text
+cola Brother USB
+        |
+        v
+endpoint USB
+        |
+        v
+USB_PRESENCE
+```
+
+### USB conectado
+
+Resultado esperado:
+
+```text
+REACHABLE
+    |
+    v
+NO_ACTION
+```
+
+No debe existir evaluación de recovery Wi-Fi.
+
+### USB desconectado
+
+Resultado esperado:
+
+```text
+UNREACHABLE
+    |
+    v
+NO_WIFI_ACTION
+```
+
+PrintSwitch no debe inventar una recuperación de red simplemente porque el
+endpoint USB dejó de estar disponible.
+
+### Estado incierto
+
+Resultado esperado:
+
+```text
+UNKNOWN
+    |
+    v
+FAIL SAFE
+    |
+    v
+NO_WIFI_ACTION
+```
+
+---
+
+## 53. Caso Brother Network
+
+La cola de red observada utiliza:
+
+```text
+PortName  = BRWC48E8F7B140F
+Transport = NETWORK
+Protocol  = LPR
+TcpPort   = 515
+QueueName = BINARY_P1
+```
+
+El hostname observado es:
+
+```text
+BRWC48E8F7B140F
+```
+
+En el entorno donde puede resolverse se observó:
+
+```text
+192.168.100.12
+```
+
+La validación formal debe comprobar:
+
+```text
+cola
+  |
+  v
+endpoint NETWORK
+  |
+  v
+resolución de hostname
+  |
+  v
+LPR / TCP 515
+  |
+  v
+reachability
+  |
+  v
+path analysis
+```
+
+sin agregar lógica específica para Brother al Orchestrator.
+
+---
+
+## 54. Criterio de aprobación del Punto 3
+
+El Punto 3 podrá considerarse cerrado cuando exista evidencia reproducible de
+los siguientes escenarios:
+
+```text
+[ ] Brother USB conectado
+    -> endpoint USB
+    -> REACHABLE
+    -> NO_ACTION
+    -> ningún cambio Wi-Fi
+
+[ ] Brother USB desconectado
+    -> endpoint USB
+    -> UNREACHABLE
+    -> ningún recovery Wi-Fi inventado
+
+[ ] Brother NETWORK alcanzable
+    -> endpoint NETWORK
+    -> LPR / 515
+    -> camino existente
+    -> NO_ACTION
+
+[ ] Brother NETWORK no resoluble o sin evidencia suficiente
+    -> UNKNOWN / clasificación segura
+    -> ningún cambio Wi-Fi no autorizado
+```
+
+Además:
+
+```text
+[ ] no debe agregarse hardcoding Brother al runtime común
+
+[ ] Epson debe continuar funcionando después de las pruebas
+
+[ ] Ethernet debe continuar siendo preservado
+
+[ ] policy ausente no debe convertir la cola Brother en inválida
+```
+
+Sólo después de estas comprobaciones:
+
+```text
+PUNTO 3 = CERRADO
+```
+
+---
+
+## 55. Punto 4 — Consolidar Discovery + Policy
+
+Estado:
+
+```text
+PENDIENTE
+```
+
+El modelo conceptual ya existe:
+
+```text
+Windows / Registry / PnP / Spooler
+             |
+             v
+          Discovery
+             |
+             v
+         QueueContext
+
+
+config/policy.json
+             |
+             v
+      intención del usuario
+```
+
+Sin embargo, la consolidación definitiva pertenece a una etapa posterior a la
+validación Brother.
+
+Objetivos:
+
+```text
+PrinterDiscovery como inventario automático
+discovery.json como snapshot regenerable
+policy.json como intención persistente
+printers.json solamente como compatibilidad legacy
+```
+
+No debe adelantarse la eliminación de:
+
+```text
+config/printers.json
+```
+
+mientras existan componentes Alpha que todavía lo utilicen.
+
+---
+
+## 56. Punto 5 — Integración completa con QueueWatcher
+
+Estado:
+
+```text
+PENDIENTE
+```
+
+El objetivo es que la operación cotidiana deje de requerir ejecución manual
+del Orchestrator.
+
+El flujo buscado es:
+
+```text
+trabajo
+   |
+   v
+QueueWatcher
+   |
+   v
+cola
+   |
+   v
+endpoint
+   |
+   v
+paths
+   |
+   v
+policy
+   |
+   v
+acción mínima
+```
+
+`-EnableRecovery` deberá continuar significando:
+
+```text
+permiso para ejecutar una recuperación necesaria
+```
+
+y nunca:
+
+```text
+forzar un cambio de Wi-Fi
+```
+
+---
+
+## 57. Punto 6 — Regresiones y casos raros
+
+Estado:
+
+```text
+PENDIENTE
+```
+
+La batería deberá incluir al menos:
+
+```text
+impresora apagada
+
+SSID objetivo no visible
+
+perfil Wi-Fi conocido pero servicio no disponible
+
+múltiples caminos existentes
+
+múltiples caminos alcanzables
+
+hostname no resoluble
+
+USB conectado
+
+USB desconectado
+
+USB aparece durante ejecución
+
+USB desaparece durante ejecución
+
+endpoint UNKNOWN
+
+policy ausente
+
+recovery no autorizado
+
+fallo de NetworkManager
+
+switch realizado pero endpoint no recuperado
+
+Ethernet presente antes y después
+
+Ethernet ausente desde el inicio
+```
+
+El principio para los casos ambiguos será:
+
+```text
+FAIL SAFE
+```
+
+Una falta de evidencia no debe producir automáticamente una modificación de
+conectividad.
+
+---
+
+## 58. Punto 7 — Aplicación y UI
+
+Estado:
+
+```text
+POSTERIOR
+```
+
+La interfaz será una capa sobre el motor.
+
+No deberá contener una segunda implementación de las decisiones de
+conectividad.
+
+La evolución prevista incluye:
+
+```text
+agente residente
+system tray
+estado de impresoras
+logs
+configuración mínima
+historial de recuperaciones
+instalador
+```
+
+La UI deberá consumir las decisiones y resultados producidos por el core.
+
+---
+
+## 59. Punto 8 — Multi-impresora y otros fabricantes
+
+Estado:
+
+```text
+FUTURO
+```
+
+Después de estabilizar Epson + Brother se incorporarán nuevas fuentes de
+evidencia.
+
+Entre ellas:
+
+```text
+HP
+otras impresoras
+múltiples trabajos simultáneos
+múltiples endpoints por dispositivo físico
+correlación USB / NETWORK
+```
+
+En esta etapa será necesario evolucionar hacia un modelo semejante a:
+
+```text
+QueueWatcher
+      |
+      v
+Job Contexts
+      |
+      v
+Endpoint Resolver
+      |
+      v
+Path Analyzer por trabajo
+      |
+      v
+Conflict / Resource Manager
+      |
+      v
+Decision Engine
+      |
+      v
+acciones
+```
+
+Wi-Fi deberá considerarse un recurso compartido cuya modificación puede
+afectar a más de un trabajo.
+
+USB y Ethernet pueden coexistir sin exigir el mismo tipo de arbitraje.
+
+---
+
+## 60. Regla de prioridad para la evolución futura
+
+Las decisiones futuras deben favorecer el camino de menor intervención.
+
+Conceptualmente:
+
+```text
+endpoint ya alcanzable
+        |
+        v
+costo mínimo
+
+
+USB disponible
+Ethernet disponible
+Wi-Fi actual funcional
+        |
+        v
+preferidos
+
+
+cambio de Wi-Fi
+        |
+        v
+mayor costo
+
+
+interrumpir otro trabajo
+        |
+        v
+costo muy alto
+```
+
+Este modelo de costos todavía no constituye una implementación.
+
+Es una dirección arquitectónica para la etapa multi-contexto.
+
+---
+
+## 61. Estado general — Septiembre 2026
+
+El roadmap vigente queda:
+
+```text
+[COMPLETADO] 1. Cierre endpoint-aware
+
+[COMPLETADO] 2. Consolidación de inconsistencias
+
+[SIGUIENTE]   3. Validación Brother
+
+[PENDIENTE]   4. Consolidar Discovery + Policy
+
+[PENDIENTE]   5. Integración QueueWatcher
+
+[PENDIENTE]   6. Regresiones y casos raros
+
+[POSTERIOR]   7. Aplicación / UI
+
+[FUTURO]      8. Multi-impresora / otros fabricantes
+```
+
+La regla para avanzar continúa siendo:
+
+> **No promover una capacidad por diseño esperado. Promoverla cuando exista
+> evidencia reproducible de que funciona y de que no rompe los escenarios ya
+> validados.**
+
+El siguiente trabajo funcional comienza en:
+
+```text
+PUNTO 3
+VALIDACIÓN BROTHER
+```
+
+y no en la construcción de UI ni en la expansión prematura del sistema.

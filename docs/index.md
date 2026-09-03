@@ -370,3 +370,467 @@ La regla central de PrintSwitch puede resumirse como:
 Y para cualquier modificación de conectividad:
 
 > **Si la evidencia disponible no justifica el cambio, la acción preferida es no intervenir.**
+
+
+---
+
+# Estado vigente — Septiembre 2026
+
+> **Nota de versión**
+>
+> Todo el contenido anterior de este documento se conserva como referencia
+> histórica de las etapas Alpha y Post-Alpha de PrintSwitch-Windows.
+>
+> Las descripciones anteriores representan correctamente el estado que tenía
+> el proyecto cuando fueron escritas, pero no deben interpretarse como una
+> descripción completa de la arquitectura operacional vigente.
+>
+> El estado actual documentado toma como referencia:
+>
+> ```text
+> commit 55316dd
+> FEAT: consolida recovery operacional y diagnostico opcional
+> ```
+
+---
+
+## Evolución desde Alpha
+
+El Alpha demostró que PrintSwitch podía:
+
+```text
+detectar un trabajo
+        |
+        v
+analizar conectividad
+        |
+        v
+evitar cambios innecesarios
+        |
+        v
+decidir una recuperación Wi-Fi
+        |
+        v
+ejecutarla
+        |
+        v
+verificar recuperación
+        |
+        v
+permitir la impresión
+```
+
+La etapa posterior refinó la unidad sobre la que se realiza esa decisión.
+
+La arquitectura ya no parte de:
+
+```text
+impresora
++
+IP
++
+TCP 9100
+```
+
+como modelo operacional general.
+
+El flujo vigente parte de la cola Windows:
+
+```text
+Trabajo
+   |
+   v
+Cola Windows
+   |
+   v
+QueueContext
+   |
+   v
+Endpoint
+   |
+   v
+Reachability
+   |
+   v
+Paths
+   |
+   v
+Policy
+   |
+   v
+Acción mínima
+```
+
+---
+
+## Endpoint-aware
+
+PrintSwitch incorpora actualmente una capa de resolución de endpoint.
+
+Esto permite distinguir, entre otros casos:
+
+```text
+NETWORK / RAW
+NETWORK / LPR
+NETWORK / IPP
+USB
+```
+
+sin exigir que todos los dispositivos utilicen la misma estrategia de
+reachability.
+
+La cola Windows constituye el objeto operacional inicial.
+
+El endpoint define cómo debe evaluarse su disponibilidad.
+
+---
+
+## Epson L365 — evidencia vigente
+
+La Epson L365 continúa siendo la principal impresora utilizada para validar el
+recovery físico.
+
+La investigación posterior al Alpha determinó que la cola:
+
+```text
+L365 Series(Red)
+```
+
+utiliza operacionalmente:
+
+```text
+Transport    = NETWORK
+Protocol     = LPR
+Destination  = 192.168.1.108
+TcpPort      = 515
+QueueName    = ENPQueue
+```
+
+Por ello:
+
+```text
+192.168.1.108:515
+```
+
+es actualmente el endpoint utilizado para validar la recuperación operacional
+de esa cola.
+
+TCP 9100 continúa siendo una señal diagnóstica válida en los experimentos
+donde fue utilizado, pero ya no constituye una suposición global del motor.
+
+---
+
+## Recovery físico validado
+
+Se volvió a validar el escenario real:
+
+```text
+Ethernet desconectado
+Wi-Fi inicial = Claro640
+Epson encendida
+suarezcores visible y conocido
+```
+
+El endpoint:
+
+```text
+192.168.1.108:515
+```
+
+era inicialmente inalcanzable.
+
+PrintSwitch evaluó el contexto, determinó que correspondía recuperación Wi-Fi
+y realizó:
+
+```text
+Claro640
+   |
+   v
+suarezcores
+```
+
+Posteriormente se confirmó el servicio LPR / TCP 515 y la ruta resultante.
+
+El resultado final fue:
+
+```text
+RecoverySucceeded     = True
+FinalClassification   = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+---
+
+## No intervención cuando existe un camino funcional
+
+También se validó el escenario donde:
+
+```text
+Ethernet
+   |
+   v
+Epson alcanzable
+
+Wi-Fi
+   |
+   v
+Claro640
+```
+
+Aunque se ejecutó el Orchestrator con permiso para realizar acciones reales,
+el sistema detectó que el endpoint ya era alcanzable mediante Ethernet.
+
+Resultado:
+
+```text
+SwitchAuthorized   = False
+SwitchExecuted     = False
+FinalClassification = EXISTING_REACHABLE_PATH
+```
+
+Esto confirma que:
+
+```text
+-Execute
+```
+
+significa permiso para actuar si es necesario y no una orden de cambiar Wi-Fi.
+
+---
+
+## Discovery y Policy
+
+La arquitectura vigente separa:
+
+```text
+DISCOVERY
+```
+
+de:
+
+```text
+POLICY
+```
+
+Discovery responde:
+
+```text
+¿Qué existe y cómo está configurado?
+```
+
+Policy responde:
+
+```text
+¿Qué está autorizado a hacer PrintSwitch?
+```
+
+El inventario puede construirse desde:
+
+```text
+Windows
+Registry
+PnP
+Spooler
+```
+
+mediante:
+
+```text
+PrinterDiscovery.ps1
+```
+
+y representarse temporalmente en:
+
+```text
+config/discovery.json
+```
+
+como snapshot regenerable.
+
+La intención persistente se almacena separadamente en:
+
+```text
+config/policy.json
+```
+
+El archivo:
+
+```text
+config/printers.json
+```
+
+se conserva por compatibilidad con componentes anteriores y no representa el
+modelo arquitectónico objetivo.
+
+---
+
+## ConnectivityAnalyzer
+
+`ConnectivityAnalyzer.ps1` continúa disponible como herramienta diagnóstica.
+
+Ya no constituye una dependencia obligatoria del recovery operacional.
+
+Una recuperación completa fue validada con el componente temporalmente
+ausente:
+
+```text
+ConnectivityAfter   = NOT_AVAILABLE
+RecoverySucceeded   = True
+FinalClassification = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+La autoridad operacional corresponde actualmente a la combinación de:
+
+```text
+NetworkSwitchVerified
+RecoveryValidator.RecoveryConfirmed
+RouteAfter.TargetReachable
+```
+
+---
+
+## Preservación Ethernet
+
+PrintSwitch continúa manteniendo como regla:
+
+> **Una recuperación Wi-Fi no debe modificar Ethernet.**
+
+La auditoría distingue actualmente:
+
+```text
+NOT_APPLICABLE
+PRESERVED
+FAILED
+```
+
+según exista o no Ethernet activa antes de la recuperación y según su estado
+posterior.
+
+---
+
+## Documentación por versiones
+
+A partir de este checkpoint se adopta explícitamente la siguiente política
+documental:
+
+```text
+documentación existente
+        |
+        v
+se conserva como versión histórica
+        |
+        v
+no se reescribe retroactivamente
+        |
+        v
+se agrega una nueva sección fechada
+        |
+        v
+la nueva sección describe el estado vigente
+```
+
+Por lo tanto, una afirmación histórica puede diferir de una conclusión
+posterior sin que la primera sea eliminada.
+
+Ejemplo:
+
+```text
+Alpha
+    TCP 9100 utilizado como señal operacional y de liveness
+
+Septiembre 2026
+    endpoint real Epson identificado como LPR / TCP 515
+```
+
+Ambas afirmaciones pertenecen a momentos distintos del desarrollo.
+
+---
+
+## Documentos vigentes de referencia
+
+Para comprender el estado de Septiembre 2026 deben consultarse especialmente:
+
+```text
+Architecture_Observed.md
+Knowledge.md
+Roadmap.md
+```
+
+Las nuevas secciones fechadas al final de esos documentos describen la
+evolución posterior al contenido histórico.
+
+`Alpha_Checkpoint.md` continúa siendo deliberadamente una fotografía del Alpha
+y no debe actualizarse para simular el comportamiento actual.
+
+`Experimental_Tests.md` conserva la evidencia experimental cronológica y no
+debe corregirse retroactivamente cuando una hipótesis o mecanismo fue
+posteriormente refinado.
+
+---
+
+## Roadmap vigente
+
+El estado actual es:
+
+```text
+[COMPLETADO] 1. Cierre endpoint-aware
+
+[COMPLETADO] 2. Consolidación de inconsistencias
+
+[SIGUIENTE]   3. Validación Brother
+
+[PENDIENTE]   4. Consolidar Discovery + Policy
+
+[PENDIENTE]   5. Integración QueueWatcher
+
+[PENDIENTE]   6. Regresiones y casos raros
+
+[POSTERIOR]   7. Aplicación / UI
+
+[FUTURO]      8. Multi-impresora / otros fabricantes
+```
+
+La siguiente etapa funcional utiliza:
+
+```text
+Brother HL-1212W
+```
+
+como segunda impresora física de validación.
+
+Windows expone actualmente colas de red y USB asociadas a ese dispositivo.
+
+El objetivo no será agregar excepciones específicas para Brother.
+
+El objetivo será comprobar si:
+
+```text
+QueueContext
+      |
+      v
+Endpoint
+      |
+      v
+ReachabilityStrategy
+```
+
+permite interpretar correctamente ambos transportes utilizando el mismo motor
+general.
+
+---
+
+## Principio vigente
+
+La regla histórica:
+
+> **Observar antes de inferir, medir antes de decidir, decidir antes de actuar y verificar después de actuar.**
+
+continúa plenamente vigente.
+
+La evolución endpoint-aware agrega una precisión:
+
+> **No preguntar primero en qué red debería estar la impresora. Preguntar
+> primero cómo intenta alcanzarla realmente la cola que recibió el trabajo.**
+
+Y se mantiene la regla de seguridad:
+
+> **Si la evidencia disponible no justifica el cambio, la acción preferida es no intervenir.**
