@@ -1,29 +1,28 @@
 param (
     [switch]$EnableRecovery,
 
-    [string]$PrinterName,
-
-    [string]$ConfigPath = (
-        Join-Path `
-            (Split-Path $PSScriptRoot -Parent) `
-            "config\printers.json"
-    )
+    [string]$PrinterName
 )
 
 $ErrorActionPreference = "Continue"
 
-# ============================================================
-# PrintSwitch - QueueWatcher v0.6
+# PrintSwitch - QueueWatcher v0.7
 #
-# Orquestador principal.
+# Orquestador de observacion de trabajos.
 #
 # Funciones:
-#   - valida configuracion
+#   - descubre colas instaladas mediante PrinterDiscovery
+#   - selecciona la cola observada mediante QueueContext
 #   - observa trabajos
 #   - solicita diagnostico
 #   - solicita recuperacion de red
 #   - registra eventos importantes mediante Logger
-# ============================================================
+#
+# v0.7:
+# - elimina la dependencia operacional de config/printers.json
+# - deja de usar ConfigValidator para seleccionar impresoras
+# - usa PrinterDiscovery como fuente operacional de colas
+# - no selecciona arbitrariamente una cola cuando existen varias
 
 $PollingMilliseconds = 500
 
@@ -31,10 +30,9 @@ $LoggerPath = Join-Path `
     $PSScriptRoot `
     "Logger.ps1"
 
-$ConfigValidatorPath = Join-Path `
+$PrinterDiscoveryPath = Join-Path `
     $PSScriptRoot `
-    "ConfigValidator.ps1"
-
+    "PrinterDiscovery.ps1"
 
 $PrintRecoveryOrchestratorPath = Join-Path `
     $PSScriptRoot `
@@ -78,7 +76,7 @@ catch {
 # ============================================================
 
 Write-Host ""
-Write-Host "PrintSwitch - QueueWatcher v0.6" `
+Write-Host "PrintSwitch - QueueWatcher v0.7" `
     -ForegroundColor Cyan
 
 Write-Host ""
@@ -89,54 +87,63 @@ Write-PrintSwitchLog `
     -Level "INFO" `
     -Data @{
         RecoveryEnabled = [bool]$EnableRecovery
-        ConfigPath      = $ConfigPath
+        RequestedPrinter = $PrinterName
     } |
     Out-Null
 
 # ============================================================
-# 2. VALIDAR CONFIGURACION
+# 2. VALIDAR PRINTER DISCOVERY
 # ============================================================
 
 Write-Host "========================================"
-Write-Host "1. VALIDACION DE CONFIGURACION"
+Write-Host "1. PRINTER DISCOVERY"
 Write-Host "========================================"
 
-if (-not (Test-Path $ConfigValidatorPath)) {
+if (-not (Test-Path -LiteralPath $PrinterDiscoveryPath)) {
 
     Write-Host ""
     Write-Host `
-        "ERROR: ConfigValidator no encontrado." `
+        "ERROR: PrinterDiscovery no encontrado." `
         -ForegroundColor Red
+
+    Write-Host "Ruta esperada: $PrinterDiscoveryPath"
 
     Write-PrintSwitchLog `
         -Component "QueueWatcher" `
-        -Event "CONFIG_VALIDATOR_NOT_FOUND" `
+        -Event "PRINTER_DISCOVERY_NOT_FOUND" `
         -Level "ERROR" `
         -Data @{
-            Path = $ConfigValidatorPath
+            Path = $PrinterDiscoveryPath
         } |
         Out-Null
 
     return
 }
 
+# ============================================================
+# 3. EJECUTAR DISCOVERY
+# ============================================================
+
+$QueueContexts = @()
+
 try {
 
-    $ValidationResult = & $ConfigValidatorPath `
-        -ConfigPath $ConfigPath
+    $QueueContexts = @(
+        & $PrinterDiscoveryPath
+    )
 }
 catch {
 
     Write-Host ""
     Write-Host `
-        "ERROR ejecutando ConfigValidator." `
+        "ERROR ejecutando PrinterDiscovery." `
         -ForegroundColor Red
 
     Write-Host $_.Exception.Message
 
     Write-PrintSwitchLog `
         -Component "QueueWatcher" `
-        -Event "CONFIG_VALIDATION_ERROR" `
+        -Event "PRINTER_DISCOVERY_ERROR" `
         -Level "ERROR" `
         -Data @{
             Message = $_.Exception.Message
@@ -146,16 +153,16 @@ catch {
     return
 }
 
-if ($null -eq $ValidationResult) {
+if ($QueueContexts.Count -eq 0) {
 
     Write-Host ""
     Write-Host `
-        "ERROR: ConfigValidator no devolvio resultado." `
+        "ERROR: PrinterDiscovery no encontro colas fisicas." `
         -ForegroundColor Red
 
     Write-PrintSwitchLog `
         -Component "QueueWatcher" `
-        -Event "CONFIG_VALIDATION_NO_RESULT" `
+        -Event "NO_PHYSICAL_PRINTER_QUEUES" `
         -Level "ERROR" |
         Out-Null
 
@@ -163,156 +170,140 @@ if ($null -eq $ValidationResult) {
 }
 
 Write-Host ""
-Write-Host "----------------------------------------"
-Write-Host "RESULTADO CONFIGVALIDATOR"
-Write-Host "----------------------------------------"
-
-Write-Host `
-    "Classification : $($ValidationResult.Classification)"
-
-Write-Host `
-    "IsValid        : $($ValidationResult.IsValid)"
-
-Write-Host `
-    "PrinterCount   : $($ValidationResult.PrinterCount)"
-
-Write-Host `
-    "ErrorCount     : $($ValidationResult.ErrorCount)"
-
-if (-not $ValidationResult.IsValid) {
-
-    Write-PrintSwitchLog `
-        -Component "QueueWatcher" `
-        -Event "CONFIG_INVALID" `
-        -Level "ERROR" `
-        -Data @{
-            ErrorCount = $ValidationResult.ErrorCount
-            Errors     = ($ValidationResult.Errors -join ",")
-        } |
-        Out-Null
-
-    Write-Host ""
-    Write-Host "========================================"
-
-    Write-Host `
-        "PRINTSWITCH_STARTUP_ABORTED" `
-        -ForegroundColor Red
-
-    Write-Host "========================================"
-
-    Write-Host `
-        "La configuracion es invalida."
-
-    Write-Host `
-        "PrintSwitch no iniciara la observacion de trabajos."
-
-    if ($ValidationResult.Errors.Count -gt 0) {
-
-        Write-Host ""
-        Write-Host "Errores detectados:"
-
-        foreach ($ValidationError in $ValidationResult.Errors) {
-
-            Write-Host `
-                " - $ValidationError" `
-                -ForegroundColor Red
-        }
-    }
-
-    return
-}
-
-Write-PrintSwitchLog `
-    -Component "QueueWatcher" `
-    -Event "CONFIG_VALID" `
-    -Level "INFO" `
-    -Data @{
-        PrinterCount = $ValidationResult.PrinterCount
-    } |
-    Out-Null
-
-Write-Host ""
-Write-Host `
-    "Configuracion validada correctamente." `
-    -ForegroundColor Green
+Write-Host "QueueContexts descubiertos : $($QueueContexts.Count)"
 
 # ============================================================
-# 3. CARGAR CONFIGURACION VALIDADA
+# 4. SELECCIONAR COLA
 # ============================================================
 
-Write-Host ""
-Write-Host "========================================"
-Write-Host "2. CARGA DE CONFIGURACION"
-Write-Host "========================================"
+$SelectedQueueContext = $null
 
-try {
+if (
+    -not [string]::IsNullOrWhiteSpace($PrinterName)
+) {
 
-    $Config = Get-Content `
-        $ConfigPath `
-        -Raw `
-        -ErrorAction Stop |
-        ConvertFrom-Json `
-            -ErrorAction Stop
-}
-catch {
-
-    Write-Host ""
-    Write-Host `
-        "ERROR: la configuracion fue validada pero no pudo volver a cargarse." `
-        -ForegroundColor Red
-
-    Write-PrintSwitchLog `
-        -Component "QueueWatcher" `
-        -Event "CONFIG_RELOAD_FAILED" `
-        -Level "ERROR" `
-        -Data @{
-            Message = $_.Exception.Message
-        } |
-        Out-Null
-
-    return
-}
-
-# ============================================================
-# 4. SELECCIONAR IMPRESORA
-# ============================================================
-
-$PrinterProfile = $null
-
-if ($PrinterName) {
-
-    $PrinterProfile = @(
-        $Config.printers |
+    $SelectedQueueContext =
+        $QueueContexts |
             Where-Object {
-                $_.name -eq $PrinterName
-            }
-    ) | Select-Object -First 1
+                $_.QueueName -eq $PrinterName
+            } |
+            Select-Object -First 1
 
-    if ($null -eq $PrinterProfile) {
+    if ($null -eq $SelectedQueueContext) {
 
         Write-Host ""
         Write-Host `
-            "ERROR: no existe un perfil para '$PrinterName'." `
+            "ERROR: Windows no contiene una cola fisica llamada '$PrinterName'." `
             -ForegroundColor Red
+
+        Write-Host ""
+        Write-Host "Colas descubiertas:"
+
+        $QueueContexts |
+            ForEach-Object {
+                Write-Host " - $($_.QueueName)"
+            }
 
         Write-PrintSwitchLog `
             -Component "QueueWatcher" `
-            -Event "PRINTER_PROFILE_NOT_FOUND" `
+            -Event "PRINTER_QUEUE_NOT_FOUND" `
             -Level "ERROR" `
             -Data @{
-                Printer = $PrinterName
+                RequestedPrinter = $PrinterName
+                DiscoveredCount  = $QueueContexts.Count
             } |
             Out-Null
 
         return
     }
 }
+elseif ($QueueContexts.Count -eq 1) {
+
+    $SelectedQueueContext =
+        $QueueContexts[0]
+
+    $PrinterName =
+        [string]$SelectedQueueContext.QueueName
+}
 else {
 
-    $PrinterProfile = @($Config.printers)[0]
+    Write-Host ""
+    Write-Host `
+        "ERROR: se descubrieron varias colas fisicas y no se especifico -PrinterName." `
+        -ForegroundColor Red
+
+    Write-Host ""
+    Write-Host "Colas disponibles:"
+
+    $QueueContexts |
+        ForEach-Object {
+            Write-Host " - $($_.QueueName)"
+        }
+
+    Write-Host ""
+    Write-Host `
+        "Especifique explicitamente la cola mediante -PrinterName." `
+        -ForegroundColor Yellow
+
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "AMBIGUOUS_PRINTER_SELECTION" `
+        -Level "ERROR" `
+        -Data @{
+            DiscoveredCount = $QueueContexts.Count
+        } |
+        Out-Null
+
+    return
 }
 
-$PrinterName = [string]$PrinterProfile.name
+$PrinterName =
+    [string]$SelectedQueueContext.QueueName
+
+Write-Host ""
+Write-Host "----------------------------------------"
+Write-Host "QUEUECONTEXT SELECCIONADO"
+Write-Host "----------------------------------------"
+
+Write-Host `
+    "QueueName             : $($SelectedQueueContext.QueueName)"
+
+Write-Host `
+    "DiscoveryStatus       : $($SelectedQueueContext.DiscoveryStatus)"
+
+Write-Host `
+    "TransportType         : $($SelectedQueueContext.TransportType)"
+
+Write-Host `
+    "Protocol              : $($SelectedQueueContext.Protocol)"
+
+Write-Host `
+    "ConfiguredDestination : $($SelectedQueueContext.ConfiguredDestination)"
+
+Write-Host `
+    "TcpPort               : $($SelectedQueueContext.TcpPort)"
+
+Write-Host `
+    "ReachabilityStrategy  : $($SelectedQueueContext.ReachabilityStrategy)"
+
+Write-PrintSwitchLog `
+    -Component "QueueWatcher" `
+    -Event "PRINTER_QUEUE_SELECTED" `
+    -Level "INFO" `
+    -Data @{
+        PrinterName =
+            $SelectedQueueContext.QueueName
+
+        DiscoveryStatus =
+            $SelectedQueueContext.DiscoveryStatus
+
+        TransportType =
+            $SelectedQueueContext.TransportType
+
+        Protocol =
+            $SelectedQueueContext.Protocol
+    } |
+    Out-Null
 
 # ============================================================
 # 5. PRINTSWITCH READY
@@ -344,12 +335,12 @@ else {
         -ForegroundColor Green
 }
 
-Write-Host ""
-Write-Host "Configuracion       : $ConfigPath"
-Write-Host "Impresora observada : $PrinterName"
-Write-Host "Intervalo           : $PollingMilliseconds ms"
-Write-Host "Logger              : $LoggerPath"
-Write-Host "ConfigValidator     : $ConfigValidatorPath"
+Write-Host "Fuente de colas      : Windows / PrinterDiscovery"
+Write-Host "Impresora observada  : $PrinterName"
+Write-Host "DiscoveryStatus      : $($SelectedQueueContext.DiscoveryStatus)"
+Write-Host "Intervalo            : $PollingMilliseconds ms"
+Write-Host "Logger               : $LoggerPath"
+Write-Host "PrinterDiscovery     : $PrinterDiscoveryPath"
 
 
 Write-PrintSwitchLog `
