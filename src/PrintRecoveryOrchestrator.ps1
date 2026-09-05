@@ -1,15 +1,10 @@
-﻿param (
+param (
     [string]$PrinterName,
 
     [string]$TargetIP,
 
     [string]$TargetSSID,
 
-    [string]$ConfigPath = (
-        Join-Path `
-            $PSScriptRoot `
-            "..\config\printers.json"
-    ),
 
     [string]$PolicyPath = (
         Join-Path `
@@ -1320,7 +1315,8 @@ if ($ConnectivityAnalyzerAvailable) {
 
         $ConnectivityAfter = & $ConnectivityAnalyzerPath `
             -PrinterName $PrinterName `
-            -ConfigPath $ConfigPath
+            -TargetIP $OperationalTargetIP `
+            -TcpPort $OperationalTcpPort
 
         if (
             $null -ne $ConnectivityAfter -and

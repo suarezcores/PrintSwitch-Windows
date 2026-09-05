@@ -84,6 +84,10 @@ $ConnectivityAnalyzerPath = Join-Path `
     $PSScriptRoot `
     "ConnectivityAnalyzer.ps1"
 
+$PrinterEndpointResolverPath = Join-Path `
+    $PSScriptRoot `
+    "PrinterEndpointResolver.ps1"
+
 # ============================================================
 # 1. CARGAR CONFIGURACION
 # ============================================================
@@ -150,14 +154,53 @@ if ($null -eq $PrinterProfile) {
 $PrinterName =
     [string]$PrinterProfile.name
 
-$TargetIP =
-    [string]$PrinterProfile.ip
-
 $TargetSSID =
     [string]$PrinterProfile.requiredSSID
 
+try {
+
+    . $PrinterEndpointResolverPath
+
+    $Endpoint =
+        Resolve-PrintSwitchEndpoint `
+            -PrinterName $PrinterName
+
+}
+catch {
+
+    Write-Host `
+        "ERROR resolviendo endpoint operacional." `
+        -ForegroundColor Red
+
+    Write-Host $_.Exception.Message
+
+    return
+}
+
+if (
+    $null -eq $Endpoint -or
+    [string]::IsNullOrWhiteSpace(
+        [string]$Endpoint.ConfiguredDestination
+    ) -or
+    $null -eq $Endpoint.TcpPort
+) {
+
+    Write-Host `
+        "ERROR: endpoint operacional incompleto." `
+        -ForegroundColor Red
+
+    return
+}
+
+$TargetIP =
+    [string]$Endpoint.ConfiguredDestination
+
+$TargetTcpPort =
+    [int]$Endpoint.TcpPort
+
 Write-Host "PrinterName : $PrinterName"
 Write-Host "TargetIP    : $TargetIP"
+Write-Host "TargetTcpPort: $TargetTcpPort"
 Write-Host "TargetSSID  : $TargetSSID"
 
 # ============================================================
@@ -177,7 +220,8 @@ $RequiredComponents = @(
     $SwitchDecisionPath,
     $NetworkManagerPath,
     $RecoveryValidatorPath,
-    $ConnectivityAnalyzerPath
+    $ConnectivityAnalyzerPath,
+    $PrinterEndpointResolverPath
 )
 
 foreach ($ComponentPath in $RequiredComponents) {
@@ -794,9 +838,10 @@ Write-Host "========================================"
 Write-Host "12. REVALIDACION DE IMPRESORA"
 Write-Host "========================================"
 
-$ConnectivityAfter = & $ConnectivityAnalyzerPath `
-    -PrinterName $PrinterName `
-    -ConfigPath $ConfigPath
+    $ConnectivityAfter = & $ConnectivityAnalyzerPath `
+        -PrinterName $PrinterName `
+        -TargetIP $TargetIP `
+        -TcpPort $TargetTcpPort
 
 # ============================================================
 # 13. REVALIDAR ROUTE ANALYZER
