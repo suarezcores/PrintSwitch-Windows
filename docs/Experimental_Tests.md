@@ -4069,3 +4069,1441 @@ problema de red
 El Alpha queda experimentalmente cerrado con un flujo End-to-End funcional y
 con evidencia positiva tanto de intervención correcta como de no intervención
 correcta.
+
+---
+
+# Punto 6 — Regresiones y casos excepcionales — Septiembre 2026
+
+> **Estado**
+>
+> Batería diseñada.
+>
+> Ejecución:
+>
+> ```text
+> PENDIENTE
+> ```
+>
+> Esta sección se prepara antes de ejecutar las pruebas.
+>
+> No contiene resultados inventados ni reconstruidos retrospectivamente.
+>
+> El baseline funcional de referencia es:
+>
+> ```text
+> commit 4730803
+> REFACTOR: desacopla diagnostico de configuracion legacy
+> ```
+>
+> Este baseline representa:
+>
+> ```text
+> Puntos 1 a 5 completados
+> Epson Network validada
+> Brother Network validada
+> Brother USB validada
+> IPv4 validado
+> HOSTNAME validado
+> LPR validado
+> USB_PRESENCE validado
+> PrinterDiscovery integrado
+> Policy separada
+> QueueWatcher integrado
+> recovery físico validado
+> no intervención validada
+> ConnectivityAnalyzer endpoint-aware
+> auditoría técnica completada
+> ```
+
+---
+
+## P6.0. Objetivo general
+
+El Punto 6 tiene como objetivo someter la arquitectura actual a situaciones que
+no fueron necesariamente utilizadas durante su construcción.
+
+No busca principalmente:
+
+```text
+agregar funcionalidades
+```
+
+ni:
+
+```text
+mejorar UI
+```
+
+ni:
+
+```text
+incorporar nuevos fabricantes
+```
+
+Busca detectar:
+
+```text
+supuestos ocultos
+ambigüedad
+dependencias accidentales
+clasificaciones incorrectas
+acciones innecesarias
+acciones inseguras
+regresiones
+```
+
+antes de avanzar hacia una primera beta.
+
+---
+
+## P6.0.1. Metodología de ejecución
+
+Cada prueba debe seguir:
+
+```text
+diseño previo
+      |
+      v
+configuración inicial
+      |
+      v
+hipótesis
+      |
+      v
+resultado esperado
+      |
+      v
+ejecución
+      |
+      v
+resultado real
+      |
+      v
+comparación
+      |
+      v
+PASS / FAIL / INCONCLUSO
+```
+
+No debe modificarse código durante la primera observación de un comportamiento
+inesperado.
+
+Primero se preservará evidencia.
+
+---
+
+## P6.0.2. Estado del entorno antes de cada prueba
+
+Cada prueba deberá registrar explícitamente, cuando corresponda:
+
+```text
+Wi-Fi actual
+SSID actual
+Ethernet
+Epson ON/OFF
+Brother ON/OFF
+USB Brother conectado/desconectado
+SSID visibles
+Recovery habilitado/deshabilitado
+cola utilizada
+endpoint esperado
+```
+
+Según el caso también podrán registrarse:
+
+```text
+IP local
+gateway
+rutas
+resolución DNS / hostname
+estado de adaptadores
+PrinterStatus
+PortName
+```
+
+La configuración inicial es parte de la evidencia experimental.
+
+---
+
+## P6.0.3. Clasificación de resultados
+
+Cada prueba deberá terminar en uno de estos estados:
+
+```text
+PASS
+FAIL
+INCONCLUSO
+```
+
+### PASS
+
+El comportamiento observado coincide con el esperado y no aparece una
+regresión relevante.
+
+### FAIL
+
+El comportamiento contradice la hipótesis o revela una decisión insegura,
+incorrecta o regresiva.
+
+### INCONCLUSO
+
+La evidencia obtenida no alcanza para determinar si el comportamiento fue
+correcto.
+
+`INCONCLUSO` no debe convertirse en `PASS` por conveniencia.
+
+---
+
+# P6-01 — Endpoint accesible por camino alternativo
+
+## Estado
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Objetivo
+
+Comprobar que PrintSwitch preserve un camino funcional ya existente aunque el
+Wi-Fi actual no sea la red asociada normalmente a la impresora.
+
+La variable principal será:
+
+```text
+Ethernet
+```
+
+---
+
+## Pregunta experimental
+
+```text
+¿Qué ocurre si el Wi-Fi actual no conduce directamente
+al endpoint de impresión,
+pero Ethernet ya permite alcanzarlo?
+```
+
+---
+
+## Configuración inicial propuesta
+
+```text
+Wi-Fi
+    SSID = Claro640
+
+Ethernet
+    CONECTADO
+
+Epson
+    ENCENDIDA
+
+Brother
+    indiferente
+
+USB Brother
+    indiferente
+
+Cola
+    L365 Series(Red)
+
+Endpoint esperado
+    192.168.1.108:515
+
+Recovery
+    HABILITADO
+```
+
+Antes de ejecutar deberá verificarse que Ethernet realmente proporciona un
+camino funcional hacia:
+
+```text
+192.168.1.108:515
+```
+
+---
+
+## Hipótesis
+
+Si existe un camino funcional mediante Ethernet:
+
+```text
+PrintSwitch no debe cambiar Wi-Fi
+```
+
+aunque:
+
+```text
+Wi-Fi = Claro640
+```
+
+---
+
+## Resultado esperado
+
+Se espera una clasificación equivalente a:
+
+```text
+EXISTING_REACHABLE_PATH
+```
+
+con:
+
+```text
+SwitchDecision   = NO_ACTION
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+y preservación de Ethernet:
+
+```text
+EthernetPreservationStatus = PRESERVED
+```
+
+---
+
+## Acción / estímulo
+
+```text
+iniciar QueueWatcher
+con recovery habilitado
+y generar un trabajo real de impresión
+```
+
+---
+
+## Resultado obtenido
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Check real
+
+```text
+PENDIENTE
+```
+
+---
+
+## Observaciones
+
+```text
+PENDIENTE
+```
+
+---
+
+## Hallazgo
+
+```text
+PENDIENTE
+```
+
+---
+
+## Corrección necesaria
+
+```text
+PENDIENTE
+```
+
+---
+
+## Regresión posterior
+
+```text
+PENDIENTE
+```
+
+---
+
+# P6-02 — Hostname conocido pero no resoluble
+
+## Estado
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Objetivo
+
+Comprobar que la pérdida de resolución de un hostname produzca degradación
+segura y no una intervención basada en evidencia insuficiente.
+
+---
+
+## Pregunta experimental
+
+```text
+¿Qué ocurre cuando la cola posee
+un hostname válido configurado,
+pero el contexto de red actual
+no permite resolverlo?
+```
+
+---
+
+## Dispositivo de referencia
+
+```text
+Brother HL-1210W series
+```
+
+Endpoint configurado:
+
+```text
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+Protocol              = LPR
+TcpPort               = 515
+```
+
+---
+
+## Configuración inicial propuesta
+
+```text
+Wi-Fi
+    SSID = suarezcores
+
+Ethernet
+    DESCONECTADO
+
+Brother
+    ENCENDIDA
+
+Brother Network
+    configurada
+
+USB Brother
+    indiferente
+
+Epson
+    indiferente
+
+Recovery
+    DESHABILITADO inicialmente
+
+Hostname
+    BRWC48E8F7B140F
+
+Resultado previo conocido
+    el hostname no resuelve desde este contexto
+```
+
+La condición de no resolución debe verificarse antes de ejecutar el caso.
+
+---
+
+## Hipótesis
+
+La imposibilidad de resolver el hostname debe producir:
+
+```text
+UNKNOWN
+```
+
+y no:
+
+```text
+UNREACHABLE
+```
+
+---
+
+## Resultado esperado
+
+```text
+ReachabilityState = UNKNOWN
+
+ProbeResult =
+DESTINATION_RESOLUTION_FAILED
+```
+
+El Orchestrator debería terminar en una clasificación equivalente a:
+
+```text
+NO_ACTION_INSUFFICIENT_ENDPOINT_EVIDENCE
+NETWORK_DESTINATION_UNRESOLVED
+```
+
+con:
+
+```text
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+---
+
+## Acción / estímulo
+
+Ejecutar el pipeline sobre:
+
+```text
+Brother HL-1210W series
+```
+
+desde el contexto donde el hostname no pueda resolverse.
+
+---
+
+## Resultado obtenido
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Check real
+
+```text
+PENDIENTE
+```
+
+---
+
+## Observaciones
+
+```text
+PENDIENTE
+```
+
+---
+
+## Hallazgo
+
+```text
+PENDIENTE
+```
+
+---
+
+## Corrección necesaria
+
+```text
+PENDIENTE
+```
+
+---
+
+## Regresión posterior
+
+Si el test obliga a modificar lógica de endpoint o reachability, deberán
+repetirse al menos:
+
+```text
+Brother Network resoluble
+Brother USB conectado
+Brother USB desconectado
+Epson Network alcanzable
+```
+
+---
+
+# P6-03 — SSID visible pero endpoint no recuperado
+
+## Estado
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Objetivo
+
+Comprobar que PrintSwitch no confunda:
+
+```text
+cambio de red exitoso
+```
+
+con:
+
+```text
+recuperación del endpoint
+```
+
+---
+
+## Pregunta experimental
+
+```text
+¿Qué ocurre si el SSID candidato está disponible
+y el cambio Wi-Fi se completa,
+pero el recurso buscado continúa inaccesible?
+```
+
+---
+
+## Principio a verificar
+
+```text
+NetworkSwitchVerified = True
+```
+
+no debe implicar automáticamente:
+
+```text
+RecoverySucceeded = True
+```
+
+---
+
+## Configuración inicial propuesta
+
+La configuración concreta deberá definirse antes de ejecutar el test utilizando
+una red controlada que permita:
+
+```text
+SSID objetivo visible
+cambio Wi-Fi posible
+endpoint final inaccesible
+```
+
+Entorno disponible:
+
+```text
+Claro640
+suarezcores
+Suarez
+```
+
+La prueba deberá elegir una sola variante reproducible.
+
+---
+
+## Hipótesis
+
+Si el cambio de SSID ocurre pero el endpoint no responde:
+
+```text
+NetworkSwitchVerified = True
+```
+
+pero:
+
+```text
+RecoveryValidationConfirmed = False
+RecoverySucceeded           = False
+```
+
+o una clasificación equivalente.
+
+---
+
+## Resultado esperado
+
+El sistema no debe producir:
+
+```text
+CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+si el endpoint operacional permanece inaccesible.
+
+---
+
+## Acción / estímulo
+
+```text
+PENDIENTE DE DEFINIR EN EL MOMENTO DE EJECUCIÓN
+```
+
+La acción deberá diseñarse de modo que sólo cambie la condición necesaria para
+separar:
+
+```text
+SSID alcanzado
+```
+
+de:
+
+```text
+endpoint recuperado
+```
+
+---
+
+## Resultado obtenido
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Check real
+
+```text
+PENDIENTE
+```
+
+---
+
+## Observaciones
+
+```text
+PENDIENTE
+```
+
+---
+
+## Hallazgo
+
+```text
+PENDIENTE
+```
+
+---
+
+## Corrección necesaria
+
+```text
+PENDIENTE
+```
+
+---
+
+## Regresión posterior
+
+Si se modifica `RecoveryValidator`, `NetworkManager` o el Orchestrator deberán
+repetirse:
+
+```text
+recovery Epson Claro640 -> suarezcores
+no intervención Epson ya alcanzable
+```
+
+---
+
+# P6-04 — Cambio de contexto durante una evaluación
+
+## Estado
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Objetivo
+
+Comprobar que la validación posterior detecte si una condición deja de ser
+válida después de haber sido observada inicialmente.
+
+---
+
+## Pregunta experimental
+
+```text
+¿Qué sucede si una condición cambia
+entre observación y validación final?
+```
+
+---
+
+## Variantes posibles
+
+Sólo se ejecutará una variante por vez.
+
+Ejemplos:
+
+```text
+impresora se apaga
+
+SSID desaparece
+
+USB se desconecta
+
+hostname deja de resolver
+```
+
+---
+
+## Variante inicial recomendada
+
+La variante exacta deberá seleccionarse antes de ejecutar el test.
+
+La más controlable será aquella donde pueda modificarse una sola variable sin
+alterar simultáneamente otros caminos.
+
+---
+
+## Hipótesis
+
+La evidencia obtenida antes de una acción no debe considerarse válida
+indefinidamente.
+
+La validación posterior debe impedir declarar éxito si el estado final ya no
+coincide con el observado inicialmente.
+
+---
+
+## Resultado esperado
+
+```text
+estado inicial favorable
+        |
+        v
+cambio de contexto
+        |
+        v
+validación final
+        |
+        v
+detección de que el objetivo ya no está disponible
+```
+
+El resultado no deberá declarar recovery exitoso únicamente porque una etapa
+intermedia haya sido satisfactoria.
+
+---
+
+## Acción / estímulo
+
+```text
+PENDIENTE DE DEFINIR SEGÚN VARIANTE
+```
+
+---
+
+## Resultado obtenido
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Check real
+
+```text
+PENDIENTE
+```
+
+---
+
+## Observaciones
+
+```text
+PENDIENTE
+```
+
+---
+
+## Hallazgo
+
+```text
+PENDIENTE
+```
+
+---
+
+## Corrección necesaria
+
+```text
+PENDIENTE
+```
+
+---
+
+## Regresión posterior
+
+Dependerá del componente afectado.
+
+---
+
+# P6-05 — Múltiples colas y selección ambigua
+
+## Estado
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Objetivo
+
+Comprobar que QueueWatcher / Discovery no seleccionen arbitrariamente una cola
+cuando existen múltiples candidatas físicas y el usuario no indicó cuál debe
+observarse.
+
+---
+
+## Pregunta experimental
+
+```text
+¿Qué ocurre si existen varias colas físicas
+y QueueWatcher se ejecuta sin PrinterName?
+```
+
+---
+
+## Entorno actual
+
+Existen al menos:
+
+```text
+Brother HL-1210W series
+Brother HL-1210W series USB
+L365 Series(Red)
+```
+
+Por lo tanto existe una condición real de múltiples colas candidatas.
+
+---
+
+## Configuración inicial propuesta
+
+```text
+Wi-Fi
+    indiferente
+
+Ethernet
+    indiferente
+
+Epson
+    instalada
+
+Brother Network
+    instalada
+
+Brother USB
+    instalada
+
+PrinterName
+    NO especificado
+
+Recovery
+    DESHABILITADO
+```
+
+Esta prueba debe comenzar en modo no intrusivo.
+
+---
+
+## Hipótesis
+
+Si existen múltiples colas físicas:
+
+```text
+QueueWatcher no debe seleccionar una arbitrariamente
+```
+
+---
+
+## Resultado esperado
+
+Se espera una clasificación o error equivalente a:
+
+```text
+AMBIGUOUS_PRINTER_SELECTION
+```
+
+o una salida que requiera explícitamente:
+
+```text
+-PrinterName
+```
+
+No debe ocurrir:
+
+```text
+seleccionar primera cola encontrada
+        |
+        v
+observar / actuar sobre ella
+```
+
+---
+
+## Acción / estímulo
+
+Ejecutar:
+
+```text
+QueueWatcher
+```
+
+sin especificar:
+
+```text
+-PrinterName
+```
+
+---
+
+## Resultado obtenido
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Check real
+
+```text
+PENDIENTE
+```
+
+---
+
+## Observaciones
+
+```text
+PENDIENTE
+```
+
+---
+
+## Hallazgo
+
+```text
+PENDIENTE
+```
+
+---
+
+## Corrección necesaria
+
+```text
+PENDIENTE
+```
+
+---
+
+## Regresión posterior
+
+Si se modifica lógica de selección de colas deberán repetirse:
+
+```text
+selección explícita Epson
+selección explícita Brother Network
+selección explícita Brother USB
+```
+
+---
+
+# P6-06 — Evidencia parcial o contradictoria
+
+## Estado
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Objetivo
+
+Observar cómo se comporta PrintSwitch cuando diferentes fuentes describen un
+estado que no es completamente coherente.
+
+---
+
+## Pregunta experimental
+
+```text
+¿Qué ocurre cuando una fuente indica
+un estado aparentemente normal
+pero otra evidencia operacional
+indica indisponibilidad?
+```
+
+---
+
+## Casos candidatos
+
+```text
+cola instalada
++
+USB ausente
+```
+
+```text
+PrinterStatus = Normal
++
+endpoint no alcanzable
+```
+
+```text
+hostname configurado
++
+hostname no resoluble
+```
+
+```text
+SSID visible
++
+recurso inaccesible
+```
+
+---
+
+## Variante inicial
+
+La variante exacta deberá seleccionarse antes de ejecutar.
+
+Debe priorizarse una condición que pueda producirse de manera natural y
+reproducible sin editar artificialmente Windows ni la configuración del
+sistema.
+
+---
+
+## Hipótesis
+
+La arquitectura debe priorizar evidencia operacional adecuada al tipo de
+pregunta.
+
+Ejemplo:
+
+```text
+cola instalada
+```
+
+no debe superar:
+
+```text
+USB_DEVICE_NOT_PRESENT
+```
+
+cuando la pregunta sea:
+
+```text
+¿está disponible el endpoint USB ahora?
+```
+
+---
+
+## Resultado esperado
+
+No se define todavía una clasificación universal para todos los casos.
+
+El criterio de seguridad será:
+
+```text
+si la evidencia no es suficiente o es contradictoria,
+no debe ejecutarse una acción irreversible o innecesaria
+sin justificación adicional
+```
+
+---
+
+## Acción / estímulo
+
+```text
+PENDIENTE DE DEFINIR SEGÚN VARIANTE
+```
+
+---
+
+## Resultado obtenido
+
+```text
+PENDIENTE DE EJECUCIÓN
+```
+
+---
+
+## Check real
+
+```text
+PENDIENTE
+```
+
+---
+
+## Observaciones
+
+```text
+PENDIENTE
+```
+
+---
+
+## Hallazgo
+
+```text
+PENDIENTE
+```
+
+---
+
+## Corrección necesaria
+
+```text
+PENDIENTE
+```
+
+---
+
+## Regresión posterior
+
+Dependerá del componente afectado.
+
+---
+
+# P6.7. Orden inicial de ejecución
+
+La batería se ejecutará inicialmente en este orden:
+
+```text
+P6-01
+Camino alternativo existente
+
+        |
+        v
+
+P6-02
+Hostname no resoluble
+
+        |
+        v
+
+P6-03
+SSID disponible pero endpoint no recuperado
+
+        |
+        v
+
+P6-04
+Cambio de contexto durante evaluación
+
+        |
+        v
+
+P6-05
+Selección ambigua de cola
+
+        |
+        v
+
+P6-06
+Evidencia parcial o contradictoria
+```
+
+El orden avanza desde escenarios cercanos a regresiones conocidas hacia casos
+con mayor ambigüedad.
+
+---
+
+# P6.8. Regresiones mínimas de referencia
+
+Durante el Punto 6 deberán conservarse como referencia las siguientes
+capacidades ya validadas:
+
+```text
+R-01
+Epson Network alcanzable
+192.168.1.108:515
+
+R-02
+Brother Network alcanzable
+BRWC48E8F7B140F
+-> 192.168.100.12:515
+
+R-03
+Brother USB conectado
+USB_DEVICE_PRESENT
+
+R-04
+Brother USB desconectado
+USB_DEVICE_NOT_PRESENT
+NO_WIFI_ACTION
+
+R-05
+Recovery Epson
+Claro640 -> suarezcores
+CONTEXTUAL_RECOVERY_SUCCESS
+
+R-06
+No intervención
+endpoint ya alcanzable
+NO_ACTION
+```
+
+No todas deberán ejecutarse después de cada test.
+
+La selección dependerá de los componentes modificados.
+
+---
+
+# P6.9. Evidencia externa por prueba
+
+Cuando una salida sea extensa deberá guardarse en:
+
+```text
+docs/evidence/
+```
+
+siguiendo nombres equivalentes a:
+
+```text
+P6-01-environment.txt
+P6-01-result.txt
+
+P6-02-environment.txt
+P6-02-result.txt
+```
+
+o, cuando corresponda:
+
+```text
+P6-03A-before.txt
+P6-03A-after.txt
+```
+
+Esto permite preservar:
+
+```text
+salida completa
+orden temporal
+configuración
+resultado
+```
+
+sin depender de la capacidad visible de la terminal de VS Code.
+
+---
+
+# P6.10. Regla frente a un resultado inesperado
+
+Si aparece un resultado diferente del esperado:
+
+```text
+NO modificar inmediatamente
+```
+
+Primero:
+
+```text
+1. preservar salida
+2. verificar configuración inicial
+3. repetir si es seguro
+4. confirmar reproducibilidad
+5. identificar componente responsable
+6. recién después proponer corrección
+```
+
+La prueba debe conservar evidencia del comportamiento original.
+
+---
+
+# P6.11. Criterio de cierre de cada prueba
+
+Una prueba se considera cerrada cuando existe:
+
+```text
+configuración inicial registrada
+
+hipótesis previa
+
+resultado esperado
+
+evidencia real
+
+resultado obtenido
+
+PASS / FAIL / INCONCLUSO
+
+conclusión
+```
+
+Si existe `FAIL` además deben existir:
+
+```text
+causa comprendida
+
+corrección implementada
+
+retest
+
+regresión posterior
+```
+
+---
+
+# P6.12. Criterio de cierre de la batería
+
+El Punto 6 podrá cerrarse cuando:
+
+```text
+P6-01 ejecutado y documentado
+
+P6-02 ejecutado y documentado
+
+P6-03 ejecutado y documentado
+
+P6-04 ejecutado y documentado
+
+P6-05 ejecutado y documentado
+
+P6-06 ejecutado y documentado
+```
+
+y además:
+
+```text
+los FAIL hayan sido comprendidos
+
+las correcciones necesarias estén implementadas
+
+las regresiones relevantes continúen pasando
+
+no existan comportamientos críticos sin explicación
+```
+
+El objetivo no es afirmar que PrintSwitch soporte cualquier entorno imaginable.
+
+El objetivo es conocer suficientemente bien sus límites antes de promover la
+arquitectura hacia:
+
+```text
+Punto 7
+Aplicación / UI
+Primera beta
+```
+
+---
+
+# P6.13. Estado de preparación
+
+Al momento de crear esta sección:
+
+```text
+Diseño de pruebas       = COMPLETADO
+
+Ejecución P6-01         = PENDIENTE
+Ejecución P6-02         = PENDIENTE
+Ejecución P6-03         = PENDIENTE
+Ejecución P6-04         = PENDIENTE
+Ejecución P6-05         = PENDIENTE
+Ejecución P6-06         = PENDIENTE
+```
+
+La próxima acción experimental del proyecto será:
+
+```text
+preparar configuración inicial de P6-01
+        |
+        v
+verificar precondiciones
+        |
+        v
+ejecutar P6-01
+        |
+        v
+registrar evidencia
+```

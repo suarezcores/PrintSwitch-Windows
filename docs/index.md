@@ -834,3 +834,1000 @@ La evolución endpoint-aware agrega una precisión:
 Y se mantiene la regla de seguridad:
 
 > **Si la evidencia disponible no justifica el cambio, la acción preferida es no intervenir.**
+
+---
+
+# Estado vigente — Cierre de Puntos 3 a 5 y entrada al Punto 6 — Septiembre 2026
+
+> **Nota de actualización**
+>
+> Esta sección reemplaza únicamente la interpretación del estado vigente.
+>
+> Todo el contenido anterior permanece preservado como registro histórico de
+> Alpha, Post-Alpha y de los checkpoints previos de Septiembre 2026.
+>
+> El baseline actual del proyecto es:
+>
+> ```text
+> commit 4730803
+> REFACTOR: desacopla diagnostico de configuracion legacy
+> ```
+
+---
+
+## Estado actual del proyecto
+
+PrintSwitch se encuentra actualmente en:
+
+```text
+Puntos 1 a 5
+    COMPLETADOS
+
+Auditoría pre-Punto 6
+    COMPLETADA
+
+Punto 6
+    ACTUAL
+```
+
+La fase vigente ya no consiste principalmente en construir la arquitectura
+base.
+
+La arquitectura se encuentra:
+
+```text
+integrada
+validada físicamente
+probada con dos fabricantes
+probada con NETWORK y USB
+auditada
+versionada
+```
+
+El siguiente objetivo es someterla a escenarios adversos y poco habituales
+antes de iniciar el desarrollo de una interfaz de usuario.
+
+---
+
+## Roadmap vigente
+
+```text
+[COMPLETADO] 1. Cierre endpoint-aware
+
+[COMPLETADO] 2. Consolidación de inconsistencias
+
+[COMPLETADO] 3. Validación Brother
+
+[COMPLETADO] 4. Consolidar Discovery + Policy
+
+[COMPLETADO] 5. Integración QueueWatcher
+
+[ACTUAL]      6. Regresiones y casos excepcionales
+
+[POSTERIOR]   7. Aplicación / UI
+
+[FUTURO]      8. Multi-impresora / otros fabricantes
+
+[FUTURO 2]    Evaluación transversal de calidad de evidencia
+```
+
+---
+
+## Arquitectura operacional vigente
+
+La arquitectura actual parte de la cola real utilizada por Windows.
+
+```text
+Windows Print Queue
+        |
+        v
+QueueWatcher
+        |
+        v
+PrinterDiscovery
+        |
+        v
+QueueContext
+        |
+        v
+PrinterEndpointResolver
+        |
+        v
+PrinterEndpointReachability
+        |
+        v
+PrintRecoveryOrchestrator
+        |
+        +--> InterfacePathAnalyzer
+        |
+        +--> RouteAnalyzer
+        |
+        +--> ConnectivityPolicy
+        |
+        +--> WiFiCandidateEvaluator
+        |
+        +--> SwitchDecision
+        |
+        +--> NetworkManager
+        |
+        +--> RecoveryValidator
+        |
+        +--> ConnectivityAnalyzer
+               |
+               +--> diagnóstico endpoint-aware opcional
+```
+
+La decisión ya no parte del modelo histórico:
+
+```text
+impresora
++
+IP manual
++
+TCP 9100
+```
+
+sino de:
+
+```text
+trabajo
+   |
+   v
+cola
+   |
+   v
+endpoint
+   |
+   v
+reachability
+   |
+   v
+caminos
+   |
+   v
+policy
+   |
+   v
+acción mínima
+```
+
+---
+
+## Separación de responsabilidades
+
+La arquitectura vigente distingue:
+
+```text
+OBSERVAR
+    Windows Print Queue
+    QueueWatcher
+    PrinterDiscovery
+
+DESCRIBIR EL DESTINO
+    PrinterEndpointResolver
+
+COMPROBAR ENDPOINT
+    PrinterEndpointReachability
+
+ANALIZAR CAMINOS
+    InterfacePathAnalyzer
+    RouteAnalyzer
+
+AUTORIZAR
+    ConnectivityPolicy
+
+EVALUAR ALTERNATIVAS
+    WiFiCandidateEvaluator
+
+DECIDIR
+    SwitchDecision
+
+ACTUAR
+    NetworkManager
+
+VALIDAR
+    RecoveryValidator
+
+DIAGNOSTICAR
+    ConnectivityAnalyzer
+```
+
+La regla general es:
+
+> Ninguna capa debe reconstruir innecesariamente información que ya fue
+> resuelta por otra capa responsable de producirla.
+
+---
+
+## Epson L365 — evidencia vigente
+
+La Epson continúa siendo el principal dispositivo utilizado para validar
+recovery Wi-Fi.
+
+Su cola de red es:
+
+```text
+L365 Series(Red)
+```
+
+y el endpoint operacional configurado actualmente por Windows es:
+
+```text
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = 192.168.1.108
+TcpPort               = 515
+ServiceQueue          = ENPQueue
+ReachabilityStrategy  = LPR_TCP
+```
+
+Por lo tanto:
+
+```text
+192.168.1.108:515
+```
+
+es el servicio operacional utilizado por la cola.
+
+El histórico Alpha conserva referencias a:
+
+```text
+TCP 9100
+```
+
+porque ese puerto fue utilizado correctamente como señal diagnóstica durante
+esa etapa.
+
+La interpretación vigente es:
+
+```text
+TCP 9100
+    puede aportar evidencia diagnóstica
+
+TCP 515
+    es el servicio operacional de la cola Epson actualmente configurada
+```
+
+---
+
+## Brother HL-1212W — segunda impresora validada
+
+La segunda impresora física utilizada para comprobar generalización es:
+
+```text
+Brother HL-1212W
+```
+
+Windows y el software Brother la exponen mediante la familia:
+
+```text
+Brother HL-1210W series
+```
+
+y actualmente existen dos colas relevantes:
+
+```text
+Brother HL-1210W series
+Brother HL-1210W series USB
+```
+
+Estas representan dos endpoints distintos.
+
+---
+
+## Brother Network
+
+La cola de red fue descubierta como:
+
+```text
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+TcpPort               = 515
+ServiceQueue          = BINARY_P1
+ReachabilityStrategy  = LPR_TCP
+```
+
+En el contexto donde la impresora está disponible:
+
+```text
+BRWC48E8F7B140F
+        |
+        v
+192.168.100.12
+```
+
+y:
+
+```text
+192.168.100.12:515
+```
+
+responde correctamente.
+
+Esto valida un endpoint NETWORK basado en hostname sin agregar reglas
+específicas para Brother.
+
+---
+
+## Brother USB
+
+La segunda cola Brother fue descubierta como:
+
+```text
+TransportType         = USB
+Protocol              = USB
+ConfiguredDestination = USB001
+AddressType           = DEVICE
+ReachabilityStrategy  = USB_PRESENCE
+```
+
+Con USB conectado:
+
+```text
+REACHABLE
+USB_DEVICE_PRESENT
+USB_ENDPOINT_REACHABLE
+```
+
+Con USB desconectado:
+
+```text
+UNREACHABLE
+USB_DEVICE_NOT_PRESENT
+USB_ENDPOINT_UNREACHABLE
+```
+
+En ambos escenarios:
+
+```text
+SwitchDecision   = NO_WIFI_ACTION
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+La ausencia de un endpoint USB no se interpreta como un problema recuperable
+mediante Wi-Fi.
+
+---
+
+## Generalización validada hasta el momento
+
+La misma arquitectura puede representar actualmente:
+
+```text
+Epson
+    NETWORK
+    IPV4
+    LPR / TCP 515
+
+Brother
+    NETWORK
+    HOSTNAME
+    LPR / TCP 515
+
+Brother
+    USB
+    DEVICE
+    USB_PRESENCE
+```
+
+No se introdujeron reglas:
+
+```text
+if Epson ...
+if Brother ...
+```
+
+La abstracción común permanece:
+
+```text
+QueueContext
+      |
+      v
+Endpoint
+      |
+      v
+ReachabilityStrategy
+```
+
+Esto constituye evidencia real de generalización.
+
+No constituye todavía evidencia de universalidad.
+
+---
+
+## UNKNOWN y degradación segura
+
+Durante la validación Brother se comprobó un caso donde:
+
+```text
+ConfiguredDestination = BRWC48E8F7B140F
+```
+
+no podía resolverse desde determinado contexto Wi-Fi.
+
+La clasificación fue:
+
+```text
+ReachabilityState = UNKNOWN
+ProbeResult       = DESTINATION_RESOLUTION_FAILED
+```
+
+El sistema produjo:
+
+```text
+NO_ACTION_INSUFFICIENT_ENDPOINT_EVIDENCE
+NETWORK_DESTINATION_UNRESOLVED
+```
+
+sin modificar Wi-Fi.
+
+Esto confirma:
+
+```text
+UNKNOWN
+   !=
+UNREACHABLE
+```
+
+y:
+
+```text
+falta de evidencia
+   !=
+autorización para intervenir
+```
+
+---
+
+## Discovery y Policy
+
+La arquitectura distingue explícitamente:
+
+```text
+DISCOVERY
+```
+
+de:
+
+```text
+POLICY
+```
+
+### Discovery
+
+Responde:
+
+```text
+¿Qué existe?
+¿Cómo intenta Windows alcanzarlo?
+```
+
+Se construye principalmente mediante:
+
+```text
+Windows
+PrinterDiscovery
+PrinterEndpointResolver
+PrinterEndpointReachability
+```
+
+### Policy
+
+Responde:
+
+```text
+¿Qué está autorizado a hacer PrintSwitch?
+```
+
+y se mantiene en:
+
+```text
+config/policy.json
+```
+
+Por ejemplo:
+
+```text
+la Epson existe y utiliza 192.168.1.108:515
+        |
+        v
+DISCOVERY
+```
+
+mientras:
+
+```text
+PrintSwitch puede intentar recovery mediante suarezcores
+        |
+        v
+POLICY
+```
+
+---
+
+## Estado de `printers.json`
+
+`config/printers.json` se conserva en el repositorio como artefacto histórico y
+para herramientas legacy o experimentales.
+
+Ya no constituye la fuente operacional del core moderno.
+
+La selección de colas y resolución de endpoints se obtiene desde Windows.
+
+La distinción vigente es:
+
+```text
+CORE MODERNO
+
+Windows
+PrinterDiscovery
+PrinterEndpointResolver
+PrinterEndpointReachability
+policy.json
+```
+
+frente a:
+
+```text
+LEGACY / EXPERIMENTAL
+
+printers.json
+ConfigValidator
+ProfileAnalyzer
+PerformanceAnalyzer
+ContextualRecoveryTest
+```
+
+---
+
+## QueueWatcher integrado
+
+QueueWatcher obtiene actualmente las colas mediante:
+
+```text
+PrinterDiscovery
+```
+
+y consume objetos:
+
+```text
+QueueContext
+```
+
+Ya no utiliza `printers.json` como inventario operacional.
+
+Cuando existen varias colas, la selección puede realizarse explícitamente con:
+
+```text
+-PrinterName
+```
+
+La ambigüedad no debe resolverse mediante una elección silenciosa y arbitraria.
+
+El checkpoint de esta integración es:
+
+```text
+bbe5c4c
+FEAT: integra QueueWatcher con discovery y recovery operacional
+```
+
+---
+
+## Recovery físico desde un trabajo real
+
+Se validó el escenario:
+
+```text
+Wi-Fi inicial = Claro640
+Ethernet      = desconectado
+Epson         = encendida
+SSID objetivo = suarezcores
+Endpoint      = 192.168.1.108:515
+Recovery      = habilitado
+```
+
+Un trabajo real ingresó en:
+
+```text
+L365 Series(Red)
+```
+
+QueueWatcher detectó el trabajo y delegó el análisis.
+
+El sistema determinó que no existía un camino funcional y ejecutó:
+
+```text
+Claro640
+   |
+   v
+suarezcores
+```
+
+Posteriormente:
+
+```text
+NetworkSwitchVerified       = True
+RecoveryValidationConfirmed = True
+RecoverySucceeded           = True
+SwitchExecuted              = True
+FinalClassification         = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+El endpoint:
+
+```text
+192.168.1.108:515
+```
+
+quedó nuevamente alcanzable.
+
+---
+
+## No intervención cuando el endpoint ya es alcanzable
+
+También se validó:
+
+```text
+Wi-Fi inicial = suarezcores
+Ethernet      = desconectado
+Epson         = encendida
+Recovery      = habilitado
+```
+
+El endpoint ya estaba disponible.
+
+Resultado:
+
+```text
+UNIQUE_REACHABLE_PATH
+EXISTING_REACHABLE_PATH
+NO_ACTION
+
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+Esto confirma:
+
+```text
+Recovery habilitado
+        !=
+acción obligatoria
+```
+
+---
+
+## ConnectivityAnalyzer v0.6
+
+La auditoría previa al Punto 6 detectó que `ConnectivityAnalyzer v0.5`
+continuaba dependiendo de conceptos legacy:
+
+```text
+printers.json
+RequiredSSID
+NETWORK_MISMATCH
+TCP 9100
+TCP 80
+```
+
+La versión vigente es:
+
+```text
+ConnectivityAnalyzer v0.6
+```
+
+y recibe:
+
+```text
+PrinterName
+TargetIP
+TcpPort
+```
+
+Su responsabilidad es:
+
+```text
+diagnosticar el endpoint recibido
+```
+
+y no:
+
+```text
+descubrirlo
+decidir policy
+comparar SSID
+asumir puertos globales
+```
+
+ICMP permanece como evidencia auxiliar.
+
+La evidencia operacional principal es:
+
+```text
+TargetIP:TcpPort
+```
+
+---
+
+## Regresión posterior a la auditoría
+
+El nuevo contrato se validó con dos dispositivos de red.
+
+### Epson
+
+```text
+TargetIP = 192.168.1.108
+TcpPort  = 515
+
+OperationalTcpSucceeded = True
+Classification          = PRINTER_REACHABLE
+```
+
+### Brother
+
+```text
+ConfiguredDestination = BRWC48E8F7B140F
+ResolvedDestination   = 192.168.100.12
+TcpPort               = 515
+
+OperationalTcpSucceeded = True
+Classification          = PRINTER_REACHABLE
+```
+
+El checkpoint correspondiente es:
+
+```text
+4730803
+REFACTOR: desacopla diagnostico de configuracion legacy
+```
+
+---
+
+## Baseline del Punto 6
+
+Todas las próximas regresiones parten de:
+
+```text
+4730803
+```
+
+Este baseline representa:
+
+```text
+Puntos 1–5 completados
+Epson validada
+Brother Network validada
+Brother USB validada
+IPv4 validado
+HOSTNAME validado
+LPR validado
+USB_PRESENCE validado
+Discovery integrado
+Policy separada
+QueueWatcher integrado
+recovery físico real
+no intervención real
+ConnectivityAnalyzer endpoint-aware
+auditoría de dependencias completada
+```
+
+---
+
+## Punto 6 — Regresiones y casos excepcionales
+
+La fase vigente busca intentar romper o confundir deliberadamente los supuestos
+del sistema.
+
+La primera batería planificada incluye:
+
+```text
+P6-01
+Endpoint accesible por camino alternativo
+
+P6-02
+Hostname conocido pero no resoluble
+
+P6-03
+Red objetivo visible pero endpoint no recuperado
+
+P6-04
+Cambio de contexto durante una evaluación
+
+P6-05
+Múltiples colas y selección ambigua
+
+P6-06
+Información parcial o contradictoria
+```
+
+Cada prueba debe registrar antes de ejecutarse:
+
+```text
+Test ID
+Objetivo
+Configuración inicial
+Hipótesis
+Resultado esperado
+Acción
+Resultado obtenido
+Check real
+Observaciones
+Corrección necesaria
+Regresión posterior
+```
+
+---
+
+## Configuración inicial como parte de la evidencia
+
+A partir del Punto 6 toda prueba física deberá declarar explícitamente, cuando
+corresponda:
+
+```text
+Wi-Fi actual
+SSID actual
+Ethernet
+Epson ON/OFF
+Brother ON/OFF
+USB conectado/desconectado
+SSID visibles
+Recovery habilitado/deshabilitado
+cola utilizada
+endpoint esperado
+```
+
+No deberá reconstruirse posteriormente de memoria.
+
+---
+
+## Entorno de pruebas disponible
+
+El entorno controlable dispone actualmente de:
+
+```text
+Claro640
+suarezcores
+Suarez
+```
+
+además de:
+
+```text
+Epson L365
+
+Brother HL-1212W
+    |
+    +--> Network
+    |
+    +--> USB
+```
+
+Esto permite producir escenarios con:
+
+```text
+cambios de SSID
+Ethernet presente o ausente
+impresoras ON/OFF
+USB conectado/desconectado
+hostname resoluble/no resoluble
+red objetivo presente/ausente
+caminos alternativos
+```
+
+sin modificar todavía la arquitectura para fabricar situaciones artificiales.
+
+---
+
+## Gate hacia la primera beta
+
+La primera UI no comienza automáticamente después del Punto 5.
+
+El gate vigente es:
+
+```text
+Puntos 1–5 completados
+        +
+Punto 6 ejecutado y estabilizado
+        |
+        v
+arquitectura suficientemente estable
+        |
+        v
+Punto 7
+Aplicación / UI
+```
+
+La idea es evitar construir una interfaz sobre contratos que todavía puedan
+cambiar durante la batería adversa.
+
+---
+
+## Documentos vigentes de referencia
+
+Para comprender el estado actual deben consultarse principalmente:
+
+```text
+Architecture_Observed.md
+Knowledge.md
+Roadmap.md
+Methodology.md
+```
+
+`Alpha_Checkpoint.md` continúa siendo deliberadamente una fotografía histórica
+del Alpha.
+
+`Experimental_Tests.md` conserva la cronología experimental y no debe
+reescribirse retroactivamente cuando una conclusión posterior refine una etapa
+anterior.
+
+---
+
+## Principios vigentes
+
+Se mantienen las reglas históricas:
+
+> **Observar antes de inferir, medir antes de decidir, decidir antes de actuar
+> y verificar después de actuar.**
+
+> **Si la evidencia disponible no justifica el cambio, la acción preferida es
+> no intervenir.**
+
+La evolución endpoint-aware agrega:
+
+> **No preguntar primero en qué red debería estar la impresora. Preguntar
+> primero cómo intenta alcanzarla realmente la cola que recibió el trabajo.**
+
+Y la auditoría reciente agrega una cuarta precisión:
+
+> **Una capa diagnóstica debe consumir el endpoint operacional ya resuelto y no
+> reconstruir una segunda versión de la misma realidad mediante configuración
+> legacy.**
+
+---
+
+## Próxima acción
+
+La próxima acción del proyecto no es:
+
+```text
+agregar UI
+```
+
+ni:
+
+```text
+agregar más fabricantes
+```
+
+ni:
+
+```text
+expandir funcionalidades
+```
+
+La secuencia actual es:
+
+```text
+cerrar actualización documental
+        |
+        v
+formalizar metodología del Punto 6
+        |
+        v
+preparar registro experimental
+        |
+        v
+ejecutar P6-01
+        |
+        v
+analizar resultado
+        |
+        v
+continuar batería adversa
+```
+
+El objetivo inmediato es comprobar cuánto resiste la arquitectura actual antes
+de convertirla en una primera beta orientada a usuario.

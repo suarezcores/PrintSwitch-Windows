@@ -2606,3 +2606,1309 @@ VALIDACIÓN BROTHER
 ```
 
 y no en la construcción de UI ni en la expansión prematura del sistema.
+
+
+---
+
+# Roadmap vigente — Cierre de Puntos 3 a 5 y entrada al Punto 6 — Septiembre 2026
+
+> **Estado documental**
+>
+> Todo el roadmap anterior se conserva como registro histórico de las
+> decisiones y prioridades vigentes en cada etapa.
+>
+> En particular, la sección anterior registra correctamente el momento en que:
+>
+> ```text
+> Punto 3 — Validación Brother
+> ```
+>
+> todavía constituía el siguiente objetivo.
+>
+> Desde entonces se completaron:
+>
+> ```text
+> Punto 3 — Validación Brother
+> Punto 4 — Consolidación Discovery + Policy
+> Punto 5 — Integración QueueWatcher
+> Auditoría técnica pre-Punto 6
+> ```
+>
+> Esta sección establece el roadmap vigente a partir del checkpoint:
+>
+> ```text
+> 4730803
+> REFACTOR: desacopla diagnostico de configuracion legacy
+> ```
+
+---
+
+## 62. Punto 3 — Validación Brother completada
+
+Estado:
+
+```text
+COMPLETADO
+```
+
+El objetivo del Punto 3 era comprobar si la arquitectura endpoint-aware podía
+interpretar una segunda impresora sin agregar excepciones específicas por
+fabricante.
+
+La impresora física utilizada fue:
+
+```text
+Brother HL-1212W
+```
+
+mientras que Windows y el software Brother exponen las colas:
+
+```text
+Brother HL-1210W series
+Brother HL-1210W series USB
+```
+
+Se validaron dos transportes diferentes.
+
+### 62.1. Brother Network
+
+La cola fue interpretada como:
+
+```text
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+TcpPort               = 515
+ServiceQueue          = BINARY_P1
+ReachabilityStrategy  = LPR_TCP
+```
+
+En el contexto de red correspondiente el hostname resolvió a:
+
+```text
+192.168.100.12
+```
+
+y el endpoint respondió correctamente.
+
+### 62.2. Brother USB
+
+La segunda cola fue interpretada como:
+
+```text
+TransportType         = USB
+Protocol              = USB
+ConfiguredDestination = USB001
+AddressType           = DEVICE
+ReachabilityStrategy  = USB_PRESENCE
+```
+
+Se validaron:
+
+```text
+USB conectado
+    -> REACHABLE
+    -> USB_ENDPOINT_REACHABLE
+    -> NO_WIFI_ACTION
+
+USB desconectado
+    -> UNREACHABLE
+    -> USB_ENDPOINT_UNREACHABLE
+    -> NO_WIFI_ACTION
+```
+
+### 62.3. Criterio de cierre
+
+No fue necesario introducir:
+
+```text
+if Epson ...
+if Brother ...
+```
+
+La misma abstracción pudo representar:
+
+```text
+Epson NETWORK / IPv4
+Brother NETWORK / HOSTNAME
+Brother USB
+```
+
+mediante:
+
+```text
+QueueContext
+      |
+      v
+Endpoint
+      |
+      v
+ReachabilityStrategy
+```
+
+Por lo tanto:
+
+```text
+PUNTO 3 = CERRADO
+```
+
+---
+
+## 63. Punto 4 — Consolidación Discovery + Policy completada
+
+Estado:
+
+```text
+COMPLETADO
+```
+
+El objetivo del Punto 4 era separar definitivamente:
+
+```text
+lo que existe
+```
+
+de:
+
+```text
+lo que PrintSwitch está autorizado a hacer
+```
+
+La arquitectura vigente establece:
+
+```text
+DISCOVERY
+    |
+    +--> Windows
+    +--> PrinterDiscovery
+    +--> PrinterEndpointResolver
+    +--> PrinterEndpointReachability
+```
+
+y:
+
+```text
+POLICY
+    |
+    +--> config/policy.json
+```
+
+---
+
+## 64. PrinterDiscovery pasa a ser la fuente operacional de colas
+
+`QueueWatcher` deja de utilizar:
+
+```text
+config/printers.json
+```
+
+como inventario operacional.
+
+Las colas físicas se obtienen mediante:
+
+```text
+Windows
+   |
+   v
+PrinterDiscovery
+   |
+   v
+QueueContext
+```
+
+La configuración real de la cola aporta:
+
+```text
+QueueName
+DriverName
+PortName
+TransportType
+Protocol
+ConfiguredDestination
+TcpPort
+ReachabilityStrategy
+```
+
+sin mantener manualmente una segunda copia del mismo conocimiento.
+
+---
+
+## 65. `printers.json` queda clasificado como legacy / experimental
+
+El archivo:
+
+```text
+config/printers.json
+```
+
+no se elimina del repositorio.
+
+Continúa existiendo porque forma parte de etapas históricas y todavía puede ser
+utilizado por herramientas:
+
+```text
+ConfigValidator
+ProfileAnalyzer
+PerformanceAnalyzer
+ContextualRecoveryTest
+```
+
+Sin embargo deja de gobernar:
+
+```text
+QueueWatcher
+PrinterDiscovery
+PrinterEndpointResolver
+PrintRecoveryOrchestrator
+ConnectivityAnalyzer
+```
+
+dentro del core operacional vigente.
+
+La regla es:
+
+```text
+preservar historia
+      !=
+mantener dependencia operacional
+```
+
+---
+
+## 66. Punto 5 — Integración QueueWatcher completada
+
+Estado:
+
+```text
+COMPLETADO
+```
+
+El objetivo del Punto 5 era integrar el flujo endpoint-aware con el evento real
+que origina el problema:
+
+```text
+un trabajo de impresión
+```
+
+El pipeline validado queda:
+
+```text
+trabajo
+   |
+   v
+QueueWatcher
+   |
+   v
+PrinterDiscovery
+   |
+   v
+QueueContext
+   |
+   v
+PrintRecoveryOrchestrator
+   |
+   v
+Endpoint / Reachability
+   |
+   v
+Path / Route
+   |
+   v
+Policy
+   |
+   v
+SwitchDecision
+   |
+   v
+NetworkManager
+   |
+   v
+RecoveryValidator
+   |
+   v
+resultado final
+```
+
+El checkpoint de integración es:
+
+```text
+bbe5c4c
+FEAT: integra QueueWatcher con discovery y recovery operacional
+```
+
+---
+
+## 67. Prueba integrada — recovery necesario
+
+Se validó físicamente:
+
+```text
+Wi-Fi inicial = Claro640
+Ethernet      = desconectado
+Epson         = encendida
+SSID objetivo = suarezcores
+Endpoint      = 192.168.1.108:515
+Recovery      = habilitado
+```
+
+Un trabajo real fue detectado por QueueWatcher.
+
+El sistema determinó que no existía un camino funcional hacia el endpoint.
+
+La secuencia ejecutada fue:
+
+```text
+Claro640
+   |
+   v
+suarezcores
+```
+
+seguida por validación del endpoint operacional.
+
+Resultado:
+
+```text
+SwitchExecuted              = True
+NetworkSwitchVerified       = True
+RecoveryValidationConfirmed = True
+RecoverySucceeded           = True
+FinalClassification         = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+---
+
+## 68. Prueba integrada — recovery innecesario
+
+También se validó:
+
+```text
+Wi-Fi inicial = suarezcores
+Ethernet      = desconectado
+Epson         = encendida
+Endpoint      = 192.168.1.108:515
+Recovery      = habilitado
+```
+
+El endpoint ya era alcanzable.
+
+Resultado:
+
+```text
+PathClassification  = UNIQUE_REACHABLE_PATH
+FinalClassification = EXISTING_REACHABLE_PATH
+SwitchDecision      = NO_ACTION
+SwitchAuthorized    = False
+SwitchExecuted      = False
+```
+
+Esto confirma:
+
+```text
+Recovery habilitado
+        !=
+cambio obligatorio de red
+```
+
+Por lo tanto:
+
+```text
+PUNTO 5 = CERRADO
+```
+
+---
+
+## 69. Auditoría técnica pre-Punto 6
+
+Antes de comenzar pruebas adversas se realizó una revisión de:
+
+```text
+dependencias
+contratos
+configuración
+consumidores
+fuentes de verdad
+referencias legacy
+parsers
+integraciones
+```
+
+La auditoría encontró una dependencia residual real en:
+
+```text
+ConnectivityAnalyzer v0.5
+```
+
+que todavía utilizaba:
+
+```text
+printers.json
+RequiredSSID
+NETWORK_MISMATCH
+TCP 9100
+TCP 80
+```
+
+aunque la arquitectura ya poseía información endpoint-aware.
+
+---
+
+## 70. ConnectivityAnalyzer v0.6
+
+La auditoría produjo un refactor específico.
+
+El contrato pasó a ser:
+
+```text
+PrinterName
+TargetIP
+TcpPort
+```
+
+El componente deja de:
+
+```text
+descubrir endpoints
+leer printers.json
+decidir policy
+comparar SSID
+asumir puertos globales
+```
+
+Su función queda limitada a:
+
+```text
+diagnosticar el endpoint recibido
+```
+
+La evidencia operacional principal es:
+
+```text
+TargetIP:TcpPort
+```
+
+El checkpoint correspondiente es:
+
+```text
+4730803
+REFACTOR: desacopla diagnostico de configuracion legacy
+```
+
+---
+
+## 71. Regresión posterior al refactor
+
+Antes de cerrar la auditoría se comprobó físicamente el nuevo contrato con dos
+fabricantes.
+
+### 71.1. Epson L365
+
+```text
+TargetIP = 192.168.1.108
+TcpPort  = 515
+
+OperationalTcpSucceeded = True
+Classification          = PRINTER_REACHABLE
+```
+
+### 71.2. Brother Network
+
+```text
+ConfiguredDestination = BRWC48E8F7B140F
+ResolvedDestination   = 192.168.100.12
+TcpPort               = 515
+
+OperationalTcpSucceeded = True
+Classification          = PRINTER_REACHABLE
+```
+
+La auditoría no sólo produjo un cambio estático.
+
+El nuevo contrato fue validado funcionalmente con:
+
+```text
+Epson
+Brother
+```
+
+---
+
+## 72. Estado del roadmap al inicio del Punto 6
+
+El roadmap vigente queda:
+
+```text
+[COMPLETADO] 1. Cierre endpoint-aware
+
+[COMPLETADO] 2. Consolidación de inconsistencias
+
+[COMPLETADO] 3. Validación Brother
+
+[COMPLETADO] 4. Consolidar Discovery + Policy
+
+[COMPLETADO] 5. Integración QueueWatcher
+
+[ACTUAL]      6. Regresiones y casos excepcionales
+
+[POSTERIOR]   7. Aplicación / UI
+
+[FUTURO]      8. Multi-impresora / otros fabricantes
+```
+
+El proyecto entra ahora en una etapa diferente.
+
+Hasta el Punto 5 la pregunta principal fue:
+
+```text
+¿podemos construir y validar este flujo?
+```
+
+En el Punto 6 pasa a ser:
+
+```text
+¿qué ocurre cuando las condiciones
+dejan de parecerse a aquellas
+con las que construimos el flujo?
+```
+
+---
+
+## 73. Objetivo del Punto 6
+
+El Punto 6 no busca principalmente agregar funcionalidades.
+
+Busca someter el sistema actual a:
+
+```text
+regresiones
+casos raros
+estados parciales
+contradicciones
+topologías inesperadas
+fallos de resolución
+cambios de conectividad
+ambigüedad
+```
+
+para descubrir:
+
+```text
+supuestos ocultos
+dependencias no detectadas
+clasificaciones incorrectas
+acciones inseguras
+regresiones
+```
+
+antes de comenzar una interfaz de usuario.
+
+---
+
+## 74. Baseline obligatorio del Punto 6
+
+Todas las pruebas del Punto 6 parten del checkpoint:
+
+```text
+4730803
+REFACTOR: desacopla diagnostico de configuracion legacy
+```
+
+Este baseline contiene:
+
+```text
+Puntos 1 a 5 completados
+Brother validada
+Epson validada
+NETWORK validado
+USB validado
+IPv4 validado
+HOSTNAME validado
+Discovery integrado
+Policy separada
+QueueWatcher integrado
+ConnectivityAnalyzer endpoint-aware
+```
+
+Si un test obliga a modificar código, deberá distinguirse:
+
+```text
+estado antes de la corrección
+        |
+        v
+hallazgo
+        |
+        v
+cambio
+        |
+        v
+regresión contra baseline
+```
+
+---
+
+## 75. Regla documental obligatoria para cada prueba
+
+Cada prueba del Punto 6 debe diseñarse antes de ejecutarse.
+
+El registro mínimo será:
+
+```text
+Test ID
+
+Nombre
+
+Objetivo
+
+Configuración inicial
+
+Hipótesis
+
+Resultado esperado
+
+Acción / estímulo
+
+Resultado obtenido
+
+Check real
+    PASS
+    FAIL
+    INCONCLUSO
+
+Observaciones
+
+Hallazgo
+
+Corrección necesaria
+
+Regresión posterior
+```
+
+La configuración inicial deberá incluir explícitamente, cuando corresponda:
+
+```text
+Wi-Fi actual
+SSID actual
+Ethernet
+Epson ON/OFF
+Brother ON/OFF
+USB conectado/desconectado
+SSID visibles
+Recovery habilitado/deshabilitado
+cola utilizada
+endpoint esperado
+```
+
+No se deberá reconstruir esta información posteriormente de memoria.
+
+---
+
+## 76. Entorno disponible para testing adverso
+
+El laboratorio actual dispone de varias redes controlables:
+
+```text
+Claro640
+suarezcores
+Suarez
+```
+
+Además existen:
+
+```text
+Epson L365
+
+Brother HL-1212W
+    |
+    +--> Network
+    |
+    +--> USB
+```
+
+y la posibilidad de:
+
+```text
+conectar / desconectar Ethernet
+conectar / desconectar USB
+encender / apagar impresoras
+cambiar SSID
+retirar temporalmente una red
+alterar el contexto de resolución de hostname
+```
+
+Esto permite producir escenarios suficientemente variados sin introducir
+todavía infraestructura artificial adicional.
+
+---
+
+## 77. Diseño inicial de la batería del Punto 6
+
+La primera batería deberá contener seis pruebas principales.
+
+No constituyen una lista cerrada.
+
+Si una prueba descubre un comportamiento nuevo podrán agregarse casos derivados.
+
+---
+
+### 77.1. P6-01 — Endpoint accesible por camino alternativo
+
+Objetivo:
+
+```text
+comprobar que PrintSwitch preserve un camino funcional
+aunque el Wi-Fi actual no sea la red asociada normalmente a la impresora
+```
+
+Variable principal:
+
+```text
+Ethernet
+```
+
+Hipótesis:
+
+```text
+si el endpoint ya es alcanzable,
+PrintSwitch no debe cambiar Wi-Fi
+```
+
+Esta prueba extiende la regresión de preservación de Ethernet.
+
+---
+
+### 77.2. P6-02 — Hostname conocido pero no resoluble
+
+Objetivo:
+
+```text
+comprobar degradación segura cuando una cola NETWORK
+posee un hostname válido pero el contexto actual no puede resolverlo
+```
+
+Caso de referencia:
+
+```text
+Brother HL-1210W series
+ConfiguredDestination = BRWC48E8F7B140F
+```
+
+Resultado esperado conceptual:
+
+```text
+UNKNOWN
+        |
+        v
+NO_ACTION_INSUFFICIENT_ENDPOINT_EVIDENCE
+```
+
+La prueba debe confirmar que ninguna política convierte automáticamente
+incertidumbre en autorización.
+
+---
+
+### 77.3. P6-03 — Red objetivo visible pero recurso incorrecto o inaccesible
+
+Objetivo:
+
+```text
+separar claramente
+red disponible
+de
+endpoint recuperable
+```
+
+Se buscará un escenario donde:
+
+```text
+SSID candidato existe
+```
+
+pero:
+
+```text
+el endpoint buscado no queda funcional
+```
+
+Resultado esperado:
+
+```text
+un cambio de red verificado
+no debe equivaler automáticamente
+a recovery exitoso
+```
+
+Esta prueba busca detectar decisiones basadas excesivamente en SSID.
+
+---
+
+### 77.4. P6-04 — Cambio de contexto durante una evaluación
+
+Objetivo:
+
+```text
+observar qué ocurre si el entorno cambia
+entre discovery, decisión y validación
+```
+
+Ejemplos posibles:
+
+```text
+SSID desaparece
+
+impresora se apaga
+
+USB se desconecta
+
+hostname deja de resolver
+```
+
+La prueba deberá ejecutar solamente una variante controlada por vez.
+
+Hipótesis:
+
+```text
+la validación posterior debe impedir
+declarar éxito con evidencia obsoleta
+```
+
+---
+
+### 77.5. P6-05 — Múltiples colas y selección ambigua
+
+Objetivo:
+
+```text
+comprobar que Discovery no seleccione silenciosamente
+una cola incorrecta cuando existen varias candidatas
+```
+
+El entorno actual ya contiene:
+
+```text
+Brother Network
+Brother USB
+Epson Network
+```
+
+Resultado esperado:
+
+```text
+la ambigüedad debe requerir selección explícita
+o producir una clasificación segura
+```
+
+Nunca:
+
+```text
+elegir arbitrariamente una cola
+y ejecutar recovery sobre ella
+```
+
+---
+
+### 77.6. P6-06 — Información parcial o contradictoria
+
+Objetivo:
+
+```text
+buscar una situación donde diferentes fuentes
+no describan exactamente el mismo estado
+```
+
+Ejemplos candidatos:
+
+```text
+cola instalada pero dispositivo ausente
+
+Windows conserva temporalmente un SSID desaparecido
+
+hostname configurado pero no resoluble
+
+PrinterStatus normal pero endpoint no alcanzable
+```
+
+La prueba no pretende implementar todavía una nueva capa de confianza.
+
+Su objetivo es documentar:
+
+```text
+qué evidencia recibe actualmente PrintSwitch
+
+cómo la clasifica
+
+si el comportamiento resultante permanece seguro
+```
+
+Este caso será además insumo para una posible etapa futura de:
+
+```text
+evaluación de calidad de evidencia
+```
+
+posterior al roadmap actual.
+
+---
+
+## 78. Orden de ejecución del Punto 6
+
+La batería no debe ejecutarse aleatoriamente.
+
+El orden inicial será:
+
+```text
+P6-01
+camino alternativo existente
+
+        |
+        v
+
+P6-02
+hostname no resoluble
+
+        |
+        v
+
+P6-03
+SSID disponible pero endpoint no recuperado
+
+        |
+        v
+
+P6-04
+cambio de contexto durante evaluación
+
+        |
+        v
+
+P6-05
+selección ambigua de cola
+
+        |
+        v
+
+P6-06
+evidencia parcial o contradictoria
+```
+
+La lógica del orden es comenzar por escenarios cercanos a situaciones ya
+validadas y avanzar hacia casos con mayor ambigüedad.
+
+---
+
+## 79. Criterio de PASS del Punto 6
+
+Una prueba no se considera aprobada solamente porque:
+
+```text
+el script no se haya cerrado
+```
+
+El PASS requiere que:
+
+```text
+la clasificación sea coherente con la evidencia
+
+la acción sea proporcional a la evidencia
+
+no se modifique conectividad sin autorización suficiente
+
+el resultado final represente lo que realmente ocurrió
+
+no se rompan capacidades previamente validadas
+```
+
+Cuando una prueba revele un defecto:
+
+```text
+FAIL
+```
+
+no significa que el Punto 6 haya fracasado.
+
+Significa que la prueba cumplió su función.
+
+La secuencia correcta será:
+
+```text
+FAIL
+  |
+  v
+hallazgo
+  |
+  v
+análisis
+  |
+  v
+corrección mínima
+  |
+  v
+repetición del caso
+  |
+  v
+regresión general
+```
+
+---
+
+## 80. Criterio de cierre del Punto 6
+
+El Punto 6 podrá considerarse completado cuando:
+
+```text
+las pruebas planificadas hayan sido ejecutadas
+
+cada prueba posea evidencia documentada
+
+los FAIL hayan sido comprendidos
+
+las correcciones necesarias hayan sido implementadas
+
+las pruebas afectadas hayan sido repetidas
+
+las regresiones Epson y Brother continúen pasando
+
+el core moderno permanezca sin dependencias legacy accidentales
+```
+
+Además deberán seguir funcionando como mínimo:
+
+```text
+Epson Network / LPR 515
+
+Brother Network / hostname / LPR 515
+
+Brother USB conectado
+
+Brother USB desconectado
+
+recovery Claro640 -> suarezcores
+
+no intervención cuando existe camino funcional
+```
+
+---
+
+## 81. Decisión sobre UI / primera beta
+
+La UI no comienza simplemente porque:
+
+```text
+Punto 5 = completado
+```
+
+El gate real queda:
+
+```text
+Puntos 1–5
+    completados
+        +
+Punto 6
+    batería adversa satisfactoria
+        |
+        v
+arquitectura suficientemente estable
+        |
+        v
+Punto 7 — UI / primera beta
+```
+
+El objetivo es evitar construir una interfaz sobre contratos que todavía puedan
+cambiar de forma importante durante las regresiones.
+
+---
+
+## 82. Punto 7 — Aplicación / UI
+
+Estado:
+
+```text
+POSTERIOR AL PUNTO 6
+```
+
+Una vez superado el gate de regresión podrá diseñarse una interfaz que permita,
+como mínimo:
+
+```text
+seleccionar cola
+
+observar estado
+
+habilitar / deshabilitar recovery
+
+visualizar endpoint descubierto
+
+visualizar camino actual
+
+visualizar decisión
+
+visualizar último resultado
+
+consultar logs
+
+distinguir acción de diagnóstico
+```
+
+La UI no deberá replicar lógica del core.
+
+Deberá consumir sus contratos estructurados.
+
+---
+
+## 83. Punto 8 — Multi-impresora y otros fabricantes
+
+Estado:
+
+```text
+FUTURO
+```
+
+La Brother ya aportó evidencia multimarca.
+
+Sin embargo esta etapa futura deberá ampliar deliberadamente:
+
+```text
+protocolos
+monitores de puerto
+fabricantes
+topologías
+múltiples impresoras activas
+múltiples trabajos simultáneos
+```
+
+El objetivo seguirá siendo evitar:
+
+```text
+reglas por marca
+```
+
+y favorecer:
+
+```text
+reglas por capacidad
+transporte
+endpoint
+contexto
+policy
+```
+
+---
+
+## 84. Etapa posterior — Calidad y coherencia de evidencia
+
+Durante la planificación previa al Punto 6 surgió una dirección arquitectónica
+adicional.
+
+La arquitectura futura podrá evaluar no sólo:
+
+```text
+qué dice una fuente
+```
+
+sino también:
+
+```text
+si la evidencia es suficiente
+
+si está completa
+
+si es coherente
+
+si se contradice con otras señales
+
+si permite ejecutar una policy con seguridad
+```
+
+Conceptualmente:
+
+```text
+evidencia completa y coherente
+        |
+        v
+decisión normal
+
+
+evidencia parcial
+        |
+        v
+capacidad degradada
+
+
+evidencia contradictoria
+        |
+        v
+estado conservador
+```
+
+Esta capacidad:
+
+```text
+NO forma parte del Punto 6
+```
+
+y:
+
+```text
+NO debe implementarse antes de terminar el roadmap vigente
+```
+
+Se conserva como una segunda etapa futura.
+
+El Punto 6 sí puede producir evidencia útil para diseñarla posteriormente.
+
+---
+
+## 85. Estado general vigente
+
+El roadmap queda finalmente:
+
+```text
+[COMPLETADO] 1. Cierre endpoint-aware
+
+[COMPLETADO] 2. Consolidación de inconsistencias
+
+[COMPLETADO] 3. Validación Brother
+
+[COMPLETADO] 4. Consolidar Discovery + Policy
+
+[COMPLETADO] 5. Integración QueueWatcher
+
+[ACTUAL]      6. Regresiones y casos excepcionales
+
+[POSTERIOR]   7. Aplicación / UI
+
+[FUTURO]      8. Multi-impresora / otros fabricantes
+
+[FUTURO 2]    Evaluación transversal de calidad de evidencia
+```
+
+El baseline actual es:
+
+```text
+4730803
+REFACTOR: desacopla diagnostico de configuracion legacy
+```
+
+La próxima acción funcional no es modificar el core ni comenzar la UI.
+
+Es:
+
+```text
+terminar actualización documental
+        |
+        v
+formalizar metodología del Punto 6
+        |
+        v
+crear registro experimental del Punto 6
+        |
+        v
+ejecutar P6-01
+```
+
+La regla de avance continúa siendo:
+
+> **No promover una capacidad por diseño esperado. Promoverla cuando exista
+> evidencia reproducible de que funciona y de que no rompe los escenarios ya
+> validados.**

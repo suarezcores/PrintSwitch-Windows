@@ -1699,3 +1699,1405 @@ FEAT: consolida recovery operacional y diagnostico opcional
 
 La próxima etapa debe aportar evidencia nueva mediante una segunda impresora y
 no simplemente extender las conclusiones obtenidas con Epson.
+
+
+---
+
+# Actualización de conocimiento — Validación multimarca, integración y auditoría pre-Punto 6 — Septiembre 2026
+
+> **Alcance**
+>
+> Esta sección incorpora exclusivamente conocimiento obtenido después del
+> checkpoint:
+>
+> ```text
+> 55316dd
+> FEAT: consolida recovery operacional y diagnostico opcional
+> ```
+>
+> No reemplaza las conclusiones anteriores.
+>
+> Las amplía mediante evidencia obtenida durante:
+>
+> ```text
+> Punto 3 — validación Brother
+> Punto 4 — consolidación Discovery + Policy
+> Punto 5 — integración QueueWatcher
+> auditoría técnica pre-Punto 6
+> ```
+>
+> Los checkpoints posteriores relevantes son:
+>
+> ```text
+> bbe5c4c
+> FEAT: integra QueueWatcher con discovery y recovery operacional
+>
+> 4730803
+> REFACTOR: desacopla diagnostico de configuracion legacy
+> ```
+
+---
+
+## 56. Una segunda marca confirmó que la abstracción no era accidentalmente Epson-specific
+
+La Brother permitió responder una pregunta que permanecía abierta en el
+checkpoint anterior.
+
+La arquitectura desarrollada inicialmente alrededor de la Epson podía ser:
+
+```text
+realmente genérica
+```
+
+o simplemente:
+
+```text
+una generalización aparente construida sobre supuestos Epson
+```
+
+La Brother presentó características diferentes:
+
+```text
+dos colas para un mismo dispositivo físico
+
+endpoint NETWORK basado en HOSTNAME
+
+endpoint USB
+
+LPR
+
+identidad USB
+
+resolución dinámica del destino de red
+```
+
+y aun así pudo representarse mediante:
+
+```text
+QueueContext
+      |
+      v
+Endpoint
+      |
+      v
+ReachabilityStrategy
+```
+
+sin agregar lógica:
+
+```text
+if Brother ...
+```
+
+Esto constituye evidencia de que la abstracción utilizada por PrintSwitch
+trasciende al primer fabricante empleado durante el desarrollo.
+
+---
+
+## 57. El nombre comercial del equipo no es necesariamente la identidad operacional
+
+El dispositivo físico utilizado para la segunda validación pertenece
+comercialmente a la familia:
+
+```text
+Brother HL-1212W
+```
+
+Sin embargo Windows y el driver exponen:
+
+```text
+Brother HL-1210W series
+```
+
+La diferencia no impidió operar correctamente.
+
+Esto refuerza que PrintSwitch no debe intentar reconstruir la identidad del
+producto a partir de nombres comerciales externos.
+
+La identidad operacional relevante es la que Windows expone mediante:
+
+```text
+QueueName
+DriverName
+PortName
+```
+
+y posteriormente normaliza mediante `QueueContext`.
+
+La lección es:
+
+> El sistema debe trabajar con la representación operacional que realmente
+> utiliza el sistema de impresión y no con una identidad comercial inferida.
+
+---
+
+## 58. Un dispositivo físico puede tener varias identidades operacionales válidas
+
+La Brother produjo simultáneamente:
+
+```text
+Brother HL-1210W series
+Brother HL-1210W series USB
+```
+
+Ambas colas corresponden al mismo equipo físico.
+
+Sin embargo representan endpoints diferentes:
+
+```text
+NETWORK
+```
+
+y:
+
+```text
+USB
+```
+
+Por lo tanto:
+
+```text
+dispositivo físico
+    !=
+cola
+```
+
+y también:
+
+```text
+dispositivo físico
+    !=
+endpoint único
+```
+
+La unidad sobre la cual PrintSwitch puede tomar decisiones continúa siendo la
+cola seleccionada y su endpoint.
+
+Esto evita intentar fusionar automáticamente dos caminos que Windows presenta
+como mecanismos operacionales distintos.
+
+---
+
+## 59. Un hostname configurado es evidencia válida de destino
+
+La Brother Network utiliza:
+
+```text
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+Protocol              = LPR
+TcpPort               = 515
+```
+
+La dirección operacional no se encontraba almacenada como IPv4 literal en la
+cola.
+
+Cuando el contexto de red permitió resolver el hostname:
+
+```text
+BRWC48E8F7B140F
+        |
+        v
+192.168.100.12
+```
+
+el servicio:
+
+```text
+192.168.100.12:515
+```
+
+respondió correctamente.
+
+Esto demuestra:
+
+> Una dirección IP literal no es requisito para que PrintSwitch pueda
+> representar un endpoint de red.
+
+La información puede evolucionar desde:
+
+```text
+destino configurado
+        |
+        v
+resolución
+        |
+        v
+destino operacional
+```
+
+La dirección resuelta pertenece al contexto operacional actual y no debe
+confundirse necesariamente con la identidad persistente del endpoint.
+
+---
+
+## 60. Fallar al resolver un hostname no demuestra que la impresora esté caída
+
+Se observó físicamente que:
+
+```text
+BRWC48E8F7B140F
+```
+
+podía no resolverse desde determinado contexto de red.
+
+En esa situación no existía evidencia suficiente para ejecutar el probe TCP.
+
+La clasificación correcta fue:
+
+```text
+ReachabilityState = UNKNOWN
+ProbeResult       = DESTINATION_RESOLUTION_FAILED
+```
+
+No:
+
+```text
+UNREACHABLE
+```
+
+Posteriormente, desde un contexto donde el hostname volvió a resolverse, la
+impresora respondió correctamente.
+
+Esto aporta evidencia experimental adicional a la distinción ya establecida:
+
+```text
+UNKNOWN
+   !=
+UNREACHABLE
+```
+
+y permite formular una regla más específica:
+
+> La imposibilidad de obtener el destino operacional es un fallo de evidencia,
+> no una demostración de indisponibilidad del servicio final.
+
+---
+
+## 61. La incertidumbre debe degradar capacidad de acción
+
+Cuando la Brother Network produjo:
+
+```text
+DESTINATION_RESOLUTION_FAILED
+```
+
+el Orchestrator terminó con:
+
+```text
+SwitchDecision =
+NO_ACTION_INSUFFICIENT_ENDPOINT_EVIDENCE
+
+SwitchAuthorized = False
+SwitchExecuted   = False
+
+FinalClassification =
+NETWORK_DESTINATION_UNRESOLVED
+```
+
+La red Wi-Fi permaneció sin cambios.
+
+Esto amplía el principio de evidencia positiva:
+
+```text
+menos evidencia
+      |
+      v
+menos capacidad para justificar una intervención
+```
+
+y no:
+
+```text
+menos evidencia
+      |
+      v
+más libertad para probar acciones
+```
+
+La incertidumbre debe degradar el sistema hacia estados conservadores.
+
+---
+
+## 62. USB requiere semántica propia y no una simulación del modelo IP
+
+La Brother USB fue descubierta como:
+
+```text
+TransportType         = USB
+Protocol              = USB
+ConfiguredDestination = USB001
+AddressType           = DEVICE
+ReachabilityStrategy  = USB_PRESENCE
+```
+
+No fue necesario fabricar valores artificiales para:
+
+```text
+IP
+TCP
+SSID
+```
+
+El endpoint pudo describirse correctamente utilizando propiedades propias de
+su transporte.
+
+Esto confirma:
+
+> La abstracción común debe normalizar diferencias, no borrarlas.
+
+Un endpoint genérico no significa que todos los transportes deban fingir ser
+TCP/IP.
+
+---
+
+## 63. La existencia de una cola USB no demuestra la presencia física del dispositivo
+
+Con la Brother USB desconectada, Windows conservó:
+
+```text
+Brother HL-1210W series USB
+```
+
+como cola instalada.
+
+Sin embargo:
+
+```text
+USB_PRESENCE
+```
+
+produjo:
+
+```text
+Reachable         = False
+ReachabilityState = UNREACHABLE
+ProbeResult       = USB_DEVICE_NOT_PRESENT
+```
+
+Por lo tanto:
+
+```text
+cola instalada
+    !=
+dispositivo presente
+```
+
+Esto es equivalente conceptualmente a otros casos donde configuración y
+realidad operacional deben mantenerse separadas.
+
+La cola constituye evidencia de configuración.
+
+La estrategia de reachability aporta evidencia de disponibilidad actual.
+
+---
+
+## 64. Un endpoint USB inaccesible no autoriza recuperación Wi-Fi
+
+La ausencia física de la Brother USB produjo:
+
+```text
+USB_ENDPOINT_UNREACHABLE
+```
+
+pero:
+
+```text
+SwitchDecision   = NO_WIFI_ACTION
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+Esto valida físicamente una conclusión que previamente era principalmente
+arquitectónica:
+
+> La estrategia de recuperación debe estar condicionada por el transporte del
+> endpoint.
+
+El razonamiento:
+
+```text
+impresora inaccesible
+        |
+        v
+cambiar Wi-Fi
+```
+
+es incorrecto.
+
+La secuencia correcta comienza por:
+
+```text
+endpoint inaccesible
+        |
+        v
+¿qué transporte utiliza?
+        |
+        v
+¿qué tipo de recuperación tiene sentido para ese transporte?
+```
+
+---
+
+## 65. Discovery puede reemplazar inventario manual sin convertirse en Policy
+
+Durante el Punto 4 `PrinterDiscovery` pasó a ser la fuente operacional para
+conocer las colas existentes.
+
+Esto permitió eliminar de QueueWatcher la dependencia de:
+
+```text
+config/printers.json
+```
+
+para seleccionar impresoras.
+
+La información:
+
+```text
+qué cola existe
+qué driver utiliza
+qué puerto utiliza
+qué endpoint representa
+```
+
+puede derivarse de Windows.
+
+Sin embargo esto no elimina la necesidad de Policy.
+
+Windows puede decir:
+
+```text
+esta cola existe
+```
+
+pero no necesariamente:
+
+```text
+PrintSwitch está autorizado a cambiar de red para recuperarla
+```
+
+Por lo tanto:
+
+```text
+Discovery elimina inventario redundante
+```
+
+sin implicar:
+
+```text
+Discovery reemplaza intención del usuario
+```
+
+---
+
+## 66. Descubrir automáticamente no significa seleccionar arbitrariamente
+
+QueueWatcher puede recibir:
+
+```text
+-PrinterName
+```
+
+y seleccionar la cola correspondiente dentro de los `QueueContext`
+descubiertos.
+
+También puede operar de forma directa cuando existe una única cola física
+candidata.
+
+Sin embargo, si existen múltiples candidatas y no hay información suficiente
+para seleccionar una, el sistema no debe elegir silenciosamente.
+
+La lección es:
+
+> Automatizar descubrimiento no justifica ocultar ambigüedad.
+
+Una selección automática sólo es segura cuando la evidencia disponible produce
+una elección no ambigua.
+
+---
+
+## 67. QueueWatcher no necesita conocer cómo se descubrió técnicamente el endpoint
+
+Después de la integración del Punto 4, QueueWatcher consume:
+
+```text
+QueueContext
+```
+
+en lugar de reconstruir información de impresora por su cuenta.
+
+Esto permite que la cola pueda representar:
+
+```text
+Epson / IPv4
+Brother / hostname
+Brother / USB
+```
+
+sin que QueueWatcher necesite implementar reglas específicas para cada caso.
+
+La lección general es:
+
+> Un consumidor debe depender del contrato normalizado y no repetir la lógica
+> que produjo ese contrato.
+
+Esto reduce duplicación y evita divergencias entre componentes.
+
+---
+
+## 68. Recovery habilitado significa permiso y no obligación
+
+El Punto 5 permitió comprobar esta propiedad desde QueueWatcher y no solamente
+desde pruebas aisladas del Orchestrator.
+
+Con:
+
+```text
+-EnableRecovery
+```
+
+y la Epson ya alcanzable mediante:
+
+```text
+suarezcores
+```
+
+el sistema produjo:
+
+```text
+EXISTING_REACHABLE_PATH
+
+SwitchDecision   = NO_ACTION
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+Por lo tanto:
+
+```text
+EnableRecovery
+      |
+      v
+puede actuar si la evidencia lo justifica
+```
+
+y no:
+
+```text
+EnableRecovery
+      |
+      v
+debe cambiar la red
+```
+
+Esta diferencia es esencial para que el modo operacional pueda permanecer
+habilitado sin provocar modificaciones innecesarias.
+
+---
+
+## 69. El trabajo de impresión puede ser el estímulo real del recovery completo
+
+Se validó la secuencia:
+
+```text
+Wi-Fi = Claro640
+Ethernet desconectado
+Epson encendida
+suarezcores visible
+Recovery habilitado
+```
+
+Un trabajo real ingresó a:
+
+```text
+L365 Series(Red)
+```
+
+QueueWatcher lo detectó.
+
+El endpoint:
+
+```text
+192.168.1.108:515
+```
+
+no era alcanzable desde la situación inicial.
+
+El pipeline terminó ejecutando:
+
+```text
+Claro640
+   |
+   v
+suarezcores
+```
+
+y posteriormente confirmó:
+
+```text
+NetworkSwitchVerified       = True
+RecoveryValidationConfirmed = True
+RecoverySucceeded           = True
+RecoveryConfirmed           = True
+SwitchExecuted              = True
+FinalClassification         = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+La importancia de esta prueba es que no se ejecutó solamente un componente
+aislado.
+
+Se validó:
+
+```text
+evento real
+   |
+   v
+QueueWatcher
+   |
+   v
+Orchestrator
+   |
+   v
+decisión
+   |
+   v
+NetworkManager
+   |
+   v
+RecoveryValidator
+```
+
+---
+
+## 70. El éxito del recovery requiere comprobar el efecto buscado
+
+Después del cambio:
+
+```text
+Claro640 -> suarezcores
+```
+
+el sistema no consideró suficiente observar que Windows estuviera conectado al
+SSID nuevo.
+
+También se verificó:
+
+```text
+192.168.1.108:515
+```
+
+y externamente:
+
+```text
+TcpTestSucceeded = True
+```
+
+Esto refuerza una regla previamente establecida:
+
+> La acción ejecutada y el objetivo alcanzado son hechos diferentes.
+
+En términos generales:
+
+```text
+acción realizada
+    !=
+problema resuelto
+```
+
+El éxito debe asociarse a la recuperación del recurso operacional que motivó
+la intervención.
+
+---
+
+## 71. El happy path integrado es tan importante como el recovery
+
+También se ejecutó:
+
+```text
+Wi-Fi = suarezcores
+Ethernet desconectado
+Epson encendida
+Recovery habilitado
+```
+
+El trabajo ingresó a la cola y QueueWatcher ejecutó el pipeline.
+
+El endpoint ya era alcanzable.
+
+El resultado fue:
+
+```text
+UNIQUE_REACHABLE_PATH
+EXISTING_REACHABLE_PATH
+NO_ACTION
+```
+
+sin modificar Wi-Fi.
+
+Esta prueba demuestra que integrar más componentes no alteró el principio de
+mínima intervención.
+
+El pipeline completo puede ejecutarse y concluir correctamente:
+
+```text
+no hacer nada
+```
+
+---
+
+## 72. ConnectivityAnalyzer estaba duplicando conocimiento que ya pertenecía al pipeline
+
+La auditoría previa al Punto 6 detectó que `ConnectivityAnalyzer` todavía
+utilizaba conceptos de una arquitectura anterior.
+
+Entre ellos:
+
+```text
+printers.json
+RequiredSSID
+NETWORK_MISMATCH
+TCP 9100
+TCP 80
+```
+
+El problema no era que esas ideas hubieran sido incorrectas cuando fueron
+introducidas.
+
+El problema era que el sistema había evolucionado.
+
+El endpoint operacional ya podía obtenerse mediante:
+
+```text
+PrinterEndpointResolver
+```
+
+y la autorización de recovery pertenecía a:
+
+```text
+Policy
+```
+
+Por lo tanto ConnectivityAnalyzer estaba comenzando a duplicar
+responsabilidades de otras capas.
+
+La auditoría confirma una lección de mantenimiento:
+
+> Una dependencia correcta en una versión puede convertirse en deuda
+> arquitectónica cuando aparece una fuente de verdad mejor.
+
+---
+
+## 73. Un componente diagnóstico debe recibir el objeto que diagnostica
+
+`ConnectivityAnalyzer v0.6` dejó de descubrir por sí mismo:
+
+```text
+IP
+SSID requerido
+puerto supuesto
+```
+
+Su contrato pasó a recibir:
+
+```text
+PrinterName
+TargetIP
+TcpPort
+```
+
+La información operacional llega desde capas anteriores.
+
+Esto produce:
+
+```text
+Resolver
+   |
+   v
+endpoint operacional
+   |
+   v
+ConnectivityAnalyzer
+   |
+   v
+diagnóstico
+```
+
+en lugar de:
+
+```text
+Resolver ------------------+
+                           |
+config manual -> Analyzer  |
+                           |
+dos interpretaciones ------+
+del mismo destino
+```
+
+La lección es:
+
+> Si una capa ya resolvió una identidad operacional, las capas posteriores
+> deberían consumir ese resultado salvo que tengan una responsabilidad
+> explícita de revalidarlo.
+
+---
+
+## 74. ICMP es evidencia auxiliar cuando el servicio real es TCP
+
+`ConnectivityAnalyzer v0.6` conserva Ping como información diagnóstica.
+
+Sin embargo la clasificación operacional se apoya en:
+
+```text
+TargetIP:TcpPort
+```
+
+recibido.
+
+Para Epson:
+
+```text
+192.168.1.108:515
+```
+
+y para Brother Network:
+
+```text
+192.168.100.12:515
+```
+
+ambos produjeron:
+
+```text
+OperationalTcpSucceeded = True
+Classification          = PRINTER_REACHABLE
+```
+
+La lección es:
+
+> Alcanzar un host y alcanzar el servicio que PrintSwitch necesita son
+> afirmaciones distintas.
+
+ICMP puede aportar contexto.
+
+No debe sustituir la prueba del endpoint operacional.
+
+---
+
+## 75. El puerto operacional tampoco debe ser una constante global
+
+Durante etapas anteriores se utilizaron puertos como:
+
+```text
+9100
+80
+515
+```
+
+en distintos contextos.
+
+La evolución endpoint-aware demuestra que el puerto correcto debe ser una
+propiedad del endpoint.
+
+Por lo tanto:
+
+```text
+TcpPort = 515
+```
+
+es correcto para las colas LPR actualmente observadas, pero no constituye una
+verdad universal sobre impresoras.
+
+La regla general es:
+
+```text
+endpoint
+   |
+   +--> protocolo
+   |
+   +--> destino
+   |
+   +--> puerto
+```
+
+y no:
+
+```text
+impresora
+   |
+   v
+usar siempre puerto X
+```
+
+---
+
+## 76. La auditoría cruzada debe formar parte del desarrollo antes de ampliar funcionalidades
+
+Antes del Punto 6 se revisaron:
+
+```text
+dependencias
+configuraciones
+invocaciones
+contratos
+referencias legacy
+parsers
+```
+
+Esta revisión encontró la dependencia residual de ConnectivityAnalyzer.
+
+El hallazgo apareció antes de comenzar las pruebas excepcionales.
+
+Esto demuestra el valor de realizar auditorías entre etapas arquitectónicas.
+
+Una prueba funcional puede responder:
+
+```text
+¿funciona este escenario?
+```
+
+pero una auditoría de dependencias puede responder:
+
+```text
+¿funciona por la arquitectura que creemos tener?
+```
+
+Ambas preguntas son necesarias.
+
+---
+
+## 77. El core moderno ya no necesita `printers.json` como fuente operacional
+
+Después de la auditoría, el pipeline moderno queda basado en:
+
+```text
+Windows
+PrinterDiscovery
+PrinterEndpointResolver
+PrinterEndpointReachability
+policy.json
+```
+
+`printers.json` permanece en el repositorio porque existen:
+
+```text
+herramientas legacy
+herramientas experimentales
+historia del proyecto
+```
+
+que todavía pueden referenciarlo.
+
+Esto no contradice el diseño vigente.
+
+La lección es:
+
+> Eliminar una dependencia del core no obliga a borrar inmediatamente todos los
+> artefactos históricos que alguna vez la utilizaron.
+
+Lo importante es distinguir claramente:
+
+```text
+operacional vigente
+```
+
+de:
+
+```text
+legacy / experimental
+```
+
+---
+
+## 78. La compatibilidad con una segunda impresora no equivale todavía a universalidad
+
+La validación Brother aumenta considerablemente la evidencia de generalidad.
+
+Ahora existen casos comprobados de:
+
+```text
+dos fabricantes
+IPv4
+hostname
+NETWORK
+USB
+LPR
+USB_PRESENCE
+```
+
+Sin embargo esto no demuestra todavía compatibilidad universal con:
+
+```text
+todos los monitores de puerto
+todos los protocolos
+WSD
+IPP
+RAW
+impresoras compartidas
+otros drivers propietarios
+múltiples interfaces simultáneas
+```
+
+La conclusión correcta es:
+
+```text
+la arquitectura mostró capacidad de generalización
+```
+
+y no:
+
+```text
+la arquitectura ya soporta cualquier impresora
+```
+
+Mantener esta diferencia evita transformar evidencia limitada en una promesa
+arquitectónica excesiva.
+
+---
+
+## 79. Una beta debe construirse sobre regresiones y no sólo sobre happy paths acumulados
+
+Después de los Puntos 1 a 5 existe evidencia suficiente para considerar cercana
+una primera beta.
+
+Sin embargo el siguiente paso no debe ser inmediatamente la UI.
+
+Antes deben probarse situaciones donde las premisas habituales fallen.
+
+Entre ellas pueden aparecer:
+
+```text
+red inesperada
+endpoint ambiguo
+hostname no resoluble
+múltiples caminos
+interfaces cambiantes
+dispositivo ausente
+información parcial
+contradicciones entre fuentes
+```
+
+El objetivo del Punto 6 será descubrir qué ocurre cuando la realidad no
+coincide con el camino utilizado durante el desarrollo.
+
+La lección metodológica es:
+
+> Una arquitectura no está suficientemente probada porque todos sus escenarios
+> diseñados funcionen.
+>
+> También debe observarse qué hace cuando las condiciones dejan de parecerse a
+> aquellas con las que fue construida.
+
+---
+
+## 80. Los casos excepcionales deben diseñarse antes de ejecutarse
+
+Para evitar adaptar la interpretación después de conocer el resultado, cada
+prueba del Punto 6 deberá definir previamente:
+
+```text
+Test ID
+
+Objetivo
+
+Configuración inicial
+
+Hipótesis
+
+Resultado esperado
+
+Acción
+
+Resultado obtenido
+
+Check real
+
+Observaciones
+
+Corrección necesaria
+
+Regresión posterior
+```
+
+La configuración inicial debe incluir explícitamente cuando corresponda:
+
+```text
+Wi-Fi inicial
+Ethernet
+Epson
+Brother
+USB
+estado de alimentación
+SSID visibles
+Recovery habilitado o deshabilitado
+```
+
+Esto permite comparar:
+
+```text
+lo que creíamos que debía ocurrir
+```
+
+contra:
+
+```text
+lo que realmente ocurrió
+```
+
+sin reconstruir retrospectivamente la hipótesis.
+
+---
+
+## 81. La configuración inicial es parte de la evidencia experimental
+
+Durante las pruebas físicas se comprobó que pequeñas diferencias de contexto
+cambian radicalmente el significado del resultado.
+
+Por ejemplo:
+
+```text
+Wi-Fi = Claro640
+```
+
+no es información suficiente si no se conoce además:
+
+```text
+Ethernet
+impresora encendida
+USB
+SSID disponibles
+endpoint esperado
+modo Execute/Recovery
+```
+
+Por lo tanto, desde el Punto 6 la configuración inicial no debe considerarse
+una nota auxiliar.
+
+Debe formar parte del registro de evidencia de cada prueba.
+
+La regla metodológica pasa a ser:
+
+> Ningún resultado físico debe interpretarse sin registrar previamente el
+> estado relevante del entorno.
+
+---
+
+## 82. La tercera red Wi-Fi permite introducir variabilidad controlada
+
+El entorno físico disponible actualmente permite trabajar al menos con:
+
+```text
+suarezcores
+Claro640
+Suarez
+```
+
+Estas redes no deben utilizarse solamente como caminos hacia diferentes
+impresoras.
+
+También pueden servir para construir condiciones deliberadamente extrañas y
+comprobar cómo reacciona el sistema ante cambios de contexto.
+
+Esto permite diseñar casos donde:
+
+```text
+la red actual no es la esperada
+
+un hostname deja de resolverse
+
+un endpoint pertenece a otra subred
+
+una red candidata existe pero no conduce al recurso
+
+la conectividad general y la conectividad de impresión divergen
+```
+
+La existencia de varias redes controlables convierte el entorno doméstico de
+prueba en un pequeño laboratorio de regresión de conectividad.
+
+---
+
+## 83. El principio de evidencia positiva evoluciona hacia degradación por evidencia
+
+Hasta ahora una regla central fue:
+
+```text
+actuar únicamente con evidencia positiva suficiente
+```
+
+Las pruebas recientes permiten formular una evolución futura:
+
+```text
+evidencia completa y coherente
+        |
+        v
+decisión normal
+
+evidencia parcial
+        |
+        v
+capacidad reducida
+
+evidencia contradictoria
+        |
+        v
+no asumir certeza
+
+evidencia insuficiente
+        |
+        v
+estado seguro
+```
+
+Esta idea todavía no constituye una nueva capa implementada.
+
+Se registra como dirección arquitectónica para una segunda etapa posterior al
+roadmap actual.
+
+En el futuro podrá evaluarse una capa capaz de preguntarse:
+
+```text
+¿la evidencia que Windows y los demás componentes me entregan
+es suficiente, coherente y no contradictoria para ejecutar
+esta política de forma segura?
+```
+
+Hasta entonces debe preservarse el comportamiento conservador ya implementado
+para los estados de incertidumbre conocidos.
+
+---
+
+## 84. La fuente principal puede ser confiable sin considerarse infalible
+
+Windows continúa siendo la principal fuente operacional para:
+
+```text
+colas
+drivers
+puertos
+interfaces
+rutas
+estado de red
+```
+
+Sin embargo el diseño futuro no debería convertir:
+
+```text
+Windows dijo X
+```
+
+en:
+
+```text
+X necesariamente representa toda la realidad
+```
+
+Pueden existir situaciones donde una fuente:
+
+```text
+no responda
+devuelva información vacía
+entregue información parcial
+mantenga estado obsoleto
+se contradiga con evidencia activa
+```
+
+La arquitectura actual ya posee parte del comportamiento necesario mediante:
+
+```text
+UNKNOWN
+falta de autorización
+no intervención
+validación posterior
+```
+
+Una futura capa de calidad de evidencia podrá formalizar este razonamiento de
+manera transversal.
+
+Esta mejora queda explícitamente fuera del alcance inmediato del Punto 6.
+
+---
+
+## 85. Conocimiento vigente al inicio del Punto 6
+
+Después de completar los Puntos 3, 4 y 5 y la auditoría posterior, se consideran
+respaldadas por evidencia las siguientes afirmaciones:
+
+```text
+[OK] la arquitectura funciona con más de un fabricante
+
+[OK] el nombre comercial no tiene que coincidir con QueueName
+
+[OK] un mismo dispositivo físico puede exponer múltiples colas
+
+[OK] múltiples colas pueden representar transportes diferentes
+
+[OK] NETWORK puede utilizar IPv4 literal
+
+[OK] NETWORK puede utilizar hostname
+
+[OK] un hostname puede resolverse dinámicamente a una IPv4 operacional
+
+[OK] fallo de resolución de hostname produce UNKNOWN y no UNREACHABLE
+
+[OK] UNKNOWN no autoriza intervención
+
+[OK] USB requiere una estrategia de reachability propia
+
+[OK] una cola USB puede existir aunque el dispositivo físico esté ausente
+
+[OK] USB_DEVICE_NOT_PRESENT no justifica recovery Wi-Fi
+
+[OK] PrinterDiscovery puede reemplazar inventario manual de colas
+
+[OK] Discovery no reemplaza Policy
+
+[OK] QueueWatcher consume QueueContext en lugar de reconstruir endpoints
+
+[OK] selección automática no debe ocultar ambigüedad
+
+[OK] EnableRecovery es permiso y no obligación
+
+[OK] un trabajo real puede disparar el recovery completo
+
+[OK] el recovery real Claro640 -> suarezcores fue validado físicamente
+
+[OK] el endpoint Epson 192.168.1.108:515 fue recuperado y revalidado
+
+[OK] el happy path integrado no modifica Wi-Fi innecesariamente
+
+[OK] ConnectivityAnalyzer es consumidor del endpoint y no su descubridor
+
+[OK] ConnectivityAnalyzer ya no necesita policy de SSID
+
+[OK] ICMP es evidencia auxiliar y no sustituto del servicio operacional
+
+[OK] TcpPort debe provenir del endpoint y no de una constante global
+
+[OK] printers.json dejó de ser fuente operacional del core moderno
+
+[OK] los artefactos legacy pueden conservarse sin gobernar el core
+
+[OK] una auditoría de dependencias puede descubrir deuda que las pruebas
+     funcionales no muestran
+
+[OK] la arquitectura mostró generalización, pero todavía no universalidad
+
+[OK] el Punto 6 debe probar escenarios adversos antes de iniciar la UI
+
+[OK] la configuración inicial debe formar parte explícita de cada prueba
+```
+
+El baseline de código para comenzar las regresiones es:
+
+```text
+4730803
+REFACTOR: desacopla diagnostico de configuracion legacy
+```
+
+A partir de este punto el objetivo deja de ser demostrar nuevamente que el
+camino normal funciona.
+
+El objetivo pasa a ser buscar deliberadamente situaciones capaces de romper,
+confundir o contradecir los supuestos de la arquitectura antes de construir la
+primera beta orientada a usuario.

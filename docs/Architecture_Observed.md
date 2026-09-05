@@ -2645,3 +2645,1550 @@ expuesta actualmente en Windows mediante colas de red y USB.
 
 Esa validación pertenece a la etapa siguiente y no se considera completada en
 este checkpoint.
+
+
+---
+
+# Actualización de arquitectura — Cierre de Puntos 3 a 5 y auditoría pre-Punto 6 — Septiembre 2026
+
+> **Estado documental**
+>
+> Esta sección continúa la actualización arquitectónica iniciada en Septiembre
+> de 2026.
+>
+> Todo el contenido anterior se conserva como registro histórico de las etapas
+> en las que fue escrito.
+>
+> En particular, las descripciones Alpha basadas en TCP 9100, configuración
+> manual mediante `printers.json` y componentes experimentales anteriores no se
+> reescriben retroactivamente.
+>
+> Esta nueva sección documenta el estado alcanzado después de:
+>
+> ```text
+> Punto 3 — Validación Brother
+> Punto 4 — Consolidación Discovery + Policy
+> Punto 5 — Integración QueueWatcher
+> Auditoría técnica pre-Punto 6
+> ```
+>
+> Los checkpoints principales de código correspondientes a esta evolución son:
+>
+> ```text
+> bbe5c4c
+> FEAT: integra QueueWatcher con discovery y recovery operacional
+>
+> 4730803
+> REFACTOR: desacopla diagnostico de configuracion legacy
+> ```
+
+---
+
+## 57. Validación de una segunda impresora
+
+El Punto 3 utilizó una segunda impresora física para comprobar si la
+arquitectura endpoint-aware podía operar fuera del caso Epson.
+
+El equipo físico posee identificación comercial:
+
+```text
+Brother HL-1212W
+```
+
+mientras que Windows, el driver y el software Brother exponen la familia
+mediante:
+
+```text
+Brother HL-1210W series
+```
+
+Esta diferencia de nomenclatura no fue tratada mediante una excepción de
+fabricante.
+
+PrintSwitch operó sobre las colas que Windows expone realmente.
+
+Se observaron:
+
+```text
+Brother HL-1210W series
+Brother HL-1210W series USB
+```
+
+Estas dos colas representan mecanismos de acceso distintos al mismo equipo
+físico.
+
+La primera utiliza un endpoint de red.
+
+La segunda utiliza un endpoint USB.
+
+La validación permitió comprobar una idea importante:
+
+> La unidad operacional de PrintSwitch no debe ser el nombre comercial escrito
+> en la carcasa del dispositivo sino la cola de impresión y el endpoint que
+> Windows utiliza realmente.
+
+---
+
+## 58. Brother Network
+
+La cola de red fue descubierta como:
+
+```text
+QueueName             = Brother HL-1210W series
+DriverName            = Brother HL-1210W series
+PortName              = BRWC48E8F7B140F
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+TcpPort               = 515
+ServiceQueue          = BINARY_P1
+ReachabilityStrategy  = LPR_TCP
+DiscoverySource       = WINDOWS_PRINTER_PORT
+Confidence            = HIGH
+```
+
+La información anterior fue obtenida desde la configuración real que Windows
+mantiene para la cola.
+
+No fue necesario introducir manualmente:
+
+```text
+IP de la Brother
+puerto de impresión
+protocolo
+```
+
+en el core operacional.
+
+### 58.1. Resolución del hostname
+
+En la red donde la impresora estaba disponible, Windows resolvió:
+
+```text
+BRWC48E8F7B140F
+        |
+        v
+192.168.100.12
+```
+
+El endpoint operacional respondió correctamente mediante:
+
+```text
+TCP 515
+```
+
+y la prueba produjo:
+
+```text
+ReachabilityState = REACHABLE
+ProbeResult       = TCP_CONNECTION_SUCCEEDED
+```
+
+### 58.2. Consecuencia arquitectónica
+
+La validación demuestra que un endpoint de red no necesita estar representado
+mediante una dirección IPv4 literal.
+
+La arquitectura puede operar sobre:
+
+```text
+hostname
+   |
+   v
+resolución
+   |
+   v
+dirección operacional
+   |
+   v
+servicio TCP
+```
+
+sin incorporar una condición específica para Brother.
+
+Esto amplía el modelo previamente validado con la Epson:
+
+```text
+Epson
+ConfiguredDestination = IPv4
+
+Brother
+ConfiguredDestination = HOSTNAME
+```
+
+ambos interpretados mediante el mismo modelo general de endpoint.
+
+---
+
+## 59. Brother USB
+
+La segunda cola Brother permitió validar un transporte completamente diferente
+de los endpoints de red.
+
+La cola fue descubierta como:
+
+```text
+QueueName             = Brother HL-1210W series USB
+DriverName            = Brother HL-1210W series
+PortName              = USB001
+TransportType         = USB
+Protocol              = USB
+ConfiguredDestination = USB001
+AddressType           = DEVICE
+ReachabilityStrategy  = USB_PRESENCE
+DiscoverySource       = WINDOWS_PRINTING
+Confidence            = HIGH
+```
+
+No existe en este caso:
+
+```text
+TargetIP
+TcpPort
+SSID requerido
+```
+
+porque esas propiedades no pertenecen al transporte utilizado por la cola.
+
+### 59.1. USB conectado
+
+Con el cable USB conectado y el dispositivo encendido, la estrategia
+`USB_PRESENCE` produjo:
+
+```text
+ResolvedDestination =
+USBPRINT\BROTHERHL-1210W_SERIES\...\USB001
+
+Reachable         = True
+ReachabilityState = REACHABLE
+ProbeResult       = USB_DEVICE_PRESENT
+```
+
+El Orchestrator reconoció que se encontraba ante un endpoint USB y no ejecutó
+análisis IP ni recuperación Wi-Fi.
+
+Resultado:
+
+```text
+SwitchDecision      = NO_WIFI_ACTION
+SwitchAuthorized    = False
+SwitchExecuted      = False
+FinalClassification = USB_ENDPOINT_REACHABLE
+```
+
+### 59.2. USB desconectado
+
+Después de retirar físicamente el cable USB, la misma cola continuó existiendo
+en Windows.
+
+Sin embargo, la estrategia de reachability produjo:
+
+```text
+Reachable         = False
+ReachabilityState = UNREACHABLE
+ProbeResult       = USB_DEVICE_NOT_PRESENT
+```
+
+El Orchestrator volvió a evitar cualquier intento de recuperación inalámbrica.
+
+Resultado:
+
+```text
+SwitchDecision      = NO_WIFI_ACTION
+SwitchAuthorized    = False
+SwitchExecuted      = False
+FinalClassification = USB_ENDPOINT_UNREACHABLE
+```
+
+### 59.3. Consecuencia arquitectónica
+
+La ausencia de una impresora USB no constituye evidencia de un problema de red.
+
+Por lo tanto:
+
+```text
+USB conectado
+      |
+      v
+endpoint disponible
+      |
+      v
+NO_WIFI_ACTION
+```
+
+y:
+
+```text
+USB desconectado
+      |
+      v
+endpoint local no disponible
+      |
+      v
+NO_WIFI_ACTION
+```
+
+La estrategia de recuperación debe depender del transporte observado y no de
+una regla global aplicada indiscriminadamente a cualquier cola.
+
+---
+
+## 60. UNKNOWN continúa siendo un estado seguro
+
+Durante la validación Brother se observó un escenario donde la cola de red
+utilizaba:
+
+```text
+BRWC48E8F7B140F
+```
+
+pero el hostname no podía resolverse desde otra red Wi-Fi.
+
+El endpoint no podía considerarse:
+
+```text
+REACHABLE
+```
+
+pero tampoco existía evidencia suficiente para afirmar:
+
+```text
+UNREACHABLE
+```
+
+La clasificación obtenida fue:
+
+```text
+ReachabilityState = UNKNOWN
+ProbeResult       = DESTINATION_RESOLUTION_FAILED
+```
+
+El Orchestrator respondió:
+
+```text
+SwitchDecision =
+NO_ACTION_INSUFFICIENT_ENDPOINT_EVIDENCE
+
+SwitchAuthorized = False
+SwitchExecuted   = False
+
+FinalClassification =
+NETWORK_DESTINATION_UNRESOLVED
+```
+
+La red Wi-Fi no fue modificada.
+
+Posteriormente, al regresar al contexto donde Windows podía resolver el
+hostname, el mismo endpoint volvió a producir:
+
+```text
+ResolvedDestination = 192.168.100.12
+ReachabilityState   = REACHABLE
+ProbeResult         = TCP_CONNECTION_SUCCEEDED
+```
+
+Esto confirma experimentalmente:
+
+```text
+UNKNOWN
+   !=
+UNREACHABLE
+```
+
+y también:
+
+```text
+falta de evidencia
+   !=
+autorización para intervenir
+```
+
+La arquitectura debe degradarse hacia un comportamiento seguro cuando el
+conocimiento disponible no alcanza para justificar una acción.
+
+---
+
+## 61. Punto 3 cerrado — abstracción multimarca y multitransporte
+
+La validación Brother permitió utilizar el mismo modelo con tres endpoints
+diferentes:
+
+```text
+Epson L365
+    |
+    +--> NETWORK
+         IPV4
+         LPR / TCP 515
+
+
+Brother HL-1210W series
+    |
+    +--> NETWORK
+         HOSTNAME
+         LPR / TCP 515
+
+
+Brother HL-1210W series USB
+    |
+    +--> USB
+         DEVICE
+         USB_PRESENCE
+```
+
+No fue necesario implementar:
+
+```text
+if Epson ...
+if Brother ...
+```
+
+La abstracción efectiva continúa siendo:
+
+```text
+QueueContext
+      |
+      v
+Endpoint
+      |
+      v
+ReachabilityStrategy
+```
+
+Esto permite que las diferencias reales aparezcan como propiedades del
+endpoint y no como excepciones codificadas por fabricante.
+
+El Punto 3 se considera completado.
+
+---
+
+## 62. Punto 4 — Discovery pasa a ser la fuente operacional de colas
+
+Durante el Punto 4 se revisó la relación entre:
+
+```text
+Discovery
+Policy
+configuración legacy
+QueueWatcher
+```
+
+El objetivo fue eliminar duplicaciones entre lo que Windows conoce sobre las
+colas y lo que PrintSwitch mantenía manualmente en archivos de configuración.
+
+`PrinterDiscovery.ps1` produce actualmente objetos:
+
+```text
+QueueContext
+```
+
+utilizando información observada desde Windows y delegando la interpretación
+del endpoint a:
+
+```text
+PrinterEndpointResolver.ps1
+```
+
+El `QueueContext` normalizado contiene, entre otros:
+
+```text
+QueueName
+DriverName
+PortName
+Default
+PrinterStatus
+WorkOffline
+JobCount
+TransportType
+Protocol
+ConfiguredDestination
+AddressType
+TcpPort
+ServiceQueue
+ReachabilityStrategy
+DiscoverySource
+Confidence
+OperationalMinimumSatisfied
+MissingRequirements
+EndpointEvidence
+```
+
+La presencia de una cola y su endpoint dejan de definirse mediante inventario
+manual.
+
+La secuencia operacional pasa a ser:
+
+```text
+Windows
+   |
+   v
+PrinterDiscovery
+   |
+   v
+QueueContext
+   |
+   v
+PrinterEndpointResolver
+```
+
+---
+
+## 63. QueueWatcher integrado con PrinterDiscovery
+
+`QueueWatcher.ps1` evolucionó para utilizar:
+
+```text
+Windows
+   |
+   v
+PrinterDiscovery
+   |
+   v
+QueueContext
+```
+
+como fuente operacional de las colas físicas.
+
+El watcher ya no utiliza:
+
+```text
+ConfigValidator
+config/printers.json
+```
+
+para determinar qué impresora debe observar.
+
+Cuando el usuario especifica:
+
+```text
+-PrinterName
+```
+
+QueueWatcher busca esa cola dentro del discovery realizado sobre Windows.
+
+Si sólo existe una cola física candidata, puede seleccionarse directamente.
+
+Si existen varias y el usuario no indicó cuál observar, el sistema evita
+elegir arbitrariamente.
+
+La regla resultante es:
+
+> Descubrir automáticamente no significa adivinar silenciosamente cuando la
+> selección es ambigua.
+
+El cambio quedó integrado en:
+
+```text
+QueueWatcher v0.7
+```
+
+y consolidado posteriormente mediante el checkpoint:
+
+```text
+bbe5c4c
+FEAT: integra QueueWatcher con discovery y recovery operacional
+```
+
+---
+
+## 64. Separación consolidada entre Discovery y Policy
+
+Después del Punto 4 la arquitectura diferencia explícitamente dos preguntas.
+
+### 64.1. Discovery
+
+```text
+¿Qué existe?
+¿Cómo intenta Windows alcanzarlo?
+```
+
+Esta información proviene principalmente de:
+
+```text
+Windows Printing
+PrinterDiscovery
+PrinterEndpointResolver
+PrinterEndpointReachability
+```
+
+Incluye:
+
+```text
+cola
+driver
+puerto
+monitor
+transporte
+protocolo
+destino
+puerto TCP
+servicio LPR
+identidad USB
+```
+
+### 64.2. Policy
+
+```text
+¿Qué está autorizado a hacer PrintSwitch?
+```
+
+Esta información pertenece a:
+
+```text
+config/policy.json
+```
+
+Por ejemplo:
+
+```text
+la Epson existe
+        |
+        v
+DISCOVERY
+```
+
+mientras:
+
+```text
+si necesita recuperación Wi-Fi
+puede utilizar suarezcores
+        |
+        v
+POLICY
+```
+
+La existencia de un dispositivo no debe confundirse con la intención del
+usuario respecto de qué acciones pueden ejecutarse.
+
+---
+
+## 65. Estado de `printers.json` después del Punto 4
+
+Durante las primeras etapas:
+
+```text
+config/printers.json
+```
+
+combinaba información de distinta naturaleza:
+
+```text
+identidad
+IP
+SSID
+configuración
+```
+
+Después de la evolución Discovery + Policy, este archivo deja de ser la fuente
+operacional del core moderno.
+
+Se conserva porque forma parte del desarrollo histórico y todavía puede ser
+utilizado por herramientas legacy o experimentales.
+
+La arquitectura distingue:
+
+```text
+CORE MODERNO
+
+Windows
+PrinterDiscovery
+PrinterEndpointResolver
+PrinterEndpointReachability
+policy.json
+```
+
+de:
+
+```text
+LEGACY / EXPERIMENTAL
+
+printers.json
+ConfigValidator
+ProfileAnalyzer
+PerformanceAnalyzer
+ContextualRecoveryTest
+```
+
+La presencia de `printers.json` en el repositorio no significa que represente
+la fuente de verdad del pipeline operacional vigente.
+
+---
+
+## 66. Punto 5 — QueueWatcher completa el camino operacional
+
+El Punto 5 integró la detección real de trabajos con el pipeline endpoint-aware.
+
+El flujo completo queda:
+
+```text
+trabajo de impresión
+        |
+        v
+Windows Print Queue
+        |
+        v
+QueueWatcher
+        |
+        v
+PrinterDiscovery
+        |
+        v
+QueueContext
+        |
+        v
+PrintRecoveryOrchestrator
+        |
+        v
+PrinterEndpointResolver
+        |
+        v
+PrinterEndpointReachability
+        |
+        v
+InterfacePathAnalyzer
+        |
+        v
+RouteAnalyzer
+        |
+        v
+ConnectivityPolicy
+        |
+        v
+WiFiCandidateEvaluator
+        |
+        v
+SwitchDecision
+        |
+        v
+NetworkManager
+        |
+        v
+RecoveryValidator
+        |
+        v
+resultado operacional
+```
+
+`ConnectivityAnalyzer` participa como diagnóstico adicional y no como autoridad
+sobre el resultado de la recuperación.
+
+---
+
+## 67. Recovery real iniciado por un trabajo de impresión
+
+Se validó físicamente:
+
+```text
+Wi-Fi inicial = Claro640
+Ethernet      = desconectado
+Epson L365    = encendida
+SSID objetivo = suarezcores
+Endpoint      = 192.168.1.108:515
+Recovery      = habilitado
+```
+
+QueueWatcher se ejecutó mediante:
+
+```text
+-PrinterName "L365 Series(Red)"
+-EnableRecovery
+```
+
+Un trabajo real ingresó a la cola.
+
+QueueWatcher detectó el trabajo y delegó la recuperación al Orchestrator.
+
+Inicialmente:
+
+```text
+192.168.1.108:515
+        |
+        v
+UNREACHABLE
+```
+
+No existía un camino funcional hacia el endpoint.
+
+La policy permitió evaluar recuperación Wi-Fi.
+
+La secuencia observada fue:
+
+```text
+EVALUATE_WIFI_RECOVERY
+        |
+        v
+WIFI_SWITCH_CANDIDATE_AVAILABLE
+        |
+        v
+SWITCH_WIFI_FOR_PRINTER
+```
+
+`NetworkManager` ejecutó:
+
+```text
+Claro640
+   |
+   v
+suarezcores
+```
+
+y verificó:
+
+```text
+InitialSSID    = Claro640
+FinalSSID      = suarezcores
+SwitchVerified = True
+```
+
+Posteriormente `RecoveryValidator` confirmó nuevamente el endpoint operacional:
+
+```text
+192.168.1.108:515
+```
+
+El resultado final incluyó:
+
+```text
+NetworkSwitchVerified        = True
+RecoveryValidationConfirmed  = True
+RouteAfter                   = TARGET_REACHABLE_VIA_WIFI
+RecoverySucceeded            = True
+RecoveryConfirmed            = True
+SwitchExecuted               = True
+FinalClassification          = CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+Finalmente, una comprobación externa confirmó:
+
+```text
+RemotePort       = 515
+TcpTestSucceeded = True
+```
+
+La PC quedó conectada a:
+
+```text
+suarezcores
+```
+
+Este escenario demuestra la integración real:
+
+```text
+trabajo
+   |
+   v
+detección
+   |
+   v
+discovery
+   |
+   v
+endpoint
+   |
+   v
+decisión
+   |
+   v
+acción
+   |
+   v
+validación
+```
+
+sin intervención manual entre etapas.
+
+---
+
+## 68. No intervención con recovery habilitado
+
+Se ejecutó también la contraprueba:
+
+```text
+Wi-Fi inicial = suarezcores
+Ethernet      = desconectado
+Epson L365    = encendida
+Endpoint      = 192.168.1.108:515
+Recovery      = habilitado
+```
+
+Un trabajo real fue detectado por QueueWatcher y atravesó nuevamente el
+Orchestrator.
+
+La diferencia fue que el endpoint ya era alcanzable.
+
+El análisis produjo:
+
+```text
+UNIQUE_REACHABLE_PATH
+```
+
+y el resultado operacional fue:
+
+```text
+EXISTING_REACHABLE_PATH
+```
+
+con:
+
+```text
+SwitchDecision   = NO_ACTION
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+La red Wi-Fi permaneció sin cambios.
+
+Esta prueba confirma una propiedad central:
+
+> `-EnableRecovery` otorga permiso para actuar cuando corresponda.
+>
+> No constituye una orden de modificar conectividad.
+
+Por lo tanto:
+
+```text
+permiso
+   !=
+acción obligatoria
+```
+
+La decisión continúa subordinada a la evidencia.
+
+---
+
+## 69. Cierre del Punto 5
+
+Los dos experimentos anteriores validan las dos ramas fundamentales del flujo
+integrado.
+
+### 69.1. Intervención necesaria
+
+```text
+trabajo real
+   |
+   v
+endpoint inaccesible
+   |
+   v
+no existe camino funcional
+   |
+   v
+policy permite recuperación
+   |
+   v
+cambio Wi-Fi
+   |
+   v
+endpoint recuperado
+   |
+   v
+CONTEXTUAL_RECOVERY_SUCCESS
+```
+
+### 69.2. Intervención innecesaria
+
+```text
+trabajo real
+   |
+   v
+endpoint alcanzable
+   |
+   v
+camino funcional existente
+   |
+   v
+NO_ACTION
+```
+
+El Punto 5 se considera completado.
+
+El checkpoint correspondiente es:
+
+```text
+bbe5c4c
+FEAT: integra QueueWatcher con discovery y recovery operacional
+```
+
+---
+
+## 70. Auditoría técnica previa al Punto 6
+
+Antes de comenzar la batería de regresión y casos excepcionales se realizó una
+auditoría específica del sistema.
+
+El objetivo fue comprobar que la arquitectura declarada coincidiera con las
+dependencias reales del código.
+
+Se revisaron:
+
+```text
+componentes
+configuraciones
+dependencias
+consumidores
+contratos
+versiones
+referencias legacy
+fuentes de verdad
+parser
+integraciones
+```
+
+La auditoría permitió descubrir una dependencia residual importante.
+
+---
+
+## 71. Hallazgo — ConnectivityAnalyzer continuaba dependiendo de configuración legacy
+
+`ConnectivityAnalyzer v0.5` todavía cargaba:
+
+```text
+config/printers.json
+```
+
+y obtenía desde allí:
+
+```text
+PrinterName
+PrinterIP
+RequiredSSID
+```
+
+Además realizaba pruebas generales sobre:
+
+```text
+ICMP
+TCP 9100
+TCP 80
+```
+
+y podía producir:
+
+```text
+NETWORK_MISMATCH
+```
+
+comparando el SSID actual con el SSID configurado.
+
+Este modelo pertenecía correctamente a una etapa anterior del proyecto.
+
+Sin embargo, después de introducir:
+
+```text
+PrinterDiscovery
+PrinterEndpointResolver
+OperationalTargetIP
+OperationalTcpPort
+```
+
+esa dependencia se volvió redundante y conceptualmente incorrecta.
+
+El Analyzer estaba intentando redescubrir mediante configuración manual un
+endpoint que el pipeline operacional ya conocía.
+
+---
+
+## 72. ConnectivityAnalyzer v0.6
+
+La auditoría produjo:
+
+```text
+ConnectivityAnalyzer v0.6
+```
+
+El nuevo contrato de entrada es:
+
+```text
+PrinterName
+TargetIP
+TcpPort
+```
+
+El Analyzer ya no:
+
+```text
+carga printers.json
+descubre el endpoint
+decide policy
+decide si el SSID actual es correcto
+asume TCP 9100
+asume TCP 80
+```
+
+La evidencia operacional primaria pasa a ser:
+
+```text
+TargetIP:TcpPort
+```
+
+ICMP puede conservarse únicamente como evidencia diagnóstica auxiliar.
+
+La clasificación principal queda:
+
+```text
+PRINTER_REACHABLE
+PRINTER_UNREACHABLE
+```
+
+según el servicio TCP operacional recibido por el componente.
+
+La responsabilidad queda reducida a:
+
+> Diagnosticar conectividad hacia un endpoint que ya fue resuelto por otra
+> capa.
+
+---
+
+## 73. Diagnóstico no equivale a descubrimiento
+
+La nueva separación establece:
+
+```text
+PrinterEndpointResolver
+        |
+        v
+define endpoint
+```
+
+mientras:
+
+```text
+ConnectivityAnalyzer
+        |
+        v
+diagnostica endpoint recibido
+```
+
+Por lo tanto:
+
+```text
+Discovery
+   !=
+Diagnosis
+```
+
+El Orchestrator pasó a invocar al Analyzer mediante:
+
+```text
+-PrinterName $PrinterName
+-TargetIP    $OperationalTargetIP
+-TcpPort     $OperationalTcpPort
+```
+
+`ConfigPath` fue eliminado del contrato del Orchestrator porque dejó de ser
+necesario para el pipeline operacional moderno.
+
+`ContextualRecoveryTest.ps1`, aunque se conserva como herramienta experimental,
+también fue adaptado para obtener su endpoint mediante:
+
+```text
+PrinterEndpointResolver
+```
+
+y dejar de asumir:
+
+```text
+TCP 515
+```
+
+de forma fija.
+
+---
+
+## 74. Regresión del diagnóstico endpoint-aware
+
+Después del refactor se realizaron dos comprobaciones físicas.
+
+### 74.1. Epson L365
+
+El Resolver produjo:
+
+```text
+QueueName             = L365 Series(Red)
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = 192.168.1.108
+TcpPort               = 515
+ReachabilityStrategy  = LPR_TCP
+```
+
+`ConnectivityAnalyzer v0.6` recibió:
+
+```text
+TargetIP = 192.168.1.108
+TcpPort  = 515
+```
+
+y obtuvo:
+
+```text
+PingSucceeded           = True
+OperationalTcpSucceeded = True
+Classification          = PRINTER_REACHABLE
+```
+
+### 74.2. Brother Network
+
+El Resolver produjo:
+
+```text
+QueueName             = Brother HL-1210W series
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+TcpPort               = 515
+ServiceQueue          = BINARY_P1
+```
+
+La resolución del hostname produjo:
+
+```text
+192.168.100.12
+```
+
+`ConnectivityAnalyzer v0.6` recibió:
+
+```text
+TargetIP = 192.168.100.12
+TcpPort  = 515
+```
+
+y obtuvo:
+
+```text
+PingSucceeded           = True
+OperationalTcpSucceeded = True
+Classification          = PRINTER_REACHABLE
+```
+
+La segunda prueba es especialmente relevante porque confirma que el nuevo
+contrato no fue construido como una excepción para Epson.
+
+---
+
+## 75. Limpieza final del core moderno
+
+Después del refactor se realizó una inspección final.
+
+No quedaron referencias operacionales a:
+
+```text
+RequiredSSID
+NETWORK_MISMATCH
+Tcp9100
+Tcp80
+TcpPort 515 hardcodeado
+```
+
+dentro de `ConnectivityAnalyzer`.
+
+También se eliminó:
+
+```text
+ConfigPath
+```
+
+del contrato de `PrintRecoveryOrchestrator`.
+
+En el core moderno, `printers.json` ya no constituye una dependencia
+operacional.
+
+La única referencia explícita conservada en QueueWatcher es documental:
+
+```text
+elimina la dependencia operacional de config/printers.json
+```
+
+Las herramientas históricas que aún utilizan ese archivo permanecen
+preservadas como parte de etapas anteriores del proyecto.
+
+Todos los scripts PowerShell de:
+
+```text
+src
+scripts
+```
+
+fueron sometidos al parser y no presentaron errores sintácticos.
+
+---
+
+## 76. Arquitectura operacional vigente antes del Punto 6
+
+La arquitectura consolidada puede representarse como:
+
+```text
+Windows Print Queue
+        |
+        v
+QueueWatcher
+        |
+        v
+PrinterDiscovery
+        |
+        v
+QueueContext
+        |
+        v
+PrinterEndpointResolver
+        |
+        v
+PrinterEndpointReachability
+        |
+        v
+PrintRecoveryOrchestrator
+        |
+        +--> InterfacePathAnalyzer
+        |
+        +--> RouteAnalyzer
+        |
+        +--> ConnectivityPolicy
+        |
+        +--> WiFiCandidateEvaluator
+        |
+        +--> SwitchDecision
+        |
+        +--> NetworkManager
+        |
+        +--> RecoveryValidator
+        |
+        +--> ConnectivityAnalyzer
+               |
+               +--> diagnóstico endpoint-aware opcional
+```
+
+Las responsabilidades quedan distribuidas así:
+
+```text
+OBSERVAR
+    Windows Print Queue
+    QueueWatcher
+    PrinterDiscovery
+
+DESCRIBIR EL DESTINO
+    PrinterEndpointResolver
+
+COMPROBAR ENDPOINT
+    PrinterEndpointReachability
+
+ANALIZAR CAMINOS
+    InterfacePathAnalyzer
+    RouteAnalyzer
+
+AUTORIZAR
+    ConnectivityPolicy
+
+EVALUAR ALTERNATIVA
+    WiFiCandidateEvaluator
+
+DECIDIR
+    SwitchDecision
+
+ACTUAR
+    NetworkManager
+
+VALIDAR
+    RecoveryValidator
+
+DIAGNOSTICAR
+    ConnectivityAnalyzer
+```
+
+La regla general continúa siendo:
+
+> Ninguna capa debe asumir una responsabilidad que ya pertenece a otra.
+
+---
+
+## 77. Estado del roadmap al cierre documental pre-Punto 6
+
+El roadmap arquitectónico queda:
+
+```text
+[COMPLETADO] 1. Cierre endpoint-aware
+
+[COMPLETADO] 2. Consolidación de inconsistencias
+
+[COMPLETADO] 3. Validación Brother
+
+[COMPLETADO] 4. Consolidar Discovery + Policy
+
+[COMPLETADO] 5. Integración QueueWatcher
+
+[ACTUAL]      6. Regresiones y casos excepcionales
+
+[POSTERIOR]   7. Aplicación / UI
+
+[FUTURO]      8. Multi-impresora / otros fabricantes
+```
+
+El Punto 6 no tiene como objetivo principal agregar funcionalidades nuevas.
+
+Su objetivo será someter la arquitectura existente a condiciones:
+
+```text
+inusuales
+ambiguas
+contradictorias
+degradadas
+adversas
+```
+
+para intentar detectar supuestos todavía ocultos.
+
+---
+
+## 78. Baseline de regresión para el Punto 6
+
+El checkpoint de referencia queda establecido en:
+
+```text
+commit 4730803
+REFACTOR: desacopla diagnostico de configuracion legacy
+```
+
+Este baseline representa:
+
+```text
+Puntos 1 a 5 completados
+        +
+validación Epson
+        +
+validación Brother Network
+        +
+validación Brother USB
+        +
+Discovery integrado
+        +
+Policy separada
+        +
+QueueWatcher integrado
+        +
+recovery físico disparado por trabajo
+        +
+no intervención física validada
+        +
+auditoría de dependencias
+        +
+ConnectivityAnalyzer endpoint-aware
+```
+
+Cualquier modificación producida durante el Punto 6 deberá poder compararse
+contra este estado.
+
+La función del baseline es permitir distinguir:
+
+```text
+comportamiento ya validado
+        |
+        v
+regresión introducida
+```
+
+de:
+
+```text
+supuesto arquitectónico previamente no descubierto
+        |
+        v
+nuevo conocimiento
+```
+
+---
+
+## 79. Criterio de entrada al Punto 6
+
+Antes de ejecutar la primera prueba del Punto 6 deberán existir:
+
+```text
+arquitectura actual documentada
+conocimiento actual documentado
+roadmap actualizado
+metodología de prueba definida
+matriz de escenarios preparada
+baseline Git identificado
+```
+
+Cada prueba deberá declarar explícitamente:
+
+```text
+Test ID
+
+Objetivo
+
+Configuración inicial
+    Wi-Fi
+    Ethernet
+    Epson
+    Brother
+    USB
+    SSID visibles
+    Recovery
+
+Hipótesis
+
+Resultado esperado
+
+Acción o estímulo
+
+Resultado obtenido
+
+Check real
+    PASS
+    FAIL
+
+Observaciones
+
+Corrección necesaria
+
+Regresión posterior
+```
+
+La configuración física y de red deberá registrarse antes de ejecutar el caso,
+no reconstruirse posteriormente de memoria.
+
+---
+
+## 80. Estado arquitectónico al inicio de la fase de regresión
+
+A partir de este punto PrintSwitch deja de estar principalmente en una etapa de
+construcción de arquitectura base.
+
+El estado puede representarse como:
+
+```text
+arquitectura
+    |
+    v
+integrada
+    |
+    v
+validada con dos fabricantes
+    |
+    v
+auditada
+    |
+    v
+checkpoint
+    |
+    v
+testing adverso
+```
+
+El objetivo inmediato pasa de:
+
+```text
+¿podemos construir este flujo?
+```
+
+a:
+
+```text
+¿qué sucede cuando sometemos este flujo
+a situaciones que no fueron utilizadas
+para diseñarlo?
+```
+
+El Punto 6 deberá responder esa pregunta antes de iniciar el desarrollo de una
+interfaz de usuario o declarar una primera beta funcional.
