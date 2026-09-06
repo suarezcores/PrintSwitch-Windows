@@ -24,7 +24,7 @@ Set-StrictMode -Version Latest
 # - SIN cambio Wi-Fi
 # ============================================================
 
-$script:ControllerVersion = "0.1"
+$script:ControllerVersion = "0.2"
 
 $script:RootPath =
     Split-Path `
@@ -100,6 +100,18 @@ $script:ControllerState =
         MonitoringState =
             "NOT_STARTED"
 
+
+        MonitoringJob =
+            $null
+
+        MonitoringJobId =
+            $null
+
+        MonitoringStartedAt =
+            $null
+
+        MonitoringStoppedAt =
+            $null
         RecoveryEnabled =
             $false
 
@@ -308,6 +320,74 @@ function Get-PrintSwitchStatus {
 
     try {
 
+        # --------------------------------------------------------
+        # Reconciliar MonitoringState con el PowerShell Job real.
+        # --------------------------------------------------------
+
+        if ($null -ne $script:ControllerState.MonitoringJobId) {
+
+            $CurrentJob =
+                Get-Job `
+                    -Id $script:ControllerState.MonitoringJobId `
+                    -ErrorAction SilentlyContinue
+
+            if ($null -eq $CurrentJob) {
+
+                $script:ControllerState.MonitoringJob =
+                    $null
+
+                $script:ControllerState.MonitoringJobId =
+                    $null
+
+                $script:ControllerState.MonitoringState =
+                    "STOPPED"
+            }
+            else {
+
+                $script:ControllerState.MonitoringJob =
+                    $CurrentJob
+
+                switch ($CurrentJob.State) {
+
+                    "Running" {
+
+                        $script:ControllerState.MonitoringState =
+                            "WATCHING"
+                    }
+
+                    "Completed" {
+
+                        $script:ControllerState.MonitoringState =
+                            "STOPPED"
+                    }
+
+                    "Stopped" {
+
+                        $script:ControllerState.MonitoringState =
+                            "STOPPED"
+                    }
+
+                    "Failed" {
+
+                        $script:ControllerState.MonitoringState =
+                            "FAULTED"
+                    }
+
+                    "Blocked" {
+
+                        $script:ControllerState.MonitoringState =
+                            "FAULTED"
+                    }
+
+                    default {
+
+                        $script:ControllerState.MonitoringState =
+                            [string]$CurrentJob.State
+                    }
+                }
+            }
+        }
+
         $CurrentSSID =
             Get-PrintSwitchCurrentSSID
 
@@ -325,6 +405,15 @@ function Get-PrintSwitchStatus {
 
                 MonitoringState =
                     $script:ControllerState.MonitoringState
+
+                MonitoringJobId =
+                    $script:ControllerState.MonitoringJobId
+
+                MonitoringStartedAt =
+                    $script:ControllerState.MonitoringStartedAt
+
+                MonitoringStoppedAt =
+                    $script:ControllerState.MonitoringStoppedAt
 
                 RecoveryEnabled =
                     $script:ControllerState.RecoveryEnabled
@@ -886,19 +975,254 @@ function Start-PrintSwitchMonitoring {
 
     [CmdletBinding()]
     param (
+        [Parameter(Mandatory)]
         [string]$PrinterName
     )
 
-    return New-PrintSwitchControllerResult `
-        -Operation "StartMonitoring" `
-        -Success $false `
-        -Classification "MONITORING_NOT_IMPLEMENTED_P7_A3" `
-        -Data (
-            [PSCustomObject]@{
-                RequestedPrinter = $PrinterName
-                PlannedStage     = "P7-A4"
+    try {
+
+        # --------------------------------------------------------
+        # Detectar worker ya activo.
+        # --------------------------------------------------------
+
+        if ($null -ne $script:ControllerState.MonitoringJobId) {
+
+            $ExistingJob =
+                Get-Job `
+                    -Id $script:ControllerState.MonitoringJobId `
+                    -ErrorAction SilentlyContinue
+
+            if (
+                $null -ne $ExistingJob -and
+                $ExistingJob.State -eq "Running"
+            ) {
+
+                return New-PrintSwitchControllerResult `
+                    -Operation "StartMonitoring" `
+                    -Success $true `
+                    -Classification "ALREADY_RUNNING" `
+                    -Data (
+                        [PSCustomObject]@{
+
+                            PrinterName =
+                                $script:ControllerState.SelectedPrinter
+
+                            JobId =
+                                $ExistingJob.Id
+
+                            JobState =
+                                [string]$ExistingJob.State
+
+                            MonitoringState =
+                                "WATCHING"
+                        }
+                    )
             }
-        )
+
+            if ($null -ne $ExistingJob) {
+
+                Remove-Job `
+                    -Id $ExistingJob.Id `
+                    -Force `
+                    -ErrorAction SilentlyContinue
+            }
+
+            $script:ControllerState.MonitoringJob =
+                $null
+
+            $script:ControllerState.MonitoringJobId =
+                $null
+        }
+
+        # --------------------------------------------------------
+        # Validar cola mediante la frontera del Controller.
+        # --------------------------------------------------------
+
+        $QueueResult =
+            Get-PrintSwitchQueueContext `
+                -PrinterName $PrinterName
+
+        if (-not $QueueResult.Success) {
+
+            return New-PrintSwitchControllerResult `
+                -Operation "StartMonitoring" `
+                -Success $false `
+                -Classification "PRINTER_NOT_AVAILABLE" `
+                -ErrorObject $QueueResult.Error
+        }
+
+        if (-not (Test-Path $script:QueueWatcherPath)) {
+
+            throw "QueueWatcher.ps1 no encontrado."
+        }
+
+        $WatcherPath =
+            $script:QueueWatcherPath
+
+        $RecoveryAllowed =
+            [bool]$script:ControllerState.RecoveryEnabled
+
+        # --------------------------------------------------------
+        # IMPORTANTE:
+        #
+        # QueueWatcher sin -EnableRecovery = DRY-RUN.
+        #
+        # QueueWatcher con -EnableRecovery = recovery autorizado.
+        # --------------------------------------------------------
+
+        $Job =
+            Start-Job `
+                -Name (
+                    "PrintSwitch-Monitor-{0}-{1}" -f `
+                        (Get-Date -Format "yyyyMMddHHmmss"),
+                        ([guid]::NewGuid().ToString("N").Substring(0,8))
+                ) `
+                -ScriptBlock {
+
+                    param (
+                        [string]$QueueWatcherPath,
+                        [string]$SelectedPrinter,
+                        [bool]$RecoveryEnabled
+                    )
+
+                    if ($RecoveryEnabled) {
+
+                        & $QueueWatcherPath `
+                            -PrinterName $SelectedPrinter `
+                            -EnableRecovery
+                    }
+                    else {
+
+                        & $QueueWatcherPath `
+                            -PrinterName $SelectedPrinter
+                    }
+
+                } `
+                -ArgumentList `
+                    $WatcherPath,
+                    $PrinterName,
+                    $RecoveryAllowed
+
+        if ($null -eq $Job) {
+
+            throw "Start-Job no devolvio un worker."
+        }
+
+        Start-Sleep `
+            -Milliseconds 750
+
+        $Job =
+            Get-Job `
+                -Id $Job.Id `
+                -ErrorAction SilentlyContinue
+
+        if ($null -eq $Job) {
+
+            throw "El worker desaparecio durante inicializacion."
+        }
+
+        if ($Job.State -ne "Running") {
+
+            $StartupOutput =
+                @(
+                    Receive-Job `
+                        -Id $Job.Id `
+                        -Keep `
+                        -ErrorAction SilentlyContinue
+                )
+
+            $StartupState =
+                [string]$Job.State
+
+            Remove-Job `
+                -Id $Job.Id `
+                -Force `
+                -ErrorAction SilentlyContinue
+
+            throw (
+                "QueueWatcher no quedo residente. State={0}. Output={1}" -f `
+                    $StartupState,
+                    ($StartupOutput -join " | ")
+            )
+        }
+
+        $script:ControllerState.SelectedPrinter =
+            $PrinterName
+
+        $script:ControllerState.MonitoringJob =
+            $Job
+
+        $script:ControllerState.MonitoringJobId =
+            $Job.Id
+
+        $script:ControllerState.MonitoringStartedAt =
+            Get-Date
+
+        $script:ControllerState.MonitoringStoppedAt =
+            $null
+
+        $script:ControllerState.MonitoringState =
+            "WATCHING"
+
+        $script:ControllerState.LastUpdatedAt =
+            Get-Date
+
+        Clear-PrintSwitchControllerError
+
+        return New-PrintSwitchControllerResult `
+            -Operation "StartMonitoring" `
+            -Success $true `
+            -Classification "MONITORING_STARTED" `
+            -Data (
+                [PSCustomObject]@{
+
+                    PrinterName =
+                        $PrinterName
+
+                    JobId =
+                        $Job.Id
+
+                    JobName =
+                        $Job.Name
+
+                    JobState =
+                        [string]$Job.State
+
+                    MonitoringState =
+                        $script:ControllerState.MonitoringState
+
+                    RecoveryEnabled =
+                        $RecoveryAllowed
+
+                    StartedAt =
+                        $script:ControllerState.MonitoringStartedAt
+                }
+            )
+    }
+    catch {
+
+        $ControllerError =
+            New-PrintSwitchControllerError `
+                -Code "MONITORING_START_FAILED" `
+                -Message $_.Exception.Message `
+                -SourceComponent "QueueWatcher" `
+                -ExceptionType $_.Exception.GetType().FullName
+
+        Set-PrintSwitchControllerError `
+            -ErrorObject $ControllerError
+
+        $script:ControllerState.MonitoringState =
+            "FAULTED"
+
+        $script:ControllerState.LastUpdatedAt =
+            Get-Date
+
+        return New-PrintSwitchControllerResult `
+            -Operation "StartMonitoring" `
+            -Success $false `
+            -Classification "START_FAILED" `
+            -ErrorObject $ControllerError
+    }
 }
 
 # ============================================================
@@ -910,15 +1234,151 @@ function Stop-PrintSwitchMonitoring {
     [CmdletBinding()]
     param ()
 
-    return New-PrintSwitchControllerResult `
-        -Operation "StopMonitoring" `
-        -Success $false `
-        -Classification "MONITORING_NOT_IMPLEMENTED_P7_A3" `
-        -Data (
-            [PSCustomObject]@{
-                PlannedStage = "P7-A4"
+    try {
+
+        $JobId =
+            $script:ControllerState.MonitoringJobId
+
+        if ($null -eq $JobId) {
+
+            $script:ControllerState.MonitoringJob =
+                $null
+
+            $script:ControllerState.MonitoringState =
+                "STOPPED"
+
+            $script:ControllerState.MonitoringStoppedAt =
+                Get-Date
+
+            $script:ControllerState.LastUpdatedAt =
+                Get-Date
+
+            return New-PrintSwitchControllerResult `
+                -Operation "StopMonitoring" `
+                -Success $true `
+                -Classification "ALREADY_STOPPED"
+        }
+
+        $Job =
+            Get-Job `
+                -Id $JobId `
+                -ErrorAction SilentlyContinue
+
+        $PreviousPrinter =
+            $script:ControllerState.SelectedPrinter
+
+        $PreviousState =
+            if ($null -ne $Job) {
+                [string]$Job.State
             }
-        )
+            else {
+                "NOT_FOUND"
+            }
+
+        if ($null -ne $Job) {
+
+            if (
+                $Job.State -eq "Running" -or
+                $Job.State -eq "Blocked"
+            ) {
+
+                Stop-Job `
+                    -Id $Job.Id `
+                    -ErrorAction Stop
+            }
+
+            $Job =
+                Get-Job `
+                    -Id $JobId `
+                    -ErrorAction SilentlyContinue
+
+            $FinalState =
+                if ($null -ne $Job) {
+                    [string]$Job.State
+                }
+                else {
+                    "NOT_FOUND"
+                }
+
+            Remove-Job `
+                -Id $JobId `
+                -Force `
+                -ErrorAction SilentlyContinue
+        }
+        else {
+
+            $FinalState =
+                "NOT_FOUND"
+        }
+
+        $script:ControllerState.MonitoringJob =
+            $null
+
+        $script:ControllerState.MonitoringJobId =
+            $null
+
+        $script:ControllerState.MonitoringState =
+            "STOPPED"
+
+        $script:ControllerState.MonitoringStoppedAt =
+            Get-Date
+
+        $script:ControllerState.LastUpdatedAt =
+            Get-Date
+
+        Clear-PrintSwitchControllerError
+
+        return New-PrintSwitchControllerResult `
+            -Operation "StopMonitoring" `
+            -Success $true `
+            -Classification "MONITORING_STOPPED" `
+            -Data (
+                [PSCustomObject]@{
+
+                    PrinterName =
+                        $PreviousPrinter
+
+                    PreviousJobId =
+                        $JobId
+
+                    PreviousJobState =
+                        $PreviousState
+
+                    FinalJobState =
+                        $FinalState
+
+                    MonitoringState =
+                        $script:ControllerState.MonitoringState
+
+                    StoppedAt =
+                        $script:ControllerState.MonitoringStoppedAt
+                }
+            )
+    }
+    catch {
+
+        $ControllerError =
+            New-PrintSwitchControllerError `
+                -Code "MONITORING_STOP_FAILED" `
+                -Message $_.Exception.Message `
+                -SourceComponent "QueueWatcher" `
+                -ExceptionType $_.Exception.GetType().FullName
+
+        Set-PrintSwitchControllerError `
+            -ErrorObject $ControllerError
+
+        $script:ControllerState.MonitoringState =
+            "FAULTED"
+
+        $script:ControllerState.LastUpdatedAt =
+            Get-Date
+
+        return New-PrintSwitchControllerResult `
+            -Operation "StopMonitoring" `
+            -Success $false `
+            -Classification "STOP_FAILED" `
+            -ErrorObject $ControllerError
+    }
 }
 
 # ============================================================
@@ -939,10 +1399,13 @@ function Get-PrintSwitchControllerInfo {
             $script:ControllerVersion
 
         Stage =
-            "P7-A3"
+            "P7-A4"
 
         MonitoringImplemented =
-            $false
+            $true
+
+        MonitoringModel =
+            "BACKGROUND_JOB"
 
         NetworkMutationDirect =
             $false
