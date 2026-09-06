@@ -3912,3 +3912,925 @@ La regla de avance continúa siendo:
 > **No promover una capacidad por diseño esperado. Promoverla cuando exista
 > evidencia reproducible de que funciona y de que no rompe los escenarios ya
 > validados.**
+
+
+---
+
+# Roadmap vigente — Cierre del Punto 6 — Septiembre 2026
+
+> **Estado documental**
+>
+> Esta sección actualiza el roadmap después de completar la campaña
+> experimental del Punto 6.
+>
+> Todo el contenido anterior se conserva como registro histórico de las
+> decisiones y prioridades reales tomadas durante Alpha, Post-Alpha y la
+> preparación de la fase de regresión.
+>
+> El estado definido en esta sección representa el roadmap vigente.
+
+---
+
+## 86. Cierre formal del Punto 6
+
+Estado:
+
+```text
+COMPLETADO
+```
+
+El objetivo del Punto 6 era someter el Core endpoint-aware a regresiones y
+escenarios excepcionales antes de avanzar hacia una primera capa de producto.
+
+La campaña incluyó:
+
+```text
+P6-01
+camino alternativo existente
+
+P6-02
+recovery realmente necesario
+
+P6-03
+discovery Wi-Fi transitoriamente incompleto
+
+P6-04
+estado Windows frente a disponibilidad física Epson
+
+P6-05
+segunda marca / hostname / Brother
+
+P6-06
+evidencia parcial y aparentemente contradictoria
+
+P6-R01
+regresión final multi-printer
+```
+
+Resultado consolidado:
+
+```text
+P6-01   PASS
+P6-02   PASS
+P6-03   INCONCLUSIVE / SAFE BEHAVIOR
+P6-04   PASS
+P6-05   PASS
+P6-06   PASS
+P6-R01  PASS
+```
+
+P6-03 no constituye un fallo del Core.
+
+El caso original quedó bloqueado por una limitación temporal del discovery Wi-Fi
+de Windows, pero el sistema respondió de forma conservadora y no ejecutó una
+intervención insegura.
+
+Por tanto:
+
+```text
+PUNTO 6 = CERRADO
+```
+
+---
+
+## 87. Qué quedó validado antes de avanzar
+
+El cierre de P6 permite considerar respaldadas las siguientes capacidades:
+
+```text
+[OK] trabajo de impresión detectado por QueueWatcher
+
+[OK] cola Windows como objeto operacional primario
+
+[OK] PrinterDiscovery integrado
+
+[OK] QueueContext como contrato operativo
+
+[OK] endpoint derivado de la cola real
+
+[OK] IPV4 como AddressType
+
+[OK] HOSTNAME como AddressType
+
+[OK] DEVICE como AddressType para USB
+
+[OK] NETWORK y USB con estrategias diferentes
+
+[OK] Epson L365 con LPR / TCP 515
+
+[OK] Brother con LPR / TCP 515 y hostname
+
+[OK] resolución de hostname separada de reachability
+
+[OK] estado Windows separado de reachability operacional
+
+[OK] ICMP separado de autoridad operacional
+
+[OK] existencia de ruta separada de camino funcional
+
+[OK] preservación de caminos existentes
+
+[OK] recovery cuando realmente no existe camino funcional
+
+[OK] no intervención cuando ya existe un camino útil
+
+[OK] SwitchDecision como barrera de seguridad
+
+[OK] NetworkManager separado de la decisión
+
+[OK] RecoveryValidator como confirmación del objetivo
+
+[OK] ConnectivityAnalyzer como diagnóstico opcional
+
+[OK] comportamiento conservador ante evidencia insuficiente
+
+[OK] regresión multi-printer
+```
+
+Este conjunto constituye el gate técnico para abandonar la fase de construcción
+del Core base.
+
+---
+
+## 88. Gate hacia la primera beta
+
+El gate definido antes del Punto 6 puede considerarse superado.
+
+La primera beta ya no necesita demostrar nuevamente:
+
+```text
+que PrintSwitch puede detectar un trabajo
+
+que puede identificar el endpoint
+
+que puede decidir si existe un camino válido
+
+que puede cambiar Wi-Fi
+
+que puede validar recovery
+
+que puede evitar cambios innecesarios
+```
+
+Estas capacidades ya poseen evidencia experimental suficiente en el entorno de
+referencia.
+
+La próxima etapa puede concentrarse en:
+
+```text
+convertir el Core existente
+en una experiencia utilizable
+```
+
+sin duplicar su lógica.
+
+---
+
+## 89. Punto 7 — Aplicación / UI
+
+Estado:
+
+```text
+SIGUIENTE
+```
+
+El Punto 7 pasa a ser la próxima etapa funcional del proyecto.
+
+El objetivo no es construir una interfaz decorativa.
+
+El objetivo es encapsular el Core ya validado dentro de una aplicación mínima
+que permita utilizar, observar y configurar PrintSwitch sin operar
+manualmente desde una terminal.
+
+La UI deberá ser:
+
+```text
+capa de presentación
++
+capa de interacción
+```
+
+sobre:
+
+```text
+Core existente
+```
+
+y nunca:
+
+```text
+segunda implementación de la lógica de decisión
+```
+
+---
+
+## 90. Principio arquitectónico del Punto 7
+
+La separación prevista es:
+
+```text
+UI / Application Layer
+        |
+        v
+Application Controller / Adapter
+        |
+        v
+PrintSwitch Core
+        |
+        +--> QueueWatcher
+        +--> PrinterDiscovery
+        +--> Endpoint Resolver
+        +--> Reachability
+        +--> Orchestrator
+        +--> Policy
+        +--> NetworkManager
+        +--> RecoveryValidator
+```
+
+La UI deberá consumir:
+
+```text
+estado
+eventos
+resultados
+configuración
+```
+
+pero no decidir directamente:
+
+```text
+si cambiar Wi-Fi
+qué ruta utilizar
+si el endpoint está reachable
+si el recovery fue exitoso
+```
+
+Esas decisiones siguen perteneciendo al Core.
+
+---
+
+## 91. Objetivo mínimo de la primera beta
+
+La primera beta deberá ofrecer una experiencia mínima pero real.
+
+Alcance inicial propuesto:
+
+```text
+1. iniciar PrintSwitch
+
+2. mostrar estado del servicio/agente
+
+3. mostrar impresoras descubiertas
+
+4. identificar la cola observada
+
+5. mostrar endpoint descubierto
+
+6. mostrar estado básico de reachability
+
+7. permitir habilitar/deshabilitar recovery
+
+8. mostrar red Wi-Fi actual
+
+9. mostrar último resultado de decisión
+
+10. mostrar último recovery
+
+11. acceder a logs
+
+12. salir de la aplicación
+```
+
+No se requiere todavía una interfaz compleja.
+
+La prioridad es:
+
+```text
+operabilidad
+observabilidad
+claridad
+```
+
+---
+
+## 92. Primera beta como agente residente
+
+La forma objetivo inicial será una aplicación residente en Windows.
+
+Modelo previsto:
+
+```text
+PrintSwitch
+    |
+    +--> proceso residente
+    |
+    +--> observador de cola
+    |
+    +--> icono de system tray
+    |
+    +--> ventana de estado/configuración
+```
+
+La aplicación deberá poder permanecer:
+
+```text
+minimizada
+```
+
+o:
+
+```text
+oculta en bandeja
+```
+
+mientras el Core continúa observando trabajos.
+
+---
+
+## 93. System tray como interfaz primaria inicial
+
+Para una primera beta, el system tray resulta apropiado porque PrintSwitch no
+requiere una ventana principal abierta permanentemente.
+
+Funciones candidatas:
+
+```text
+icono de estado
+
+clic
+    -> abrir panel
+
+menú contextual
+    -> estado
+    -> habilitar/deshabilitar recovery
+    -> abrir logs
+    -> configuración
+    -> salir
+```
+
+El icono podrá evolucionar posteriormente para representar estados como:
+
+```text
+IDLE
+WATCHING
+RECOVERY_ACTIVE
+WARNING
+ERROR
+```
+
+Los detalles visuales no forman parte todavía del Core.
+
+---
+
+## 94. Panel de estado de la primera beta
+
+La ventana inicial debería priorizar información operacional.
+
+Secciones candidatas:
+
+```text
+Estado de PrintSwitch
+
+Impresora observada
+
+QueueName
+
+TransportType
+
+Protocol
+
+Endpoint
+
+Reachability
+
+Wi-Fi actual
+
+Recovery habilitado
+
+Última decisión
+
+Última acción
+
+Último resultado
+
+Acceso a logs
+```
+
+No se requiere todavía construir dashboards complejos.
+
+La primera pregunta que debe poder responder un usuario es:
+
+```text
+¿qué está viendo PrintSwitch
+y qué decidió hacer?
+```
+
+---
+
+## 95. Configuración mínima de la primera beta
+
+La configuración inicial debe ser deliberadamente reducida.
+
+Debe evaluarse incluir:
+
+```text
+activar / desactivar PrintSwitch
+
+activar / desactivar recovery
+
+seleccionar cola observada
+
+asociar policy cuando corresponda
+
+seleccionar o autorizar SSID objetivo
+
+nivel de logging
+
+inicio automático con Windows
+```
+
+No deben exponerse inicialmente parámetros internos que un usuario normal no
+necesita modificar.
+
+---
+
+## 96. Discovery como fuente para la UI
+
+La UI no debe mantener su propio inventario paralelo de impresoras.
+
+Debe consumir:
+
+```text
+PrinterDiscovery
+```
+
+y representar:
+
+```text
+QueueContext
+```
+
+Esto permitirá mostrar de forma coherente:
+
+```text
+QueueName
+TransportType
+Protocol
+Destination
+AddressType
+ReachabilityStrategy
+Confidence
+DiscoveryStatus
+```
+
+La misma información que gobierna el Core debe gobernar lo que la UI presenta.
+
+---
+
+## 97. Eventos y resultados estructurados como frontera con la UI
+
+La evolución previa ya introdujo objetos estructurados en componentes críticos.
+
+El Punto 7 debe aprovecharlos.
+
+La UI no debe depender de parsear textos como:
+
+```text
+"Recovery exitoso"
+```
+
+o:
+
+```text
+"Impresora no encontrada"
+```
+
+Debe consumir contratos equivalentes a:
+
+```text
+Component
+Classification
+SwitchAuthorized
+SwitchExecuted
+RecoverySucceeded
+EndpointState
+RouteState
+Timestamp
+```
+
+Esto exige revisar qué contratos ya están suficientemente normalizados y cuáles
+necesitan una capa adaptadora antes de conectarlos a UI.
+
+---
+
+## 98. Application Controller como frontera recomendada
+
+Antes de conectar directamente una UI a múltiples scripts se recomienda
+introducir una capa semejante a:
+
+```text
+ApplicationController
+```
+
+o:
+
+```text
+PrintSwitchService
+```
+
+cuya responsabilidad sea:
+
+```text
+iniciar/detener QueueWatcher
+
+consultar Discovery
+
+consultar estado actual
+
+recibir eventos del Core
+
+exponer resultados estructurados
+
+aplicar configuración
+
+coordinar lifecycle
+```
+
+La UI hablará con esa capa.
+
+La capa hablará con el Core.
+
+Esto evita que la interfaz conozca detalles internos innecesarios.
+
+---
+
+## 99. No duplicar lógica PowerShell dentro de la UI
+
+El Punto 7 no debe convertirse en:
+
+```text
+reescribir PrintSwitch
+```
+
+en otro lenguaje o framework.
+
+La primera beta puede utilizar el Core PowerShell existente y construir encima
+una capa de aplicación.
+
+Si posteriormente se decide migrar componentes a:
+
+```text
+C#
+Python
+otro runtime
+```
+
+esa decisión deberá justificarse por necesidades reales de:
+
+```text
+deployment
+performance
+lifecycle
+UI
+maintainability
+```
+
+y no porque una UI nueva haga parecer conveniente empezar de cero.
+
+---
+
+## 100. Logging como parte de la experiencia de usuario
+
+Los logs actuales dejan de ser únicamente una herramienta de desarrollo.
+
+En Beta deberán servir también para:
+
+```text
+diagnóstico del usuario
+
+soporte
+
+reproducción de fallos
+
+evidencia de decisiones
+```
+
+La UI debe ofrecer acceso sencillo a:
+
+```text
+últimos eventos
+
+último recovery
+
+último error
+
+archivo de log
+```
+
+sin exponer información sensible innecesaria.
+
+---
+
+## 101. Primer objetivo de empaquetado
+
+La primera beta todavía puede ser técnicamente simple.
+
+No necesita inicialmente:
+
+```text
+instalador MSI complejo
+
+servicio Windows completo
+
+auto-update
+
+telemetría
+
+firma de código comercial
+```
+
+El primer objetivo puede ser:
+
+```text
+estructura ejecutable reproducible
++
+configuración
++
+core
++
+UI
++
+logs
+```
+
+que pueda instalarse o ejecutarse de manera controlada en otra PC de prueba.
+
+---
+
+## 102. Criterios de PASS del Punto 7
+
+El Punto 7 podrá considerarse funcionalmente cerrado cuando exista una primera
+beta capaz de:
+
+```text
+[ ] iniciar sin terminal manual
+
+[ ] permanecer activa en segundo plano
+
+[ ] detectar la cola configurada
+
+[ ] mostrar correctamente el QueueContext
+
+[ ] mostrar el endpoint operacional
+
+[ ] observar trabajos reales
+
+[ ] ejecutar el mismo recovery ya validado por el Core
+
+[ ] no ejecutar recovery cuando existe un camino funcional
+
+[ ] mostrar el resultado al usuario
+
+[ ] registrar eventos
+
+[ ] permitir habilitar/deshabilitar recovery
+
+[ ] cerrarse limpiamente
+```
+
+Además deberá ejecutarse al menos una regresión física equivalente a:
+
+```text
+Claro640
+    |
+    v
+trabajo Epson
+    |
+    v
+suarezcores
+    |
+    v
+impresión
+```
+
+desde la aplicación y no desde comandos manuales.
+
+---
+
+## 103. Qué NO pertenece al Punto 7
+
+Para evitar expansión prematura, quedan fuera del alcance obligatorio de la
+primera beta:
+
+```text
+hardening avanzado de discovery Wi-Fi
+
+Native Wi-Fi API completa
+
+múltiples gateways diseñados
+
+laboratorio con Suarez
+
+arbitraje complejo multi-impresora
+
+conflictos simultáneos de trabajos
+
+soporte universal de fabricantes
+
+Android
+
+cloud
+
+telemetría remota
+
+actualización automática
+```
+
+Estas capacidades poseen etapas posteriores.
+
+---
+
+## 104. Beta 2 — Hardening de Windows y topologías
+
+Estado:
+
+```text
+POSTERIOR A PRIMERA BETA
+```
+
+Beta 2 tendrá como objetivo endurecer el comportamiento frente a características
+temporales y topológicas reales de Windows.
+
+Líneas ya identificadas:
+
+```text
+Wi-Fi discovery stabilization
+
+scan / rescan
+
+temporización de WLAN
+
+eventos vs polling
+
+Native Wi-Fi API
+
+múltiples gateways
+
+métricas
+
+rutas alternativas
+
+Ethernet + Wi-Fi simultáneos
+
+fault injection
+
+red Suarez
+
+topologías controladas
+```
+
+La red:
+
+```text
+Suarez
+```
+
+queda reservada principalmente para esta etapa.
+
+---
+
+## 105. Punto 8 — Multi-impresora y otros fabricantes
+
+Estado:
+
+```text
+POSTERIOR
+```
+
+La evidencia con Epson y Brother demuestra generalización inicial.
+
+No demuestra todavía gestión completa multi-impresora.
+
+El Punto 8 deberá estudiar:
+
+```text
+múltiples trabajos simultáneos
+
+colas con necesidades de red diferentes
+
+conflictos de recuperación
+
+Wi-Fi como recurso compartido
+
+prioridades
+
+arbitraje
+
+múltiples endpoints del mismo dispositivo
+
+correlación NETWORK / USB
+
+nuevos fabricantes
+
+nuevos protocolos
+```
+
+El diseño probablemente requerirá evolucionar hacia:
+
+```text
+Job Context
+      |
+      v
+Queue Context
+      |
+      v
+Endpoint
+      |
+      v
+Resource / Conflict Manager
+      |
+      v
+Decision Engine
+```
+
+---
+
+## 106. Etapa posterior — Calidad y coherencia de evidencia
+
+La calidad de evidencia continúa siendo una dirección futura.
+
+La batería P6 produjo ejemplos de:
+
+```text
+información parcial
+información temporalmente incompleta
+fuentes aparentemente contradictorias
+```
+
+Una futura capa podrá evaluar estados como:
+
+```text
+SUFFICIENT
+PARTIAL
+CONTRADICTORY
+STALE
+INSUFFICIENT
+```
+
+No se considera requisito para la primera beta.
+
+Debe diseñarse después de acumular más evidencia real.
+
+---
+
+## 107. Estado general vigente después del Punto 6
+
+El roadmap queda:
+
+```text
+[COMPLETADO] 1. Cierre endpoint-aware
+
+[COMPLETADO] 2. Consolidación de inconsistencias
+
+[COMPLETADO] 3. Validación Brother
+
+[COMPLETADO] 4. Consolidar Discovery + Policy
+
+[COMPLETADO] 5. Integración QueueWatcher
+
+[COMPLETADO] 6. Regresiones y casos raros
+
+[SIGUIENTE]   7. Aplicación / UI — primera beta
+
+[POSTERIOR]   Beta 2 — hardening Windows / topologías
+
+[POSTERIOR]   8. Multi-impresora / otros fabricantes
+
+[FUTURO]      Calidad y coherencia de evidencia
+```
+
+La transición actual es:
+
+```text
+construcción y validación del Core
+            |
+            v
+         CERRADA
+            |
+            v
+Aplicación / UI
+            |
+            v
+primera beta real
+```
+
+La siguiente acción funcional pertenece al:
+
+```text
+PUNTO 7
+APLICACIÓN / UI
+```
+
+y debe comenzar preservando una regla fundamental:
+
+> **La interfaz debe exponer el Core validado, no reemplazarlo.**

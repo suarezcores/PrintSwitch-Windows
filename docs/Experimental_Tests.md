@@ -4254,6 +4254,72 @@ correcto.
 
 ---
 
+---
+
+# Diseño inicial del Punto 6 — registro histórico pre-ejecución
+
+> **IMPORTANTE — SECCIÓN HISTÓRICA**
+>
+> El contenido comprendido desde esta sección hasta
+> `P6.13. Estado de preparación` corresponde al diseño de pruebas creado
+> **antes de comenzar la ejecución física del Punto 6**.
+>
+> Se conserva deliberadamente como evidencia de la metodología utilizada:
+>
+> ```text
+> diseñar
+>     |
+>     v
+> formular hipótesis
+>     |
+>     v
+> definir resultados esperados
+>     |
+>     v
+> ejecutar
+>     |
+>     v
+> comparar con evidencia real
+> ```
+>
+> Durante la campaña experimental algunos casos fueron redefinidos,
+> reordenados o reemplazados cuando la evidencia obtenida mostró escenarios
+> más útiles que los previstos inicialmente.
+>
+> Por esta razón, dentro de esta sección pueden aparecer:
+>
+> ```text
+> PENDIENTE
+> nombres de pruebas anteriores
+> hipótesis que posteriormente cambiaron
+> numeraciones cuyo contenido final evolucionó
+> ```
+>
+> Esos valores **NO representan el estado vigente del Punto 6**.
+>
+> La fuente autoritativa de resultados comienza posteriormente en:
+>
+> ```text
+> # Punto 6 — Validación experimental endpoint-aware
+> ```
+>
+> Allí se documentan las pruebas realmente ejecutadas:
+>
+> ```text
+> P6-01   PASS
+> P6-02   PASS
+> P6-03   INCONCLUSIVE / SAFE BEHAVIOR
+> P6-04   PASS
+> P6-05   PASS
+> P6-06   PASS
+> P6-R01  PASS
+> ```
+>
+> Esta sección previa se conserva únicamente para trazabilidad metodológica y
+> no debe utilizarse para determinar el estado actual del proyecto.
+
+
+
 # P6-01 — Endpoint accesible por camino alternativo
 
 ## Estado
@@ -5500,6 +5566,7 @@ preparar configuración inicial de P6-01
         |
         v
 verificar precondiciones
+
         |
         v
 ejecutar P6-01
@@ -5507,3 +5574,956 @@ ejecutar P6-01
         v
 registrar evidencia
 ```
+
+---
+
+# Punto 6 — Validación experimental endpoint-aware
+
+## Objetivo de la etapa
+
+El Punto 6 tuvo como objetivo someter la arquitectura endpoint-aware de
+PrintSwitch a escenarios físicos progresivamente menos ideales.
+
+La intención no fue únicamente comprobar que una impresión pudiera
+recuperarse.
+
+Se buscó verificar experimentalmente las siguientes propiedades:
+
+```text
+1. un camino existente debe preservarse
+
+2. una recuperación sólo debe ejecutarse cuando realmente es necesaria
+
+3. un fallo de observación no debe producir una intervención insegura
+
+4. el estado administrativo de Windows no equivale a disponibilidad física
+
+5. la resolución de un hostname no equivale a reachability
+
+6. distintos fabricantes deben poder representarse mediante el mismo modelo
+
+7. distintas fuentes de evidencia pueden discrepar legítimamente
+
+8. la reachability depende del contexto de red
+
+9. el estado físico del dispositivo no determina por sí solo
+   su disponibilidad desde la PC
+```
+
+La batería utilizó dos impresoras físicas:
+
+```text
+Epson L365 Series
+Brother HL-1210W series
+```
+
+y principalmente dos contextos Wi-Fi:
+
+```text
+Claro640
+suarezcores
+```
+
+La red `Suarez` queda reservada para experimentación posterior de topologías
+durante Beta 2.
+
+---
+
+## P6-01 — Camino existente y no intervención
+
+### Objetivo
+
+Comprobar que PrintSwitch no modifique Wi-Fi cuando ya existe un camino
+funcional hacia el endpoint de la Epson mediante otra interfaz.
+
+### Precondiciones
+
+```text
+Epson       = ENCENDIDA
+Ethernet    = conectado
+Wi-Fi       = Claro640
+Endpoint    = 192.168.1.108:515
+```
+
+La PC poseía simultáneamente:
+
+```text
+Ethernet = 192.168.1.109/24
+Wi-Fi    = 192.168.100.7/24
+```
+
+El endpoint Epson era alcanzable mediante Ethernet.
+
+### Hipótesis
+
+PrintSwitch debía reconocer el camino funcional existente y evitar cualquier
+cambio de Wi-Fi.
+
+### Resultado esperado
+
+```text
+Endpoint reachable por Ethernet
+Switch Wi-Fi = NO
+Clasificación compatible con EXISTING_REACHABLE_PATH
+```
+
+### Resultado obtenido
+
+La impresión fue realizada correctamente.
+
+No se observó cambio de red Wi-Fi.
+
+El camino Ethernet existente fue preservado.
+
+### Resultado
+
+```text
+PASS
+```
+
+### Conclusión
+
+Una interfaz Wi-Fi conectada a una red diferente de la impresora no constituye
+por sí sola una condición de recovery.
+
+La pregunta correcta es:
+
+```text
+¿existe ya algún camino funcional hacia el endpoint?
+```
+
+Si la respuesta es positiva, PrintSwitch debe preservar ese camino.
+
+---
+
+## P6-02 — Recovery realmente necesario
+
+### Objetivo
+
+Comprobar el camino opuesto a P6-01.
+
+En este escenario no debía existir ningún camino funcional hacia la Epson y
+PrintSwitch debía recuperar conectividad mediante Wi-Fi.
+
+### Precondiciones
+
+```text
+Epson       = ENCENDIDA
+Ethernet    = DESCONECTADO
+Wi-Fi       = Claro640
+suarezcores = visible
+Endpoint    = 192.168.1.108:515
+```
+
+Desde `Claro640` se verificó:
+
+```text
+PingSucceeded    = False
+TcpTestSucceeded = False
+```
+
+La ruta hacia la Epson utilizaba:
+
+```text
+Wi-Fi
+gateway = 192.168.100.1
+```
+
+### Hipótesis
+
+Sin Ethernet y con el endpoint inaccesible desde `Claro640`, PrintSwitch debía
+determinar que la recuperación era necesaria.
+
+Si la policy lo autorizaba y `suarezcores` estaba disponible, debía cambiar de
+red y posteriormente validar nuevamente el endpoint.
+
+### Resultado esperado
+
+```text
+Claro640
+   |
+   v
+suarezcores
+   |
+   v
+RecoveryValidator
+   |
+   v
+endpoint Epson reachable
+```
+
+### Resultado obtenido
+
+La recuperación se ejecutó correctamente cuando la red candidata fue detectada.
+
+El cambio fue:
+
+```text
+Claro640 -> suarezcores
+```
+
+y posteriormente el endpoint operacional volvió a ser alcanzable.
+
+### Resultado
+
+```text
+PASS
+```
+
+### Conclusión
+
+El Core distingue correctamente entre:
+
+```text
+hay un camino existente
+```
+
+y:
+
+```text
+es necesaria una intervención
+```
+
+`-Execute` habilita la intervención, pero no elimina las condiciones previas
+que deben justificarla.
+
+---
+
+## P6-03 — Discovery Wi-Fi transitoriamente incompleto
+
+### Objetivo
+
+Observar el comportamiento del recovery frente a la información temporal
+proporcionada por Windows durante el descubrimiento de redes Wi-Fi.
+
+### Observación experimental
+
+Durante varias pruebas se detectó que:
+
+```text
+netsh wlan show networks
+```
+
+puede no mostrar inmediatamente una red que físicamente está disponible.
+
+Se observó un patrón temporal:
+
+```text
+primera consulta
+    |
+    v
+red candidata ausente
+
+espera de algunos segundos
+    |
+    v
+segunda consulta
+    |
+    v
+red candidata visible
+```
+
+También se observó que la interfaz gráfica de Windows puede presentar cierto
+retardo respecto del cambio real de conectividad.
+
+### Hipótesis original
+
+La prueba buscaba provocar un escenario de:
+
+```text
+switch correcto
++
+recovery posterior imposible
+```
+
+para comprobar que el sistema no declarara éxito únicamente por haber cambiado
+de SSID.
+
+### Resultado obtenido
+
+El escenario end-to-end no pudo reproducirse limpiamente porque el discovery
+Wi-Fi produjo falsos negativos transitorios antes de la intervención.
+
+El Core respondió de forma conservadora:
+
+```text
+candidato no confirmado
+    |
+    v
+no autorizar switch
+```
+
+### Resultado
+
+```text
+INCONCLUSIVE
+```
+
+respecto del escenario end-to-end originalmente buscado.
+
+Sin embargo:
+
+```text
+SAFE BEHAVIOR CONFIRMED
+```
+
+porque la información incompleta no produjo una intervención insegura.
+
+### Conclusión
+
+P6-03 no justifica modificar el Core durante esta etapa.
+
+Sí identifica un problema de hardening para Beta 2:
+
+```text
+Wi-Fi discovery stabilization
+```
+
+Una estrategia candidata para estudiar posteriormente es:
+
+```text
+scan inicial
+    |
+    v
+espera controlada
+    |
+    v
+segundo scan
+    |
+    v
+comparación / estabilización
+```
+
+El valor inicial experimental propuesto para la espera es aproximadamente:
+
+```text
+20 segundos
+```
+
+pero no se considera todavía un parámetro definitivo.
+
+La optimización deberá diseñarse comprendiendo primero cómo Windows actualiza y
+expone su información Wi-Fi.
+
+---
+
+## P6-04 — Estado administrativo Windows frente al estado físico Epson
+
+### Objetivo
+
+Determinar si los indicadores administrativos de Windows permiten inferir que
+la impresora física está realmente disponible.
+
+### P6-04A — Epson físicamente apagada
+
+Precondiciones reales confirmadas posteriormente:
+
+```text
+Epson       = APAGADA
+Wi-Fi       = suarezcores
+Ethernet    = DESCONECTADO
+```
+
+Windows informó:
+
+```text
+PrinterStatus         = Normal
+JobCount              = 0
+WorkOffline           = False
+DetectedErrorState    = 0
+```
+
+Sin embargo:
+
+```text
+PingSucceeded    = False
+TcpTestSucceeded = False
+```
+
+### P6-04B — Epson físicamente encendida
+
+Se repitió el escenario con confirmación explícita:
+
+```text
+Epson       = ENCENDIDA
+Wi-Fi       = suarezcores
+Ethernet    = DESCONECTADO
+```
+
+Windows continuó informando:
+
+```text
+PrinterStatus = Normal
+JobCount      = 0
+WorkOffline   = False
+```
+
+pero ahora:
+
+```text
+TCP 515 = True
+```
+
+El ping continuó siendo:
+
+```text
+False
+```
+
+### Resultado
+
+```text
+PASS
+```
+
+### Conclusión
+
+Se obtuvo una evidencia especialmente importante:
+
+```text
+EPSON OFF
+PrinterStatus = Normal
+WorkOffline   = False
+TCP515        = False
+
+EPSON ON
+PrinterStatus = Normal
+WorkOffline   = False
+TCP515        = True
+```
+
+Por lo tanto:
+
+```text
+WindowsPrinterStatus != OperationalReachability
+```
+
+Además:
+
+```text
+PingSucceeded = False
+```
+
+con:
+
+```text
+TCP515 = True
+```
+
+confirma nuevamente que ICMP es evidencia auxiliar y no autoridad operacional.
+
+Para esta cola, el servicio que debe validarse es:
+
+```text
+LPR / TCP 515
+```
+
+---
+
+## P6-05 — Segunda marca y endpoint basado en hostname
+
+### Objetivo
+
+Comprobar que el modelo endpoint-aware no dependa de características
+particulares de la Epson.
+
+Se incorporó una segunda impresora:
+
+```text
+Brother HL-1210W series
+```
+
+### Precondiciones
+
+```text
+Brother  = ENCENDIDA
+Wi-Fi    = Claro640
+Ethernet = DESCONECTADO
+```
+
+### Cola observada
+
+```text
+Name          = Brother HL-1210W series
+PortName      = BRWC48E8F7B140F
+PrinterStatus = Normal
+```
+
+### Endpoint normalizado
+
+`PrinterEndpointResolver` produjo:
+
+```text
+QueueName             = Brother HL-1210W series
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+TcpPort               = 515
+ServiceQueue          = BINARY_P1
+ReachabilityStrategy  = LPR_TCP
+```
+
+El hostname resolvió a:
+
+```text
+192.168.100.12
+```
+
+y el endpoint operacional respondió:
+
+```text
+TCP515 = True
+```
+
+### Resultado
+
+```text
+PASS
+```
+
+### Conclusión
+
+La misma abstracción utilizada con Epson permitió representar una segunda
+marca sin introducir lógica:
+
+```text
+if Epson ...
+if Brother ...
+```
+
+Los dos casos quedaron normalizados como:
+
+```text
+QUEUE
+   |
+   v
+ENDPOINT
+   |
+   v
+ADDRESS RESOLUTION
+   |
+   v
+REACHABILITY STRATEGY
+```
+
+con diferencias expresadas como datos del endpoint y no como excepciones de
+fabricante.
+
+---
+
+## P6-06 — Matriz de evidencia aparentemente contradictoria
+
+### Objetivo
+
+Comprobar que QueueState, ResolutionState y EndpointState representan
+dimensiones distintas y pueden producir resultados diferentes simultáneamente.
+
+### Precondiciones
+
+```text
+Brother  = APAGADA
+Wi-Fi    = Claro640
+Ethernet = DESCONECTADO
+```
+
+### Resultado observado
+
+Windows continuó informando:
+
+```text
+PrinterStatus      = Normal
+JobCount           = 0
+WorkOffline        = False
+DetectedErrorState = 0
+```
+
+El hostname:
+
+```text
+BRWC48E8F7B140F
+```
+
+continuó resolviendo correctamente:
+
+```text
+192.168.100.12
+```
+
+pero:
+
+```text
+TCP515 = False
+```
+
+La matriz resultante fue:
+
+```text
+PhysicalState   = OFF
+QueueState      = Normal
+WorkOffline     = False
+ResolutionState = RESOLVED
+ResolvedAddress = 192.168.100.12
+EndpointState   = UNREACHABLE
+TCP515          = False
+```
+
+### Resultado
+
+```text
+PASS
+```
+
+### Conclusión
+
+Las tres dimensiones deben mantenerse separadas:
+
+```text
+QueueState
+    |
+    +-- describe cola / estado administrativo
+
+ResolutionState
+    |
+    +-- describe si un nombre puede mapearse a una dirección
+
+EndpointState
+    |
+    +-- describe si el servicio operacional responde
+```
+
+Por tanto:
+
+```text
+QueueState = Normal
+```
+
+no implica:
+
+```text
+EndpointState = REACHABLE
+```
+
+y:
+
+```text
+ResolutionState = RESOLVED
+```
+
+tampoco implica:
+
+```text
+EndpointState = REACHABLE
+```
+
+---
+
+## P6-R01 — Regresión final endpoint-aware multimpresora
+
+### Objetivo
+
+Cerrar la batería experimental comprobando simultáneamente dos impresoras
+físicamente encendidas desde un mismo contexto de red.
+
+### Precondiciones
+
+```text
+Epson       = ENCENDIDA
+Brother     = ENCENDIDA
+Wi-Fi       = Claro640
+Ethernet    = DESCONECTADO
+Impresiones = no enviar
+```
+
+### Hipótesis
+
+Desde el mismo contexto:
+
+```text
+Epson   ON -> UNREACHABLE
+Brother ON -> REACHABLE
+```
+
+La diferencia debía explicarse por endpoint y topología, no por el estado
+físico de los dispositivos.
+
+### Resultado obtenido
+
+La matriz final fue:
+
+```text
+Printer          PhysicalState   AddressType   Target           TCP   Reachability
+Epson L365       ON              IPV4          192.168.1.108    515   UNREACHABLE
+Brother HL-1210W ON              HOSTNAME      192.168.100.12   515   REACHABLE
+```
+
+Las verificaciones automáticas produjeron:
+
+```text
+NetworkContextOK = True
+EthernetDown     = True
+EpsonUnreachable = True
+BrotherReachable = True
+```
+
+y:
+
+```text
+PASS - REGRESION MULTI-PRINTER
+```
+
+### Análisis de rutas
+
+Para Epson, Windows intentó alcanzar:
+
+```text
+192.168.1.108
+```
+
+mediante la ruta default de `Claro640`.
+
+Para Brother existía una ruta directamente conectada hacia:
+
+```text
+192.168.100.0/24
+```
+
+Esto explica que desde la misma interfaz:
+
+```text
+Epson   = UNREACHABLE
+Brother = REACHABLE
+```
+
+### Resultado
+
+```text
+PASS
+```
+
+### Conclusión
+
+Esta regresión permite formular de manera más precisa el concepto de
+disponibilidad utilizado por PrintSwitch.
+
+No debe modelarse como:
+
+```text
+PrinterAvailable = True / False
+```
+
+como propiedad absoluta del dispositivo.
+
+Debe interpretarse aproximadamente como:
+
+```text
+OperationalAvailability =
+    Queue
+    +
+    Endpoint
+    +
+    ReachabilityStrategy
+    +
+    NetworkContext
+```
+
+Por lo tanto:
+
+```text
+PhysicalState != EndpointReachability
+```
+
+Una impresora físicamente encendida puede resultar inaccesible desde un
+contexto de red determinado mientras otra impresora, también encendida, resulta
+alcanzable desde ese mismo contexto.
+
+---
+
+## Resultado consolidado del Punto 6
+
+La batería queda cerrada con:
+
+```text
+P6-01
+PASS
+Camino alternativo existente.
+No intervención correcta.
+
+P6-02
+PASS
+Recovery necesario.
+Intervención y recuperación correctas.
+
+P6-03
+INCONCLUSIVE / SAFE BEHAVIOR
+Discovery Wi-Fi transitoriamente incompleto.
+No se produjo intervención insegura.
+Hardening diferido a Beta 2.
+
+P6-04
+PASS
+Estado Windows no equivale a disponibilidad física.
+TCP operacional distingue ON/OFF donde Windows no lo hace.
+
+P6-05
+PASS
+Segunda marca y hostname.
+Mismo modelo endpoint-aware sin excepciones por fabricante.
+
+P6-06
+PASS
+QueueState, ResolutionState y EndpointState son dimensiones independientes.
+
+P6-R01
+PASS
+Regresión multi-printer.
+Mismo contexto, dos dispositivos ON y reachability diferente.
+```
+
+---
+
+## Hallazgos que NO requieren modificar el Core actual
+
+La batería respalda las siguientes decisiones:
+
+```text
+[OK] preservar caminos funcionales existentes
+
+[OK] intervenir únicamente cuando recovery es necesario
+
+[OK] tratar -Execute como autorización y no como obligación
+
+[OK] utilizar el endpoint operacional para validar disponibilidad
+
+[OK] mantener ICMP como evidencia auxiliar
+
+[OK] separar estado Windows de reachability operacional
+
+[OK] separar resolución de nombres de reachability
+
+[OK] mantener QueueState, ResolutionState y EndpointState separados
+
+[OK] representar fabricantes mediante contratos comunes
+
+[OK] considerar NetworkContext al interpretar reachability
+
+[OK] responder de manera conservadora ante evidencia insuficiente
+```
+
+No se encontró durante P6 evidencia que justifique reestructurar nuevamente el
+Core endpoint-aware.
+
+---
+
+## Hallazgos diferidos a Beta 2
+
+P6 sí produjo información útil para una etapa posterior de hardening.
+
+### Estabilización del discovery Wi-Fi
+
+Debe estudiarse:
+
+```text
+latencia de actualización de Windows
+frecuencia de scans
+caché de resultados
+falsos negativos transitorios
+doble muestreo
+ventanas de estabilización
+eventos frente a polling
+```
+
+Una posible estrategia experimental inicial será:
+
+```text
+scan
+ |
+ v
+espera
+ |
+ v
+rescan
+ |
+ v
+comparación
+```
+
+sin asumir todavía que `20 s` sea el valor definitivo.
+
+### Laboratorio de topologías
+
+Se reserva para Beta 2 el uso sistemático de tres infraestructuras reales:
+
+```text
+Claro640
+    router Claro independiente
+    red propia
+    administración restringida
+
+Suarez
+    router Movistar independiente
+    red propia
+    configuración administrable
+    posibilidad de conexión Ethernet
+
+suarezcores
+    red asociada al TP-Link
+    única de las tres con la particularidad de bridge/topología adicional
+```
+
+Debe considerarse explícitamente que:
+
+```text
+Suarez != suarezcores
+```
+
+El parecido de los nombres no representa relación topológica.
+
+Esto permitirá diseñar casos de:
+
+```text
+múltiples gateways
+Wi-Fi + Ethernet
+rutas alternativas
+métricas
+cambios de interfaz
+destinos en diferentes subredes
+gateway disponible pero endpoint inaccesible
+SSID visible pero camino no funcional
+SSID distinto con camino funcional
+```
+
+La finalidad de estas pruebas será endurecer la interpretación de Windows y de
+las topologías reales, no volver a demostrar los principios básicos ya
+validados por P6.
+
+---
+
+## Criterio de cierre del Punto 6
+
+El Punto 6 se considera experimentalmente completado.
+
+La evidencia obtenida permite sostener que PrintSwitch no debe preguntar:
+
+```text
+¿la impresora está disponible?
+```
+
+como una propiedad absoluta.
+
+La pregunta operacional es:
+
+```text
+¿el servicio asociado al endpoint de esta cola
+es alcanzable desde el contexto de red actual?
+```
+
+y, si la respuesta es negativa:
+
+```text
+¿existe una intervención conocida,
+justificada y autorizada
+capaz de mejorar ese estado?
+```
+
+Ese modelo queda como base para continuar los siguientes puntos del Roadmap.

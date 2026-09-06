@@ -3101,3 +3101,1241 @@ camino normal funciona.
 El objetivo pasa a ser buscar deliberadamente situaciones capaces de romper,
 confundir o contradecir los supuestos de la arquitectura antes de construir la
 primera beta orientada a usuario.
+
+---
+
+# Actualización de conocimiento — Cierre del Punto 6 — Septiembre 2026
+
+> **Estado documental**
+>
+> Esta sección actualiza el conocimiento vigente después de la campaña
+> experimental del Punto 6.
+>
+> Todo el contenido anterior se conserva como registro histórico de las etapas
+> Alpha, Post-Alpha y pre-Punto 6.
+>
+> La evidencia experimental detallada se encuentra en:
+>
+> ```text
+> Experimental_Tests.md
+> ```
+>
+> Esta sección no reproduce toda la cronología.
+>
+> Su objetivo es extraer únicamente las conclusiones técnicas que quedaron
+> respaldadas por la batería experimental.
+
+---
+
+## 86. La disponibilidad no es una propiedad absoluta de la impresora
+
+Una de las conclusiones más importantes del Punto 6 es que PrintSwitch no debe
+modelar:
+
+```text
+PrinterAvailable = True / False
+```
+
+como una propiedad absoluta del dispositivo físico.
+
+La evidencia final mostró simultáneamente:
+
+```text
+Epson L365       PhysicalState = ON
+Brother HL-1210W PhysicalState = ON
+```
+
+desde el mismo contexto:
+
+```text
+Wi-Fi    = Claro640
+Ethernet = desconectado
+```
+
+pero:
+
+```text
+Epson   = UNREACHABLE
+Brother = REACHABLE
+```
+
+Por lo tanto, la disponibilidad operacional debe interpretarse respecto de:
+
+```text
+Queue
++
+Endpoint
++
+ReachabilityStrategy
++
+NetworkContext
+```
+
+La formulación más precisa es:
+
+```text
+OperationalAvailability =
+    relación entre
+    cola
+    endpoint
+    servicio
+    contexto de red
+```
+
+y no:
+
+```text
+estado binario del aparato
+```
+
+---
+
+## 87. PhysicalState y EndpointReachability son dimensiones distintas
+
+Las pruebas Epson y Brother confirmaron que:
+
+```text
+dispositivo encendido
+```
+
+no implica:
+
+```text
+endpoint alcanzable desde el contexto actual
+```
+
+y:
+
+```text
+dispositivo apagado
+```
+
+puede coexistir temporalmente con:
+
+```text
+PrinterStatus = Normal
+```
+
+Por lo tanto:
+
+```text
+PhysicalState != EndpointReachability
+```
+
+El estado físico puede influir sobre la reachability, pero no la define por sí
+solo.
+
+Una impresora encendida puede continuar siendo inaccesible si:
+
+```text
+la red actual no permite alcanzar su endpoint
+```
+
+mientras otra impresora encendida puede responder correctamente desde el mismo
+equipo.
+
+---
+
+## 88. PrinterStatus de Windows no constituye autoridad operacional
+
+Durante P6-04 se obtuvo un A/B particularmente claro con la Epson L365.
+
+Con la Epson físicamente apagada:
+
+```text
+PrinterStatus      = Normal
+WorkOffline        = False
+DetectedErrorState = 0
+TCP515             = False
+```
+
+Después de encenderla, manteniendo el mismo contexto:
+
+```text
+PrinterStatus      = Normal
+WorkOffline        = False
+DetectedErrorState = 0
+TCP515             = True
+```
+
+Windows mantuvo prácticamente el mismo estado administrativo mientras la
+disponibilidad real del servicio cambió.
+
+Por tanto:
+
+```text
+WindowsPrinterStatus != OperationalReachability
+```
+
+`PrinterStatus`, `WorkOffline` y campos relacionados continúan siendo útiles
+como:
+
+```text
+contexto
+diagnóstico
+evidencia auxiliar
+```
+
+pero no deben reemplazar la estrategia de reachability del endpoint.
+
+---
+
+## 89. QueueState describe la cola, no necesariamente el dispositivo físico
+
+La cola Windows puede continuar existiendo y presentarse como normal aunque el
+dispositivo físico no esté disponible.
+
+Esto se observó tanto con:
+
+```text
+Epson
+```
+
+como con:
+
+```text
+Brother
+```
+
+La interpretación correcta es:
+
+```text
+QueueState
+    |
+    v
+estado administrativo / representación Windows
+```
+
+y no:
+
+```text
+QueueState
+    |
+    v
+prueba definitiva de presencia física
+```
+
+Esto refuerza la separación ya adoptada entre:
+
+```text
+QueueContext
+```
+
+y:
+
+```text
+EndpointReachability
+```
+
+---
+
+## 90. ResolutionState y EndpointState deben permanecer separados
+
+La Brother proporcionó evidencia particularmente útil porque su destino está
+configurado mediante hostname:
+
+```text
+BRWC48E8F7B140F
+```
+
+Con la Brother encendida:
+
+```text
+BRWC48E8F7B140F
+    |
+    v
+192.168.100.12
+    |
+    v
+TCP 515 = True
+```
+
+Con la Brother apagada:
+
+```text
+BRWC48E8F7B140F
+    |
+    v
+192.168.100.12
+    |
+    v
+TCP 515 = False
+```
+
+Por lo tanto:
+
+```text
+ResolutionState = RESOLVED
+```
+
+no implica:
+
+```text
+EndpointState = REACHABLE
+```
+
+La resolución responde únicamente:
+
+```text
+¿puede este nombre mapearse a una dirección?
+```
+
+La reachability responde:
+
+```text
+¿el servicio operacional responde ahora?
+```
+
+Son preguntas diferentes.
+
+---
+
+## 91. La matriz de evidencia puede contener valores aparentemente contradictorios
+
+P6-06 produjo simultáneamente:
+
+```text
+PhysicalState   = OFF
+QueueState      = Normal
+WorkOffline     = False
+ResolutionState = RESOLVED
+ResolvedAddress = 192.168.100.12
+EndpointState   = UNREACHABLE
+TCP515          = False
+```
+
+A primera vista estas señales pueden parecer contradictorias.
+
+En realidad describen dimensiones diferentes:
+
+```text
+QueueState
+    -> representación administrativa
+
+ResolutionState
+    -> resolución de identidad/destino
+
+EndpointState
+    -> disponibilidad del servicio operacional
+```
+
+Por tanto, el motor no debe intentar reducir prematuramente todas estas señales
+a un único:
+
+```text
+True / False
+```
+
+Cada evidencia debe conservar:
+
+```text
+origen
+significado
+alcance
+```
+
+antes de participar en una decisión.
+
+---
+
+## 92. Un ping negativo no demuestra que el endpoint esté inaccesible
+
+Durante las pruebas con Epson y Brother se observaron escenarios donde:
+
+```text
+PingSucceeded    = False
+TcpTestSucceeded = True
+```
+
+Esto ocurrió con servicios de impresión completamente funcionales.
+
+Por tanto:
+
+```text
+ICMP failure != operational failure
+```
+
+ICMP puede utilizarse como:
+
+```text
+evidencia auxiliar
+```
+
+pero no debe reemplazar:
+
+```text
+ReachabilityStrategy
+```
+
+Para las colas LPR actualmente validadas, la pregunta relevante es:
+
+```text
+¿responde el servicio TCP 515?
+```
+
+y no:
+
+```text
+¿responde ping?
+```
+
+---
+
+## 93. El servicio operacional debe corresponder con la cola real
+
+La evidencia acumulada continúa respaldando la regla:
+
+```text
+no probar un puerto genérico
+si la cola utiliza otro servicio
+```
+
+Para Epson:
+
+```text
+QueueName             = L365 Series(Red)
+Protocol              = LPR
+ConfiguredDestination = 192.168.1.108
+TcpPort               = 515
+ServiceQueue          = ENPQueue
+```
+
+Para Brother:
+
+```text
+QueueName             = Brother HL-1210W series
+Protocol              = LPR
+ConfiguredDestination = BRWC48E8F7B140F
+TcpPort               = 515
+ServiceQueue          = BINARY_P1
+```
+
+Ambas utilizan:
+
+```text
+LPR / TCP 515
+```
+
+pero llegan al mismo tipo de estrategia mediante configuraciones de cola
+diferentes.
+
+La regla general es:
+
+```text
+Queue
+   |
+   v
+Endpoint
+   |
+   v
+Operational Service
+   |
+   v
+Reachability
+```
+
+---
+
+## 94. La segunda marca validó la abstracción sin excepciones por fabricante
+
+Antes del Punto 6, la compatibilidad multimarca todavía era una hipótesis.
+
+La Brother permitió validar:
+
+```text
+NETWORK
+HOSTNAME
+LPR
+TCP 515
+```
+
+y previamente también:
+
+```text
+USB
+USB_PRESENCE
+```
+
+sin introducir lógica:
+
+```text
+if Epson
+if Brother
+```
+
+La representación común continúa siendo:
+
+```text
+QueueContext
+      |
+      v
+Endpoint
+      |
+      v
+ReachabilityStrategy
+```
+
+Esto constituye evidencia real de generalización.
+
+No constituye todavía evidencia de universalidad.
+
+---
+
+## 95. Un mismo fabricante puede exponer endpoints diferentes
+
+La Brother continúa siendo un ejemplo importante porque Windows expone:
+
+```text
+Brother HL-1210W series
+```
+
+y:
+
+```text
+Brother HL-1210W series USB
+```
+
+El primer caso utiliza:
+
+```text
+NETWORK
+LPR
+HOSTNAME
+TCP 515
+```
+
+El segundo:
+
+```text
+USB
+DEVICE
+USB_PRESENCE
+```
+
+Por tanto:
+
+```text
+impresora física
+```
+
+y:
+
+```text
+endpoint operacional
+```
+
+no poseen necesariamente una relación uno a uno.
+
+Una misma impresora puede ofrecer múltiples caminos y colas independientes.
+
+---
+
+## 96. Una ruta Windows no equivale a un camino funcional
+
+P6-02 confirmó una diferencia que debe mantenerse explícita.
+
+Desde `Claro640`, Windows poseía una ruta hacia:
+
+```text
+192.168.1.108
+```
+
+mediante:
+
+```text
+default route
+gateway 192.168.100.1
+```
+
+pero:
+
+```text
+TCP515 = False
+```
+
+El resultado se clasificó como:
+
+```text
+ROUTED_PATH_ONLY
+```
+
+y posteriormente:
+
+```text
+TARGET_ROUTE_EXISTS_BUT_UNREACHABLE
+```
+
+Por tanto:
+
+```text
+RouteExists != TargetReachable
+```
+
+La presencia de una entrada de routing indica que Windows sabe por dónde
+intentar enviar tráfico.
+
+No demuestra que el destino o servicio pueda alcanzarse.
+
+---
+
+## 97. La ausencia de camino funcional sí puede justificar recovery
+
+P6-02 validó el camino positivo de intervención.
+
+Las condiciones fueron:
+
+```text
+Wi-Fi    = Claro640
+Ethernet = desconectado
+Epson    = encendida
+Endpoint = UNREACHABLE
+```
+
+No existía un camino funcional.
+
+La policy autorizaba:
+
+```text
+suarezcores
+```
+
+y el recovery ejecutó:
+
+```text
+Claro640
+   |
+   v
+suarezcores
+```
+
+Después:
+
+```text
+RecoveryValidator
+```
+
+confirmó el servicio operacional.
+
+Por tanto, la intervención correcta requiere una secuencia equivalente a:
+
+```text
+endpoint no alcanzable
+        |
+        v
+sin camino protector
+        |
+        v
+policy permite recovery
+        |
+        v
+candidata válida
+        |
+        v
+acción
+        |
+        v
+revalidación operacional
+```
+
+---
+
+## 98. Una ruta funcional existente continúa teniendo prioridad sobre recovery
+
+P6-01 volvió a validar el comportamiento complementario.
+
+Con:
+
+```text
+Wi-Fi    = Claro640
+Ethernet = conectado
+```
+
+la Epson era alcanzable mediante Ethernet:
+
+```text
+192.168.1.109
+        |
+        v
+192.168.1.108:515
+```
+
+PrintSwitch detectó el camino existente y no modificó Wi-Fi.
+
+Esto reafirma:
+
+```text
+RecoveryEnabled = True
+```
+
+no significa:
+
+```text
+SwitchRequired = True
+```
+
+La recuperación debe seguir siendo:
+
+```text
+permiso condicionado
+```
+
+y no:
+
+```text
+acción automática obligatoria
+```
+
+---
+
+## 99. Fallar de forma segura es parte del comportamiento correcto
+
+P6-03 no consiguió ejecutar limpiamente la hipótesis end-to-end originalmente
+planeada.
+
+La causa fue un comportamiento transitorio del discovery Wi-Fi:
+
+```text
+red físicamente disponible
+```
+
+pero temporalmente:
+
+```text
+TARGET_WIFI_NOT_VISIBLE
+```
+
+El sistema respondió:
+
+```text
+SWITCH_NOT_SAFE
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+Esto significa que la prueba fue:
+
+```text
+INCONCLUSIVE
+```
+
+respecto del escenario originalmente buscado, pero produjo una conclusión
+positiva sobre seguridad:
+
+```text
+insufficient evidence
+        |
+        v
+no intervention
+```
+
+Por tanto:
+
+```text
+FAIL TO CONFIRM
+```
+
+no debe transformarse en:
+
+```text
+GUESS AND ACT
+```
+
+---
+
+## 100. La visibilidad Wi-Fi de Windows puede ser temporalmente incompleta
+
+Durante P6 se observó repetidamente que una red conocida y físicamente
+disponible podía no aparecer en un primer muestreo de:
+
+```text
+netsh wlan show networks
+```
+
+y aparecer segundos después sin cambios de topología.
+
+Esto sugiere que:
+
+```text
+SSID no observado en una consulta
+```
+
+no equivale necesariamente a:
+
+```text
+SSID definitivamente ausente
+```
+
+La arquitectura actual respondió conservadoramente y no produjo una acción
+insegura.
+
+El hardening de este comportamiento queda diferido a Beta 2.
+
+---
+
+## 101. El discovery Wi-Fi requiere una semántica temporal más rica
+
+Una posible evolución futura será evitar reducir discovery Wi-Fi únicamente a:
+
+```text
+VISIBLE
+NOT_VISIBLE
+```
+
+y considerar estados equivalentes a:
+
+```text
+SCAN_PENDING
+VISIBLE
+NOT_VISIBLE_CONFIRMED
+SCAN_TIMEOUT
+UNKNOWN
+```
+
+También deberá estudiarse:
+
+```text
+tiempo de estabilización
+reintentos
+eventos Windows
+polling
+cache
+doble muestreo
+```
+
+La espera aproximada de:
+
+```text
+20 s
+```
+
+es únicamente una hipótesis experimental inicial.
+
+No constituye todavía una constante de diseño.
+
+---
+
+## 102. La capa de evidencia puede requerir evaluación transversal en el futuro
+
+El Punto 6 produjo varios ejemplos donde diferentes fuentes tenían distintas
+calidades o alcances.
+
+Esto refuerza la idea previamente registrada de una futura capa capaz de
+preguntar:
+
+```text
+¿la evidencia disponible es suficiente?
+¿es coherente?
+¿es reciente?
+¿proviene de la fuente adecuada para esta pregunta?
+```
+
+Posibles estados futuros:
+
+```text
+SUFFICIENT
+PARTIAL
+CONTRADICTORY
+STALE
+INSUFFICIENT
+```
+
+Sin embargo, esta capa no es necesaria para cerrar el Core actual.
+
+Debe diseñarse a partir de evidencia real acumulada y no como abstracción
+prematura.
+
+---
+
+## 103. La fuente correcta depende de la pregunta
+
+P6 permitió formular una regla más precisa:
+
+```text
+¿Qué quiero saber?
+        |
+        v
+¿Qué fuente responde realmente esa pregunta?
+```
+
+Ejemplos:
+
+```text
+¿existe la cola?
+    -> Windows Printing
+
+¿cómo está configurado el destino?
+    -> PrinterEndpointResolver
+
+¿puede resolverse el hostname?
+    -> Name Resolution
+
+¿responde el servicio?
+    -> Endpoint Reachability
+
+¿existe una ruta?
+    -> RouteAnalyzer / Windows Routing
+
+¿está autorizado cambiar Wi-Fi?
+    -> Policy
+
+¿el recovery solucionó el problema?
+    -> RecoveryValidator
+```
+
+No debe utilizarse una fuente simplemente porque contiene algún dato
+relacionado.
+
+Debe utilizarse porque responde a la pregunta operacional específica.
+
+---
+
+## 104. El contexto de red forma parte de la reachability
+
+P6-R01 confirmó una propiedad importante.
+
+Con ambas impresoras físicamente encendidas:
+
+```text
+Epson   = ON
+Brother = ON
+```
+
+y el mismo contexto:
+
+```text
+Wi-Fi    = Claro640
+Ethernet = desconectado
+```
+
+se obtuvo:
+
+```text
+Epson   = UNREACHABLE
+Brother = REACHABLE
+```
+
+El estado físico era igual.
+
+La diferencia estaba en:
+
+```text
+endpoint
+topología
+ruta
+contexto de red
+```
+
+Por lo tanto:
+
+```text
+Reachability
+```
+
+debe interpretarse siempre como una relación entre:
+
+```text
+origen actual
+destino
+servicio
+camino
+```
+
+---
+
+## 105. NetworkContext no debe inferirse sólo desde el SSID
+
+Aunque P6 utilizó principalmente:
+
+```text
+Claro640
+suarezcores
+```
+
+las conclusiones obtenidas indican que:
+
+```text
+SSID
+```
+
+es solamente una señal del contexto.
+
+No describe completamente:
+
+```text
+interfaces
+rutas
+gateways
+métricas
+bridges
+caminos alternativos
+```
+
+La futura experimentación Beta 2 utilizará una tercera red real:
+
+```text
+Suarez
+```
+
+como infraestructura independiente y administrable.
+
+El objetivo será explorar topologías más complejas sin alterar los principios
+del Core ya validados.
+
+---
+
+## 106. El parecido entre nombres de SSID no representa relación topológica
+
+El laboratorio futuro contiene:
+
+```text
+Suarez
+```
+
+y:
+
+```text
+suarezcores
+```
+
+pero ambas redes son infraestructuras diferentes.
+
+`Suarez` corresponde a su propio módem/router y no mantiene una relación
+topológica con la PC ni con `suarezcores` más allá de las conexiones que puedan
+establecerse deliberadamente durante una prueba.
+
+`suarezcores`, en cambio, pertenece a una topología donde existe un router
+TP-Link y constituye la red que actualmente presenta el escenario de bridge
+utilizado por el laboratorio.
+
+Por tanto:
+
+```text
+similaridad de nombre
+```
+
+no debe convertirse nunca en:
+
+```text
+inferencia de relación de red
+```
+
+Las relaciones topológicas deben derivarse de:
+
+```text
+interfaces
+direccionamiento
+rutas
+gateways
+bridges
+reachability
+```
+
+y no del texto del SSID.
+
+---
+
+## 107. Beta 2 queda definida como hardening, no como reconstrucción del Core
+
+Los hallazgos diferidos incluyen:
+
+```text
+Wi-Fi discovery stabilization
+Native Wi-Fi / eventos / polling
+temporización de Windows
+múltiples gateways
+métricas
+rutas alternativas
+Ethernet + Wi-Fi simultáneos
+uso experimental de Suarez
+topologías diseñadas
+evaluación avanzada de calidad de evidencia
+```
+
+Estas tareas deben considerarse:
+
+```text
+hardening
+```
+
+y no:
+
+```text
+prueba de que el Core actual es inválido
+```
+
+La batería P6 no produjo evidencia que justifique reestructurar nuevamente el
+modelo endpoint-aware.
+
+---
+
+## 108. Resultado de conocimiento del Punto 6
+
+Al cierre de P6 se consideran respaldadas por evidencia las siguientes
+afirmaciones:
+
+```text
+[OK] PrinterStatus no equivale a EndpointReachability
+
+[OK] WorkOffline no equivale a presencia física
+
+[OK] PhysicalState no equivale a Reachability
+
+[OK] ResolutionState no equivale a EndpointState
+
+[OK] RouteExists no equivale a TargetReachable
+
+[OK] Ping negativo no equivale a servicio operacional caído
+
+[OK] QueueState, ResolutionState y EndpointState deben permanecer separados
+
+[OK] la reachability depende del NetworkContext
+
+[OK] una segunda marca puede utilizar la misma abstracción endpoint-aware
+
+[OK] HOSTNAME e IPV4 pueden normalizarse bajo el mismo modelo
+
+[OK] NETWORK y USB continúan requiriendo estrategias diferentes
+
+[OK] un camino funcional existente evita recovery
+
+[OK] la ausencia real de camino puede justificar recovery
+
+[OK] recovery sólo se considera exitoso después de validar el endpoint
+
+[OK] evidencia insuficiente debe degradar capacidad de intervención
+
+[OK] fallar de manera conservadora es un comportamiento correcto
+
+[OK] el discovery Wi-Fi de Windows posee comportamiento temporal que requiere
+     hardening posterior
+```
+
+---
+
+## 109. Formulación vigente del problema
+
+La pregunta inicial del proyecto podía formularse como:
+
+```text
+¿debo cambiar de Wi-Fi para imprimir?
+```
+
+La evidencia acumulada permite reemplazarla por una formulación más precisa:
+
+```text
+¿el servicio operacional asociado a la cola
+es alcanzable desde el contexto de red actual?
+```
+
+Si la respuesta es negativa:
+
+```text
+¿existe una intervención conocida,
+justificada,
+segura
+y autorizada
+capaz de mejorar ese estado?
+```
+
+Después de actuar:
+
+```text
+¿la intervención realmente recuperó
+el servicio operacional?
+```
+
+Esta secuencia representa actualmente el modelo conceptual más completo de
+PrintSwitch.
+
+---
+
+## 110. Estado del conocimiento después de P6
+
+El conocimiento validado ya no se limita a:
+
+```text
+Epson L365
++
+una IP
++
+una red Wi-Fi
+```
+
+La evidencia actual incluye:
+
+```text
+dos fabricantes
+
+Epson
+Brother
+
+múltiples transportes
+
+NETWORK
+USB
+
+múltiples AddressType
+
+IPV4
+HOSTNAME
+DEVICE
+
+múltiples estados físicos
+
+ON
+OFF
+
+múltiples contextos de red
+
+Claro640
+suarezcores
+Ethernet
+
+intervención
+
+recovery real
+
+no intervención
+
+evidencia parcial
+
+evidencia aparentemente contradictoria
+
+regresión multimpresora
+```
+
+Esto no demuestra universalidad.
+
+Sí permite afirmar que el modelo evolucionó desde una solución específica para
+una impresora hacia una arquitectura general basada en:
+
+```text
+Queue
+   |
+   v
+Endpoint
+   |
+   v
+Evidence
+   |
+   v
+Reachability
+   |
+   v
+NetworkContext
+   |
+   v
+Policy
+   |
+   v
+Decision
+   |
+   v
+Action
+   |
+   v
+Validation
+```
+
+El Punto 6 queda cerrado como evidencia experimental suficiente para avanzar al
+siguiente punto del Roadmap.

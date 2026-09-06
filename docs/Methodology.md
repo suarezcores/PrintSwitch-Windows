@@ -1855,3 +1855,708 @@ Finalmente:
 
 > **Un FAIL reproducible y comprendido es más valioso para la ingeniería que un
 > PASS obtenido en un escenario que no desafía ninguna premisa.**
+
+---
+
+# Actualización metodológica — Cierre del Punto 6 — Septiembre 2026
+
+> Esta sección actualiza la metodología después de ejecutar la campaña
+> experimental del Punto 6.
+>
+> Las secciones anteriores conservan el diseño pre-P6 y permanecen como
+> registro histórico.
+>
+> Las reglas siguientes representan la metodología vigente para avanzar hacia
+> la primera beta.
+
+---
+
+## 62. Una campaña experimental puede modificar su diseño sin invalidarse
+
+El Punto 6 confirmó que una batería de pruebas no debe ejecutarse como una lista
+rígida únicamente porque fue diseñada con anterioridad.
+
+Durante la campaña aparecieron observaciones no previstas inicialmente.
+
+Ejemplo:
+
+```text
+Epson físicamente apagada
++
+Windows PrinterStatus = Normal
+```
+
+La observación produjo una hipótesis más útil que parte del caso originalmente
+planificado.
+
+La metodología correcta fue:
+
+```text
+observar
+    |
+    v
+reconocer desviación
+    |
+    v
+documentar
+    |
+    v
+formular nueva hipótesis
+    |
+    v
+convertirla en prueba controlada
+```
+
+Por tanto:
+
+> **Modificar una prueba a partir de evidencia nueva no constituye pérdida de
+> rigor si la modificación queda documentada y la nueva hipótesis se valida de
+> manera explícita.**
+
+---
+
+## 63. El estado físico requerido debe declararse explícitamente
+
+P6 mostró que una condición física aparentemente obvia puede introducir una
+ambigüedad importante.
+
+A partir de ahora, toda prueba donde el resultado dependa del dispositivo
+deberá indicar explícitamente:
+
+```text
+ESTADO FÍSICO REQUERIDO
+
+EPSON   = ENCENDIDA / APAGADA
+BROTHER = ENCENDIDA / APAGADA
+ETHERNET = CONECTADO / DESCONECTADO
+Wi-Fi    = SSID requerido
+```
+
+No debe asumirse que el operador recuerda el estado anterior.
+
+La precondición física debe formar parte de la ficha experimental.
+
+---
+
+## 64. Una precondición declarada debe verificarse antes de interpretar el resultado
+
+La ficha de prueba no constituye evidencia suficiente de que las condiciones
+realmente estén presentes.
+
+Cuando sea posible se verificará:
+
+```text
+SSID actual
+estado de Ethernet
+cola seleccionada
+endpoint esperado
+ruta
+jobs pendientes
+```
+
+El estado físico que no pueda consultarse programáticamente deberá confirmarse
+por el operador.
+
+La regla es:
+
+```text
+precondición diseñada
+        !=
+precondición observada
+```
+
+hasta que exista evidencia de su cumplimiento.
+
+---
+
+## 65. Un resultado inesperado debe clasificarse antes de repetir la prueba
+
+P6-03 mostró que repetir inmediatamente un caso puede reproducir una limitación
+de observación y no aportar nueva evidencia.
+
+Ante un resultado inesperado se debe preguntar primero:
+
+```text
+¿falló el Core?
+
+¿falló una precondición?
+
+¿falló la adquisición de evidencia?
+
+¿cambió el entorno?
+
+¿la prueba no alcanzó la condición que pretendía evaluar?
+```
+
+Sólo después se decide:
+
+```text
+repetir
+
+adaptar
+
+clasificar INCONCLUSIVE
+
+abrir hallazgo futuro
+```
+
+---
+
+## 66. INCONCLUSIVE no equivale a FAIL
+
+Una prueba puede no alcanzar el escenario necesario para evaluar la hipótesis.
+
+P6-03 produjo:
+
+```text
+Wi-Fi candidata no confirmada
+        |
+        v
+switch no autorizado
+```
+
+La prueba original buscaba analizar:
+
+```text
+switch exitoso
++
+recovery posterior fallido
+```
+
+Ese estado nunca se alcanzó.
+
+Por tanto:
+
+```text
+resultado de hipótesis = INCONCLUSIVE
+```
+
+y no:
+
+```text
+FAIL
+```
+
+Sin embargo, la misma ejecución aportó evidencia sobre otro comportamiento:
+
+```text
+evidencia insuficiente
+        |
+        v
+no intervención
+```
+
+que sí pudo clasificarse como:
+
+```text
+SAFE BEHAVIOR CONFIRMED
+```
+
+---
+
+## 67. Una prueba puede generar más de un hallazgo independiente
+
+El resultado primario de una prueba no debe ocultar observaciones secundarias
+relevantes.
+
+Ejemplo P6-04:
+
+```text
+objetivo principal
+    -> comparar estado físico y reachability
+
+hallazgo adicional
+    -> Ping=False con TCP515=True
+```
+
+Ambos resultados deben documentarse de forma separada.
+
+Esto evita perder conocimiento únicamente porque no pertenecía a la pregunta
+original.
+
+---
+
+## 68. Las fuentes de evidencia deben asociarse a preguntas concretas
+
+P6 consolidó una regla metodológica:
+
+```text
+pregunta
+    |
+    v
+fuente adecuada
+```
+
+Ejemplos:
+
+```text
+¿existe la cola?
+    -> Windows Printing
+
+¿cómo llega la cola al dispositivo?
+    -> Endpoint Resolver
+
+¿resuelve el nombre?
+    -> Name Resolution
+
+¿responde el servicio?
+    -> Operational Probe
+
+¿qué camino elegiría Windows?
+    -> Routing
+
+¿está permitido cambiar Wi-Fi?
+    -> Policy
+```
+
+No debe utilizarse una fuente simplemente porque devuelve información sobre la
+impresora.
+
+Debe utilizarse porque responde a la pregunta que se está evaluando.
+
+---
+
+## 69. Las fuentes pueden ser simultáneamente correctas y diferentes
+
+P6-06 mostró:
+
+```text
+QueueState      = Normal
+ResolutionState = RESOLVED
+EndpointState   = UNREACHABLE
+```
+
+La metodología no debe considerar automáticamente que alguna fuente está
+equivocada.
+
+Primero debe comprobar:
+
+```text
+qué dimensión describe cada una
+```
+
+Por tanto, ante evidencia aparentemente contradictoria:
+
+```text
+no reconciliar inmediatamente
+no elegir una fuente arbitrariamente
+no forzar un booleano global
+```
+
+Primero se conserva la evidencia por dimensión.
+
+---
+
+## 70. La prueba operacional debe utilizar el servicio real
+
+El mecanismo utilizado para validar disponibilidad debe corresponder al
+servicio que utiliza la cola.
+
+Para las colas LPR observadas:
+
+```text
+TCP 515
+```
+
+es una evidencia más pertinente que:
+
+```text
+Ping
+TCP 9100 genérico
+HTTP
+```
+
+La metodología general queda:
+
+```text
+descubrir servicio
+        |
+        v
+probar servicio
+        |
+        v
+clasificar
+```
+
+y no:
+
+```text
+elegir una sonda genérica
+        |
+        v
+inferir disponibilidad
+```
+
+---
+
+## 71. Las regresiones deben ejecutarse al final de una campaña
+
+P6-R01 confirmó la utilidad de cerrar una batería con una regresión transversal.
+
+La finalidad es comprobar que los hallazgos obtenidos durante los casos
+excepcionales no dejaron incoherencias en los caminos ya validados.
+
+La secuencia recomendada queda:
+
+```text
+casos normales
+    |
+    v
+casos negativos
+    |
+    v
+casos raros
+    |
+    v
+hallazgos
+    |
+    v
+regresión final
+```
+
+Una campaña no debe cerrarse únicamente porque todos los casos individuales
+fueron ejecutados.
+
+---
+
+## 72. El Core no debe modificarse durante una batería salvo que exista evidencia suficiente
+
+Durante P6 aparecieron posibles optimizaciones:
+
+```text
+esperas Wi-Fi
+doble scan
+temporización de discovery
+```
+
+No se incorporaron inmediatamente.
+
+La razón metodológica es evitar:
+
+```text
+cambiar el objeto bajo prueba
+```
+
+durante la misma campaña que intenta evaluarlo.
+
+Una modificación inmediata se justifica únicamente si:
+
+```text
+existe defecto claro
++
+el defecto bloquea la campaña
++
+la corrección es necesaria para continuar
+```
+
+Las optimizaciones no bloqueantes pueden diferirse.
+
+---
+
+## 73. Los hallazgos no bloqueantes deben convertirse en backlog explícito
+
+P6 identificó una frontera temporal en el discovery Wi-Fi de Windows.
+
+No se ignoró ni se corrigió improvisadamente.
+
+Se clasificó como:
+
+```text
+Beta 2
+Hardening Wi-Fi
+```
+
+La metodología para estos casos será:
+
+```text
+hallazgo
+    |
+    v
+impacto actual
+    |
+    +--> bloqueante
+    |       -> tratar ahora
+    |
+    +--> no bloqueante
+            -> documentar
+            -> asignar etapa futura
+```
+
+Esto mantiene foco sin perder conocimiento.
+
+---
+
+## 74. El parecido nominal no constituye evidencia técnica
+
+La disponibilidad de las redes:
+
+```text
+Suarez
+suarezcores
+```
+
+introduce un ejemplo útil.
+
+El parecido de sus nombres no implica:
+
+```text
+misma red
+mismo router
+misma topología
+relación de bridge
+```
+
+Las futuras pruebas deberán describir las redes mediante:
+
+```text
+router
+subred
+gateway
+interfaz
+ruta
+bridge
+reachability
+```
+
+y nunca inferir relaciones por el SSID.
+
+---
+
+## 75. Beta 2 utilizará fault injection controlado
+
+La red `Suarez` queda reservada como recurso para una etapa posterior de
+hardening.
+
+Su valor metodológico consiste en permitir controlar variables como:
+
+```text
+gateway
+Ethernet
+Wi-Fi
+rutas
+métricas
+subred
+conectividad parcial
+```
+
+La finalidad será introducir fallos deliberados y reproducibles.
+
+Cada fault injection deberá declarar:
+
+```text
+estado inicial
+variable modificada
+hipótesis
+resultado esperado
+resultado obtenido
+restauración del entorno
+```
+
+---
+
+## 76. El gate metodológico hacia la UI quedó superado
+
+La UI estaba condicionada a que el motor demostrara:
+
+```text
+detección
+discovery
+reachability
+decisión
+acción
+validación
+no intervención
+regresión
+```
+
+P6 permitió completar ese gate.
+
+Por tanto:
+
+```text
+Punto 7 = habilitado
+```
+
+La metodología cambia ahora parcialmente de foco.
+
+Hasta P6 la pregunta dominante fue:
+
+```text
+¿funciona correctamente el Core?
+```
+
+En Punto 7 se agrega:
+
+```text
+¿puede utilizarse el Core de forma reproducible,
+observable y segura como aplicación?
+```
+
+---
+
+## 77. La UI deberá validarse como integración y no como nueva lógica
+
+La primera beta deberá demostrar que la interfaz:
+
+```text
+consume
+```
+
+el Core.
+
+No que:
+
+```text
+lo reimplementa
+```
+
+Toda decisión importante observada desde UI deberá poder correlacionarse con un
+resultado estructurado del motor.
+
+Por tanto, una prueba de UI deberá registrar:
+
+```text
+acción del usuario
+evento recibido
+resultado del Core
+estado presentado
+acción física real si corresponde
+```
+
+---
+
+## 78. Las pruebas de Punto 7 deben conservar el mismo modelo de ficha
+
+El formato experimental utilizado en P6 continuará en la primera beta.
+
+Cada prueba deberá incluir:
+
+```text
+ID
+
+nombre
+
+objetivo
+
+estado inicial
+
+estado físico requerido
+
+hipótesis
+
+acción
+
+resultado esperado
+
+resultado obtenido
+
+check real
+
+hallazgo
+
+conclusión
+```
+
+Esto mantiene continuidad metodológica entre:
+
+```text
+Core
+```
+
+y:
+
+```text
+Application Layer
+```
+
+---
+
+## 79. La experiencia de usuario también debe producir evidencia
+
+En Punto 7 no bastará con comprobar:
+
+```text
+la ventana abre
+```
+
+o:
+
+```text
+el icono aparece
+```
+
+Será necesario verificar relaciones como:
+
+```text
+Core detecta evento
+        |
+        v
+UI lo representa correctamente
+```
+
+y:
+
+```text
+usuario cambia setting
+        |
+        v
+Application Controller
+        |
+        v
+Core recibe configuración correcta
+```
+
+La UI se evaluará como parte del sistema.
+
+---
+
+## 80. La primera beta debe preservar regresiones del Core
+
+Cada milestone importante de UI deberá incluir al menos:
+
+```text
+happy path
+
+no intervention
+
+recovery real
+
+cierre limpio
+```
+
+La existencia de interfaz no debe degradar las capacidades que ya estaban
+validadas desde terminal.
+
+El criterio es:
+
+```text
+nuevo capability
++
+no regression
+```
+
+---
+
+## 81. Principio metodológico vigente después de P6
+
+La regla histórica permanece:
+
+> **Observar antes de inferir, medir antes de decidir, decidir antes de actuar y
+> verificar después de actuar.**
+
+P6 agrega varias precisiones:
+
+> **Una fuente debe utilizarse para la pregunta que realmente puede responder.**
+
+> **Un resultado inesperado debe clasificarse antes de corregirse.**
+
+> **INCONCLUSIVE no equivale a FAIL.**
+
+> **La evidencia insuficiente debe reducir capacidad de intervención.**
+
+> **Una optimización no bloqueante puede diferirse sin invalidar el Core.**
+
+> **Toda nueva capa debe demostrar que preserva las regresiones anteriores.**
+
+Con estas reglas, la metodología queda preparada para iniciar el Punto 7 y la
+primera beta de PrintSwitch.

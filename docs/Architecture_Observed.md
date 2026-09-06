@@ -4192,3 +4192,1080 @@ para diseñarlo?
 
 El Punto 6 deberá responder esa pregunta antes de iniciar el desarrollo de una
 interfaz de usuario o declarar una primera beta funcional.
+
+---
+
+# Actualización arquitectónica — Cierre del Punto 6 — Septiembre 2026
+
+> **Estado documental**
+>
+> Esta sección describe la arquitectura observada y validada después de la
+> campaña experimental del Punto 6.
+>
+> El contenido anterior se conserva como registro histórico de las etapas
+> Alpha, Post-Alpha y de preparación de la fase de regresión.
+>
+> La evidencia detallada de las pruebas se encuentra en:
+>
+> ```text
+> Experimental_Tests.md
+> ```
+>
+> Las conclusiones conceptuales derivadas de esa evidencia se consolidan en:
+>
+> ```text
+> Knowledge.md
+> ```
+
+---
+
+## 81. Arquitectura operativa observada después de P6
+
+La arquitectura vigente puede representarse como:
+
+```text
+Windows Print Queue
+        |
+        v
+QueueWatcher
+        |
+        v
+QueueContext
+        |
+        v
+PrinterEndpointResolver
+        |
+        v
+Endpoint
+        |
+        v
+ReachabilityStrategy
+        |
+        v
+PrintRecoveryOrchestrator
+        |
+        +--> InterfacePathAnalyzer
+        |
+        +--> RouteAnalyzer
+        |
+        +--> ConnectivityPolicy
+        |
+        +--> WiFiCandidateEvaluator
+        |
+        +--> SwitchDecision
+        |
+        +--> NetworkManager
+        |
+        +--> RecoveryValidator
+        |
+        +--> ConnectivityAnalyzer
+               diagnóstico opcional
+```
+
+El cambio respecto de etapas anteriores es que la recuperación ya no comienza
+desde una asociación rígida:
+
+```text
+PrinterName
++
+IP
++
+SSID
+```
+
+sino desde:
+
+```text
+Queue
+   |
+   v
+Endpoint
+   |
+   v
+Operational Reachability
+```
+
+---
+
+## 82. QueueContext es la representación operacional primaria de una cola
+
+`PrinterDiscovery.ps1` construye actualmente objetos:
+
+```text
+QueueContext
+```
+
+que concentran información como:
+
+```text
+QueueName
+DriverName
+PortName
+DiscoveryStatus
+TransportType
+Protocol
+ConfiguredDestination
+AddressType
+TcpPort
+ServiceQueue
+ReachabilityStrategy
+DiscoverySource
+Confidence
+OperationalMinimumSatisfied
+MissingRequirements
+```
+
+Esta estructura permite que `QueueWatcher` seleccione una cola real y delegue
+la decisión posterior sin depender de `config/printers.json` como fuente
+operacional.
+
+La cola continúa siendo el objeto que recibe el trabajo.
+
+El endpoint representa cómo esa cola intenta alcanzar el dispositivo.
+
+---
+
+## 83. Endpoint y dispositivo físico permanecen desacoplados
+
+P6 confirmó que una misma impresora física puede estar representada mediante
+más de una cola.
+
+Ejemplo Brother:
+
+```text
+Brother HL-1210W series
+    |
+    +--> NETWORK
+         LPR
+         HOSTNAME
+         TCP 515
+
+Brother HL-1210W series USB
+    |
+    +--> USB
+         DEVICE
+         USB_PRESENCE
+```
+
+Por tanto:
+
+```text
+PhysicalPrinter
+```
+
+no debe identificarse automáticamente con:
+
+```text
+Queue
+```
+
+ni con:
+
+```text
+Endpoint
+```
+
+La arquitectura mantiene esas entidades separadas.
+
+---
+
+## 84. ReachabilityStrategy pertenece al endpoint
+
+La estrategia utilizada para comprobar disponibilidad depende del tipo de
+endpoint.
+
+Actualmente se observaron:
+
+```text
+NETWORK
+    |
+    +--> LPR_TCP
+
+USB
+    |
+    +--> USB_PRESENCE
+```
+
+Esto evita aplicar universalmente:
+
+```text
+Ping
+```
+
+o:
+
+```text
+TCP 9100
+```
+
+a todas las colas.
+
+La arquitectura actual selecciona la técnica de reachability a partir del
+endpoint descubierto.
+
+---
+
+## 85. QueueState, ResolutionState y EndpointState son capas independientes
+
+P6 produjo evidencia de que estas tres dimensiones pueden diferir
+simultáneamente.
+
+Ejemplo observado con Brother apagada:
+
+```text
+QueueState      = Normal
+ResolutionState = RESOLVED
+EndpointState   = UNREACHABLE
+```
+
+Por tanto, la arquitectura efectiva debe preservar:
+
+```text
+QueueState
+    |
+    +--> Windows Printing
+
+ResolutionState
+    |
+    +--> Name Resolution
+
+EndpointState
+    |
+    +--> ReachabilityStrategy
+```
+
+sin colapsarlas prematuramente en un único booleano.
+
+---
+
+## 86. El estado administrativo de Windows no es autoridad de liveness
+
+P6-04 mostró:
+
+```text
+Epson OFF
+PrinterStatus = Normal
+WorkOffline   = False
+TCP515        = False
+```
+
+y posteriormente:
+
+```text
+Epson ON
+PrinterStatus = Normal
+WorkOffline   = False
+TCP515        = True
+```
+
+Por tanto, la arquitectura no debe utilizar:
+
+```text
+PrinterStatus
+```
+
+como sustituto de:
+
+```text
+EndpointReachability
+```
+
+Los estados Windows permanecen disponibles como contexto y observabilidad.
+
+La autoridad operacional corresponde al endpoint.
+
+---
+
+## 87. ICMP queda fuera de la ruta de autoridad operacional
+
+Tanto Epson como Brother produjeron escenarios:
+
+```text
+PingSucceeded    = False
+TcpTestSucceeded = True
+```
+
+mientras el servicio de impresión estaba disponible.
+
+Por tanto:
+
+```text
+ICMP
+```
+
+puede continuar formando parte de herramientas diagnósticas, pero no debe
+gobernar la decisión principal de reachability.
+
+La arquitectura vigente sigue:
+
+```text
+Endpoint
+    |
+    v
+Operational Service Probe
+```
+
+---
+
+## 88. Name Resolution no equivale a disponibilidad
+
+La cola Brother utiliza:
+
+```text
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+```
+
+El nombre puede continuar resolviendo:
+
+```text
+BRWC48E8F7B140F
+    |
+    v
+192.168.100.12
+```
+
+aunque la impresora esté apagada.
+
+Por tanto:
+
+```text
+Resolution success
+```
+
+es una fase intermedia de discovery y normalización.
+
+No constituye evidencia suficiente de disponibilidad operacional.
+
+La secuencia observada es:
+
+```text
+ConfiguredDestination
+        |
+        v
+Address Resolution
+        |
+        v
+Operational Address
+        |
+        v
+Service Reachability
+```
+
+---
+
+## 89. NetworkContext forma parte de la interpretación de reachability
+
+P6-R01 validó simultáneamente:
+
+```text
+Epson   PhysicalState = ON
+Brother PhysicalState = ON
+```
+
+desde:
+
+```text
+Wi-Fi    = Claro640
+Ethernet = desconectado
+```
+
+con:
+
+```text
+Epson   = UNREACHABLE
+Brother = REACHABLE
+```
+
+Por tanto, la arquitectura debe interpretar reachability como una relación:
+
+```text
+Source Context
+      +
+Endpoint
+      +
+Service
+      +
+Route
+```
+
+y no como una propiedad persistente del dispositivo.
+
+---
+
+## 90. RouteAnalyzer e InterfacePathAnalyzer responden preguntas diferentes
+
+P6-02 volvió a mostrar un escenario donde Windows disponía de una ruta:
+
+```text
+0.0.0.0/0
+via 192.168.100.1
+```
+
+hacia el destino Epson, pero:
+
+```text
+TCP515 = False
+```
+
+Esto produjo:
+
+```text
+ROUTED_PATH_ONLY
+```
+
+y:
+
+```text
+TARGET_ROUTE_EXISTS_BUT_UNREACHABLE
+```
+
+Por tanto:
+
+```text
+RouteAnalyzer
+```
+
+responde aproximadamente:
+
+```text
+¿qué ruta utilizaría Windows?
+```
+
+mientras:
+
+```text
+InterfacePathAnalyzer
+```
+
+y las sondas operacionales responden:
+
+```text
+¿existe realmente un camino funcional?
+```
+
+La arquitectura mantiene ambas dimensiones separadas.
+
+---
+
+## 91. La recuperación se ejecuta sólo después de descartar caminos funcionales
+
+P6-01 y P6-02 validaron ambas ramas de decisión.
+
+### Camino existente
+
+```text
+Ethernet
+    |
+    v
+Epson 192.168.1.108:515
+```
+
+Resultado:
+
+```text
+EXISTING_REACHABLE_PATH
+NO_ACTION
+SwitchAuthorized = False
+SwitchExecuted   = False
+```
+
+### Camino inexistente
+
+```text
+Wi-Fi = Claro640
+Ethernet = desconectado
+Endpoint Epson = UNREACHABLE
+```
+
+Resultado:
+
+```text
+EVALUATE_WIFI_RECOVERY
+        |
+        v
+WIFI_SWITCH_CANDIDATE_AVAILABLE
+        |
+        v
+SWITCH_WIFI_FOR_PRINTER
+```
+
+La arquitectura preserva primero lo que ya funciona.
+
+---
+
+## 92. SwitchDecision continúa siendo una barrera explícita de seguridad
+
+La policy puede solicitar:
+
+```text
+EVALUATE_WIFI_RECOVERY
+```
+
+sin que eso implique automáticamente:
+
+```text
+ejecutar cambio Wi-Fi
+```
+
+`SwitchDecision` continúa evaluando si existe evidencia suficiente para
+autorizar una acción.
+
+P6-03 produjo:
+
+```text
+TARGET_WIFI_NOT_VISIBLE
+```
+
+y el resultado fue:
+
+```text
+SWITCH_NOT_SAFE
+ShouldExecuteSwitch = False
+```
+
+La arquitectura demuestra así una separación clara entre:
+
+```text
+necesidad potencial de recovery
+```
+
+y:
+
+```text
+autorización final de ejecución
+```
+
+---
+
+## 93. NetworkManager ejecuta, pero no decide la necesidad del cambio
+
+`NetworkManager.ps1` permanece responsable de:
+
+```text
+solicitar conexión al SSID
+verificar cambio de red
+devolver resultado estructurado
+```
+
+pero la decisión de actuar debe haber sido tomada previamente por:
+
+```text
+SwitchDecision
+```
+
+Esto mantiene:
+
+```text
+Decision
+```
+
+separada de:
+
+```text
+Execution
+```
+
+y evita que la capa que modifica el sistema determine por sí misma cuándo debe
+hacerlo.
+
+---
+
+## 94. RecoveryValidator valida el objetivo y no sólo la acción
+
+La recuperación no finaliza cuando:
+
+```text
+SSID actual = TargetSSID
+```
+
+P6-02 volvió a confirmar la secuencia:
+
+```text
+Network switch
+      |
+      v
+SwitchVerified
+      |
+      v
+RecoveryValidator
+      |
+      v
+Endpoint operational probe
+      |
+      v
+RecoveryConfirmed
+```
+
+Esto separa:
+
+```text
+ActionSucceeded
+```
+
+de:
+
+```text
+GoalSucceeded
+```
+
+La arquitectura no considera suficiente que Windows confirme el cambio de
+SSID.
+
+Debe recuperarse el servicio de impresión.
+
+---
+
+## 95. ConnectivityAnalyzer permanece fuera del camino crítico
+
+`ConnectivityAnalyzer.ps1` continúa disponible como herramienta diagnóstica y
+de observabilidad.
+
+No constituye autoridad operacional ni dependencia necesaria para realizar
+recovery.
+
+La arquitectura vigente puede representarse como:
+
+```text
+Operational Pipeline
+        |
+        +--> Endpoint Reachability
+        +--> InterfacePathAnalyzer
+        +--> RouteAnalyzer
+        +--> Policy
+        +--> Decision
+        +--> NetworkManager
+        +--> RecoveryValidator
+
+ConnectivityAnalyzer
+        |
+        +--> observabilidad adicional
+```
+
+Esto reduce acoplamiento y evita que un componente explicativo se convierta
+innecesariamente en condición de funcionamiento.
+
+---
+
+## 96. Discovery y Policy permanecen separados
+
+La separación consolidada continúa siendo:
+
+```text
+Discovery
+    |
+    +--> qué existe
+    +--> cómo está configurado
+    +--> qué endpoint usa la cola
+
+Policy
+    |
+    +--> qué está autorizado
+    +--> qué red puede utilizarse
+    +--> cuándo puede intervenir PrintSwitch
+```
+
+P6 no produjo evidencia que justifique volver a mezclar ambas responsabilidades.
+
+Una cola válida puede existir sin policy.
+
+Una policy no redefine el endpoint real de Windows.
+
+---
+
+## 97. El Core moderno ya no depende operacionalmente de printers.json
+
+La evolución previa al Punto 6 eliminó la dependencia operacional de:
+
+```text
+config/printers.json
+```
+
+en el core moderno.
+
+La fuente operacional actual es:
+
+```text
+Windows
+    |
+    v
+PrinterDiscovery
+    |
+    v
+QueueContext
+    |
+    v
+Endpoint
+```
+
+Los archivos legacy pueden continuar existiendo para herramientas anteriores o
+compatibilidad documental.
+
+No constituyen el modelo objetivo del pipeline moderno.
+
+---
+
+## 98. El modelo multi-fabricante ya tiene evidencia física
+
+Antes de P6, la generalización multimarca era principalmente una dirección de
+diseño.
+
+Después de P6 existen pruebas reales con:
+
+```text
+Epson L365
+Brother HL-1210W
+```
+
+La Brother validó:
+
+```text
+HOSTNAME
+LPR
+TCP 515
+```
+
+y sus colas también permitieron observar:
+
+```text
+USB
+USB_PRESENCE
+```
+
+sin incorporar ramas específicas por fabricante.
+
+La arquitectura genérica queda respaldada experimentalmente.
+
+---
+
+## 99. Generalización no equivale a universalidad
+
+P6 demuestra que la abstracción funciona con más de un fabricante.
+
+No demuestra todavía:
+
+```text
+todos los fabricantes
+todos los monitores de puerto
+todos los protocolos
+IPP
+WSD
+SMB
+Bluetooth
+impresoras corporativas
+VPN complejas
+múltiples adaptadores Wi-Fi
+```
+
+Por tanto, la arquitectura debe continuar permitiendo nuevas estrategias sin
+declarar compatibilidad universal prematuramente.
+
+---
+
+## 100. La evidencia insuficiente degrada capacidad de acción
+
+Una conclusión transversal de P6 es:
+
+```text
+evidence insufficient
+        |
+        v
+action capability decreases
+```
+
+y no:
+
+```text
+evidence insufficient
+        |
+        v
+inferir valor probable
+        |
+        v
+actuar
+```
+
+El comportamiento observado en P6-03 fue:
+
+```text
+SSID objetivo no confirmado
+        |
+        v
+SWITCH_NOT_SAFE
+        |
+        v
+NO NETWORK CHANGE
+```
+
+Esto constituye una propiedad arquitectónica de seguridad.
+
+---
+
+## 101. El discovery Wi-Fi presenta una frontera temporal con Windows
+
+P6 identificó una limitación fuera del Core de decisión.
+
+Una red conocida puede:
+
+```text
+no aparecer
+```
+
+en una consulta y posteriormente:
+
+```text
+aparecer
+```
+
+sin cambios físicos.
+
+Esto indica que:
+
+```text
+netsh wlan show networks
+```
+
+no debe considerarse necesariamente un snapshot físico instantáneo y completo.
+
+La arquitectura actual se mantiene conservadora.
+
+El hardening de discovery queda diferido.
+
+---
+
+## 102. Beta 2 incorpora una capa de hardening de plataforma
+
+La etapa Beta 2 deberá estudiar:
+
+```text
+Wi-Fi discovery stabilization
+scan timing
+eventos WLAN
+polling
+cache
+doble muestreo
+SCAN_PENDING
+NOT_VISIBLE_CONFIRMED
+UNKNOWN
+```
+
+También utilizará una topología experimental adicional:
+
+```text
+Suarez
+```
+
+como red Movistar completamente independiente y administrable.
+
+Su función será permitir fault injection y diseño de topologías sin modificar
+los principios del Core ya validados.
+
+---
+
+## 103. El laboratorio de red futuro queda explícitamente separado
+
+La infraestructura experimental queda conceptualmente:
+
+```text
+Claro640
+    |
+    +--> router Claro independiente
+         administración restringida
+
+Suarez
+    |
+    +--> router Movistar independiente
+         administración disponible
+         posibilidad Ethernet
+
+suarezcores
+    |
+    +--> TP-Link
+         entorno asociado a Epson
+         única topología del laboratorio con bridge relevante
+```
+
+Importante:
+
+```text
+Suarez != suarezcores
+```
+
+No existe relación topológica implícita entre ambas.
+
+El parecido del nombre no tiene significado arquitectónico.
+
+---
+
+## 104. La arquitectura futura deberá evaluar topología, no nombres de red
+
+Las pruebas Beta 2 podrán introducir:
+
+```text
+múltiples gateways
+rutas alternativas
+métricas
+Ethernet + Wi-Fi
+subredes iguales en infraestructuras distintas
+destinos con rutas engañosas
+gateway disponible pero endpoint inaccesible
+SSID visible pero camino no funcional
+```
+
+Estas pruebas deberán utilizar:
+
+```text
+direccionamiento
+rutas
+interfaces
+gateways
+reachability
+```
+
+como evidencia.
+
+Nunca:
+
+```text
+parecido entre nombres de SSID
+```
+
+---
+
+## 105. Arquitectura observada consolidada
+
+Después de P6, el flujo puede resumirse como:
+
+```text
+Print Job
+    |
+    v
+Windows Queue
+    |
+    v
+QueueWatcher
+    |
+    v
+QueueContext
+    |
+    v
+Endpoint Resolver
+    |
+    v
+Endpoint Contract
+    |
+    +--> TransportType
+    +--> Protocol
+    +--> AddressType
+    +--> Destination
+    +--> Service
+    +--> ReachabilityStrategy
+    |
+    v
+Evidence Acquisition
+    |
+    +--> Queue State
+    +--> Resolution State
+    +--> Interface State
+    +--> Route State
+    +--> Endpoint State
+    |
+    v
+Network Context Analysis
+    |
+    v
+Policy
+    |
+    v
+Switch Decision
+    |
+    +---- NO ACTION
+    |
+    +---- SAFE NO-OP
+    |
+    +---- EXECUTE RECOVERY
+              |
+              v
+         NetworkManager
+              |
+              v
+         SwitchVerified
+              |
+              v
+         RecoveryValidator
+              |
+              v
+         Endpoint Revalidated
+              |
+              v
+         Final Result
+```
+
+La regla de diseño central continúa siendo:
+
+> **La intervención es la consecuencia de evidencia suficiente, no el punto de
+> partida del análisis.**
+
+---
+
+## 106. Estado arquitectónico después del Punto 6
+
+A cierre de P6 se consideran respaldadas por evidencia:
+
+```text
+[OK] QueueWatcher integrado con PrinterDiscovery
+
+[OK] QueueContext como contrato operacional
+
+[OK] Endpoint derivado de la cola Windows
+
+[OK] NETWORK y USB representados mediante estrategias diferentes
+
+[OK] IPV4 y HOSTNAME observados físicamente
+
+[OK] Epson L365 validada con LPR / TCP 515
+
+[OK] Brother validada con LPR / TCP 515 y hostname
+
+[OK] estado Windows separado de endpoint reachability
+
+[OK] resolución de hostname separada de endpoint reachability
+
+[OK] route existence separada de reachability
+
+[OK] ICMP mantenido como evidencia auxiliar
+
+[OK] recovery condicionado a ausencia de camino funcional
+
+[OK] no intervención cuando existe un camino funcional
+
+[OK] SwitchDecision como barrera de seguridad
+
+[OK] RecoveryValidator como validación de objetivo
+
+[OK] ConnectivityAnalyzer fuera del camino crítico
+
+[OK] comportamiento conservador ante evidencia insuficiente
+
+[OK] regresión multi-printer superada
+```
+
+No se observó durante P6 una falla arquitectónica que requiera reconstruir el
+Core.
+
+Los hallazgos pendientes corresponden principalmente a:
+
+```text
+hardening de integración con Windows
+```
+
+y:
+
+```text
+topologías más complejas
+```
+
+que se reservan para Beta 2.
+
+El Core endpoint-aware queda suficientemente estable para avanzar al siguiente
+punto del Roadmap.

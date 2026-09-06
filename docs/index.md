@@ -1831,3 +1831,292 @@ continuar batería adversa
 
 El objetivo inmediato es comprobar cuánto resiste la arquitectura actual antes
 de convertirla en una primera beta orientada a usuario.
+
+
+---
+
+# Estado vigente — Cierre del Punto 6 — Septiembre 2026
+
+> Esta sección representa el estado actual de PrintSwitch.
+>
+> El contenido anterior se conserva como registro histórico de la evolución
+> del proyecto.
+
+## Punto 6 completado
+
+La fase de regresiones y casos excepcionales quedó cerrada.
+
+Resultado consolidado:
+
+```text
+P6-01   PASS
+P6-02   PASS
+P6-03   INCONCLUSIVE / SAFE BEHAVIOR
+P6-04   PASS
+P6-05   PASS
+P6-06   PASS
+P6-R01  PASS
+```
+
+La batería confirmó que el Core endpoint-aware puede:
+
+```text
+detectar trabajos
+
+descubrir colas Windows
+
+resolver endpoints reales
+
+trabajar con IPv4 y hostname
+
+distinguir NETWORK y USB
+
+analizar caminos y rutas
+
+preservar conectividad existente
+
+ejecutar recovery cuando corresponde
+
+no intervenir cuando no corresponde
+
+revalidar el servicio operacional después de actuar
+
+degradar de manera segura ante evidencia insuficiente
+```
+
+---
+
+## Dos fabricantes físicamente validados
+
+El entorno experimental ya incluye:
+
+```text
+Epson L365
+Brother HL-1210W
+```
+
+### Epson L365
+
+```text
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = 192.168.1.108
+AddressType           = IPV4
+TcpPort               = 515
+ServiceQueue          = ENPQueue
+ReachabilityStrategy  = LPR_TCP
+```
+
+### Brother HL-1210W
+
+```text
+TransportType         = NETWORK
+Protocol              = LPR
+ConfiguredDestination = BRWC48E8F7B140F
+AddressType           = HOSTNAME
+ResolvedAddress       = 192.168.100.12
+TcpPort               = 515
+ServiceQueue          = BINARY_P1
+ReachabilityStrategy  = LPR_TCP
+```
+
+También se observó una cola USB Brother con una estrategia diferente de
+reachability.
+
+Esto respalda una arquitectura general basada en endpoints sin declarar
+todavía compatibilidad universal.
+
+---
+
+## Principio operacional vigente
+
+PrintSwitch ya no intenta responder simplemente:
+
+```text
+¿la impresora está disponible?
+```
+
+La pregunta real es:
+
+```text
+¿el servicio operacional asociado a esta cola
+es alcanzable desde el contexto de red actual?
+```
+
+Si no lo es:
+
+```text
+¿existe una intervención conocida,
+justificada,
+segura
+y autorizada
+capaz de mejorar ese estado?
+```
+
+Y después de actuar:
+
+```text
+¿el servicio operacional fue realmente recuperado?
+```
+
+---
+
+## Arquitectura vigente
+
+```text
+Print Job
+    |
+    v
+Windows Queue
+    |
+    v
+QueueWatcher
+    |
+    v
+QueueContext
+    |
+    v
+Endpoint Resolver
+    |
+    v
+Reachability
+    |
+    v
+Network Context
+    |
+    v
+Policy
+    |
+    v
+Decision
+    |
+    +---- NO ACTION
+    |
+    +---- SAFE NO-OP
+    |
+    +---- RECOVERY
+              |
+              v
+         NetworkManager
+              |
+              v
+         RecoveryValidator
+```
+
+`ConnectivityAnalyzer` permanece como diagnóstico complementario y no como
+autoridad operacional.
+
+---
+
+## Hallazgos diferidos a Beta 2
+
+La campaña P6 no detectó una falla estructural del Core que requiera
+reconstrucción.
+
+Sí dejó áreas de hardening:
+
+```text
+estabilización del discovery Wi-Fi
+
+temporización del stack WLAN de Windows
+
+scan / rescan
+
+eventos frente a polling
+
+Native Wi-Fi API
+
+múltiples gateways
+
+métricas y rutas alternativas
+
+Ethernet + Wi-Fi
+
+topologías controladas
+
+fault injection
+```
+
+Para esa etapa se incorpora como recurso experimental:
+
+```text
+Suarez
+```
+
+una red Movistar independiente y administrable.
+
+Debe distinguirse completamente de:
+
+```text
+suarezcores
+```
+
+que pertenece a otra infraestructura del laboratorio.
+
+---
+
+## Roadmap actual
+
+```text
+[COMPLETADO] 1. Cierre endpoint-aware
+
+[COMPLETADO] 2. Consolidación de inconsistencias
+
+[COMPLETADO] 3. Validación Brother
+
+[COMPLETADO] 4. Consolidar Discovery + Policy
+
+[COMPLETADO] 5. Integración QueueWatcher
+
+[COMPLETADO] 6. Regresiones y casos raros
+
+[SIGUIENTE]   7. Aplicación / UI — primera beta
+
+[POSTERIOR]   Beta 2 — hardening Windows y topologías
+
+[POSTERIOR]   8. Multi-impresora / otros fabricantes
+
+[FUTURO]      Calidad y coherencia de evidencia
+```
+
+---
+
+## Próximo hito — Primera beta
+
+El siguiente trabajo funcional es:
+
+```text
+PUNTO 7
+APLICACIÓN / UI
+```
+
+La primera beta deberá transformar el Core validado en una aplicación
+utilizable sin duplicar su lógica.
+
+Dirección prevista:
+
+```text
+PrintSwitch
+    |
+    +--> agente residente
+    |
+    +--> QueueWatcher
+    |
+    +--> system tray
+    |
+    +--> panel de estado
+    |
+    +--> configuración mínima
+    |
+    +--> logs
+```
+
+La regla para esta etapa es:
+
+> **La interfaz debe exponer y controlar el Core validado, no reimplementarlo.**
+
+El objetivo inmediato deja de ser demostrar nuevamente el mecanismo de
+recovery.
+
+El objetivo pasa a ser convertirlo en una primera experiencia de producto
+reproducible y observable.
