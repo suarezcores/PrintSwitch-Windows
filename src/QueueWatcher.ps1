@@ -1,7 +1,9 @@
 param (
     [switch]$EnableRecovery,
 
-    [string]$PrinterName
+    [string]$PrinterName,
+
+    [string]$EventPath = $null
 )
 
 $ErrorActionPreference = "Continue"
@@ -29,6 +31,40 @@ $PollingMilliseconds = 500
 $LoggerPath = Join-Path `
     $PSScriptRoot `
     "Logger.ps1"
+
+$EventWriterPath = Join-Path `
+    $PSScriptRoot `
+    "EventWriter.ps1"
+
+$EventWriterEnabled = `
+    -not [string]::IsNullOrWhiteSpace($EventPath)
+
+if ($EventWriterEnabled) {
+
+    if (-not (Test-Path $EventWriterPath)) {
+
+        Write-Host ""
+        Write-Host "ERROR: EventWriter no encontrado." -ForegroundColor Red
+        Write-Host "Ruta esperada: $EventWriterPath"
+
+        return
+    }
+
+    try {
+
+        . $EventWriterPath
+    }
+    catch {
+
+        Write-Host ""
+        Write-Host "ERROR cargando EventWriter." -ForegroundColor Red
+        Write-Host $_.Exception.Message
+
+        return
+    }
+}
+
+$EventSequence = 0
 
 $PrinterDiscoveryPath = Join-Path `
     $PSScriptRoot `
@@ -473,6 +509,66 @@ while ($true) {
                     $Job.Size
             }
 
+            if ($EventWriterEnabled) {
+
+                $CorrelationId =
+                    [guid]::NewGuid().ToString()
+
+                $EventSequence++
+
+                $PrintJobEvent =
+                    New-PrintSwitchEvent `
+                        -EventType "PrintJobDetected" `
+                        -Source "QueueWatcher" `
+                        -PrinterName $PrinterName `
+                        -CorrelationId $CorrelationId `
+                        -SequenceNumber $EventSequence `
+                        -Severity "INFO" `
+                        -Data (
+                            [PSCustomObject]@{
+
+                                JobId =
+                                    $Event.JobId
+
+                                DocumentName =
+                                    $Event.Document
+
+                                Owner =
+                                    $Event.Owner
+
+                                JobStatus =
+                                    $Event.JobStatus
+
+                                QueueName =
+                                    $Event.PrinterName
+
+                                SubmittedTime =
+                                    $null
+                            }
+                        )
+
+                try {
+
+                    Write-PrintSwitchEvent `
+                        -Event $PrintJobEvent `
+                        -Path $EventPath |
+                        Out-Null
+                }
+                catch {
+
+                    Write-PrintSwitchLog `
+                        -Component "QueueWatcher" `
+                        -Event "APPLICATION_EVENT_WRITE_FAILED" `
+                        -Level "WARNING" `
+                        -Data @{
+                            Printer = $PrinterName
+                            JobId   = $Event.JobId
+                            Message = $_.Exception.Message
+                        } |
+                        Out-Null
+                }
+            }
+
             Write-PrintSwitchLog `
                 -Component "QueueWatcher" `
                 -Event "PRINT_JOB_DETECTED" `
@@ -562,6 +658,171 @@ Write-Host "FinalClassification : $($OrchestratorResult.FinalClassification)"
 Write-Host "SwitchDecision      : $($OrchestratorResult.SwitchDecision)"
 Write-Host "SwitchAuthorized    : $($OrchestratorResult.SwitchAuthorized)"
 Write-Host "SwitchExecuted      : $($OrchestratorResult.SwitchExecuted)"
+
+# ============================================================
+# APPLICATION EVENTS - ORCHESTRATOR RESULT
+# ============================================================
+
+if ($EventWriterEnabled) {
+
+    try {
+
+        $GetOrchestratorValue = {
+
+            param (
+                [string]$Name
+            )
+
+            if (
+                $null -ne $OrchestratorResult -and
+                $OrchestratorResult.PSObject.Properties.Name -contains $Name
+            ) {
+
+                return $OrchestratorResult.$Name
+            }
+
+            return $null
+        }
+
+        # ----------------------------------------------------
+        # DecisionProduced
+        # ----------------------------------------------------
+
+        $EventSequence++
+
+        $DecisionEvent =
+            New-PrintSwitchEvent `
+                -EventType "DecisionProduced" `
+                -Source "PrintRecoveryOrchestrator" `
+                -PrinterName $PrinterName `
+                -CorrelationId $CorrelationId `
+                -SequenceNumber $EventSequence `
+                -Severity "INFO" `
+                -Data (
+                    [PSCustomObject]@{
+
+                        JobId =
+                            $Event.JobId
+
+                        PolicyDecision =
+                            & $GetOrchestratorValue "PolicyDecision"
+
+                        RouteClassification =
+                            & $GetOrchestratorValue "InitialRouteClassification"
+
+                        WiFiClassification =
+                            & $GetOrchestratorValue "WiFiClassification"
+
+                        SwitchDecision =
+                            & $GetOrchestratorValue "SwitchDecision"
+
+                        SwitchAuthorized =
+                            & $GetOrchestratorValue "SwitchAuthorized"
+
+                        ShouldExecuteSwitch =
+                            & $GetOrchestratorValue "ShouldExecuteSwitch"
+
+                        PreserveEthernet =
+                            & $GetOrchestratorValue "PreserveEthernet"
+
+                        CurrentSSID =
+                            & $GetOrchestratorValue "CurrentSSID"
+
+                        TargetSSID =
+                            & $GetOrchestratorValue "TargetSSID"
+                    }
+                )
+
+        Write-PrintSwitchEvent `
+            -Event $DecisionEvent `
+            -Path $EventPath |
+            Out-Null
+
+        # ----------------------------------------------------
+        # RecoveryCompleted
+        # ----------------------------------------------------
+
+        $EventSequence++
+
+        $RecoveryEvent =
+            New-PrintSwitchEvent `
+                -EventType "RecoveryCompleted" `
+                -Source "PrintRecoveryOrchestrator" `
+                -PrinterName $PrinterName `
+                -CorrelationId $CorrelationId `
+                -SequenceNumber $EventSequence `
+                -Severity "INFO" `
+                -Data (
+                    [PSCustomObject]@{
+
+                        JobId =
+                            $Event.JobId
+
+                        FinalClassification =
+                            & $GetOrchestratorValue "FinalClassification"
+
+                        SwitchDecision =
+                            & $GetOrchestratorValue "SwitchDecision"
+
+                        SwitchAuthorized =
+                            & $GetOrchestratorValue "SwitchAuthorized"
+
+                        SwitchExecuted =
+                            & $GetOrchestratorValue "SwitchExecuted"
+
+                        RecoverySucceeded =
+                            & $GetOrchestratorValue "RecoverySucceeded"
+
+                        PreserveEthernet =
+                            & $GetOrchestratorValue "PreserveEthernet"
+
+                        TargetSSID =
+                            & $GetOrchestratorValue "TargetSSID"
+
+                        ConnectivityAfter =
+                            & $GetOrchestratorValue "ConnectivityAfter"
+
+                        RouteAfter =
+                            & $GetOrchestratorValue "RouteAfter"
+
+                        RecoveryValidationClassification =
+                            & $GetOrchestratorValue "RecoveryValidationClassification"
+
+                        RecoveryValidationConfirmed =
+                            & $GetOrchestratorValue "RecoveryValidationConfirmed"
+
+                        CompletedAt =
+                            Get-Date
+                    }
+                )
+
+        Write-PrintSwitchEvent `
+            -Event $RecoveryEvent `
+            -Path $EventPath |
+            Out-Null
+    }
+    catch {
+
+        Write-PrintSwitchLog `
+            -Component "QueueWatcher" `
+            -Event "APPLICATION_EVENT_WRITE_FAILED" `
+            -Level "WARNING" `
+            -Data @{
+                Printer =
+                    $PrinterName
+
+                JobId =
+                    $Event.JobId
+
+                Stage =
+                    "ORCHESTRATOR_RESULT"
+
+                Message =
+                    $_.Exception.Message
+            } |
+            Out-Null
+    }
+}
 
 Write-PrintSwitchLog `
     -Component "QueueWatcher" `
