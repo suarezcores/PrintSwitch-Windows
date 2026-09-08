@@ -1,0 +1,203 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-A5.3.5-A1-C1 - AUDITORIA PRE-COMMIT
+Fecha: 2026-09-08 18:55:24
+============================================================
+
+===== 1. GIT STATUS =====
+ M src/ApplicationController.ps1
+?? docs/evidence/
+?? runtime/
+?? src/ApplicationController.ps1.p7a535a1.bak
+?? src/ConnectivityAnalyzer.ps1.bak
+
+===== 2. DIFF APPLICATIONCONTROLLER =====
+diff --git a/src/ApplicationController.ps1 b/src/ApplicationController.ps1
+index a0f36db..05e0b5f 100644
+--- a/src/ApplicationController.ps1
++++ b/src/ApplicationController.ps1
+@@ -24,7 +24,7 @@ Set-StrictMode -Version Latest
+ # - SIN cambio Wi-Fi
+ # ============================================================
+ 
+-$script:ControllerVersion = "0.2"
++$script:ControllerVersion = "0.3"
+ 
+ $script:RootPath =
+     Split-Path `
+@@ -115,6 +115,9 @@ $script:ControllerState =
+         RecoveryEnabled =
+             $false
+ 
++        MonitoringEventPath =
++            $null
++
+         SelectedPrinter =
+             $null
+ 
+@@ -1070,6 +1073,33 @@ function Start-PrintSwitchMonitoring {
+         # QueueWatcher con -EnableRecovery = recovery autorizado.
+         # --------------------------------------------------------
+ 
++        $Job =
++        $MonitoringEventDirectory =
++            Join-Path `
++                $script:RootPath `
++                "runtime\events"
++
++        if (-not (Test-Path $MonitoringEventDirectory)) {
++
++            New-Item `
++                -ItemType Directory `
++                -Path $MonitoringEventDirectory `
++                -Force |
++                Out-Null
++        }
++
++        $MonitoringEventPath =
++            Join-Path `
++                $MonitoringEventDirectory `
++                (
++                    "PrintSwitch-Events-{0}-{1}.jsonl" -f `
++                        (Get-Date -Format "yyyyMMdd-HHmmss"),
++                        ([guid]::NewGuid().ToString("N").Substring(0,8))
++                )
++
++        $script:ControllerState.MonitoringEventPath =
++            $MonitoringEventPath
++
+         $Job =
+             Start-Job `
+                 -Name (
+@@ -1082,26 +1112,30 @@ function Start-PrintSwitchMonitoring {
+                     param (
+                         [string]$QueueWatcherPath,
+                         [string]$SelectedPrinter,
+-                        [bool]$RecoveryEnabled
++                        [bool]$RecoveryEnabled,
++                        [string]$ApplicationEventPath
+                     )
+ 
+                     if ($RecoveryEnabled) {
+ 
+                         & $QueueWatcherPath `
+                             -PrinterName $SelectedPrinter `
+-                            -EnableRecovery
++                            -EnableRecovery `
++                            -EventPath $ApplicationEventPath
+                     }
+                     else {
+ 
+                         & $QueueWatcherPath `
+-                            -PrinterName $SelectedPrinter
++                            -PrinterName $SelectedPrinter `
++                            -EventPath $ApplicationEventPath
+                     }
+ 
+                 } `
+                 -ArgumentList `
+                     $WatcherPath,
+                     $PrinterName,
+-                    $RecoveryAllowed
++                    $RecoveryAllowed,
++                    $MonitoringEventPath
+ 
+         if ($null -eq $Job) {
+ 
+
+===== 3. DIFF STAT =====
+ src/ApplicationController.ps1 | 44 ++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 39 insertions(+), 5 deletions(-)
+
+===== 4. DOCS/EVIDENCE =====
+
+FullName                                                                                                        Length LastWriteTime    
+--------                                                                                                        ------ -------------    
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\B3-Orchestrator-ConfigPath.txt                       65440 4/9/2026 13:21:43
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\B4-ConnectivityAnalyzer-ConfigDependency.txt         48725 4/9/2026 14:14:32
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\B5-ConnectivityAnalyzer-Consumers.txt                25155 4/9/2026 15:09:14
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\B6-ConnectivityAnalyzer-Contract.txt                  7665 4/9/2026 15:13:31
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\B7-ConnectivityAnalyzer-Source.txt                   14667 4/9/2026 15:16:13
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\D1_documentation_inventory.txt                      275278 5/9/2026 15:45:50
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\P7-A1-Core-Contracts.txt                             42483 6/9/2026 19:51:16
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\P7-A3-Core-Exports.txt                               19129 6/9/2026 19:59:10
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\P7-A4-QueueWatcher-Lifecycle.txt                     15265 6/9/2026 20:16:41
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\P7-A5.3.4B-Orchestrator-Boundary.txt                112365 8/9/2026 16:25:52
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\P7-A5.3.5-A1-C1-PreCommit-20260908-185524.txt            0 8/9/2026 18:55:24
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\P7-A5.3.5-ApplicationController-EventBuffer-Map.txt 150265 8/9/2026 17:43:15
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\ApplicationController-P7A535A1.tmp.ps1  37775 8/9/2026 17:59:24
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\P7-A5.3-Checkpoint-Smoke.jsonl            396 8/9/2026 15:48:49
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\P7-A5.3-EventWriter-Test.jsonl           2010 8/9/2026 15:37:28
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\P7-A5.3-ISO-Test.jsonl                    617 8/9/2026 15:46:38
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\P7-A5.3.4A-PrintJobDetected.jsonl         481 8/9/2026 16:07:10
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\P7-A5.3.4B-T0-Episode.jsonl              1926 8/9/2026 16:58:38
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\P7-A5.3.4B-T1-R.jsonl                    1884 8/9/2026 17:39:21
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\P7-A5.3.4B-T1-Real-Episode.jsonl         3772 8/9/2026 17:04:46
+C:\Users\Suarez\Documents\PrintSwitch-Windows\docs\evidence\runtime-test\QueueWatcher-P7-A5.3.4A.tmp.ps1         16171 8/9/2026 15:51:02
+
+
+
+
+===== 5. RUNTIME =====
+
+FullName                                                                                                       Length LastWriteTime    
+--------                                                                                                       ------ -------------    
+C:\Users\Suarez\Documents\PrintSwitch-Windows\runtime\events\PrintSwitch-Events-20260908-184918-a501ddfa.jsonl    496 8/9/2026 18:49:22
+
+
+
+
+===== 6. BACKUPS =====
+
+Name                                   Length LastWriteTime     
+----                                   ------ -------------     
+ApplicationController.ps1.p7a535a1.bak  36918 6/9/2026 20:40:54 
+ConnectivityAnalyzer.ps1.bak            14665 23/8/2026 20:44:49
+
+
+
+
+===== 7. GITIGNORE =====
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# MkDocs generated site
+site/
+
+# PrintSwitch runtime logs
+logs/*.txt
+logs/*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# VS Code local settings
+.vscode/
+
+===== 8. TRACKED EVIDENCE / RUNTIME =====
+
+===== 9. PARSER FINAL =====
+PASS - todos los PS1 parsean
+
+===== 10. ULTIMO EVENTO E2E =====
+
+
+FullName      : C:\Users\Suarez\Documents\PrintSwitch-Windows\runtime\events\PrintSwitch-Events-20260908-184918-a501ddfa.jsonl
+Length        : 496
+CreationTime  : 8/9/2026 18:49:22
+LastWriteTime : 8/9/2026 18:49:22
+
+
+
+
+----- CONTENIDO FINAL -----
+{"Component":"PrintSwitchEvent","EventVersion":1,"EventId":"54e63240-7285-48b0-a9a1-40884f28fec9","SequenceNumber":1,"EventType":"PrintJobDetected","Timestamp":"2026-09-08T18:49:22.4729677-03:00","Source":"QueueWatcher","PrinterName":"L365 Series(Red)","CorrelationId":"5eec3736-cde2-4e2b-bf10-9a4aaad1d069","Severity":"INFO","Data":{"JobId":13,"DocumentName":"*Sin tÃ­tulo: Bloc de notas","Owner":"Suarez","JobStatus":"Error | Imprimiendo","QueueName":"L365 Series(Red)","SubmittedTime":null}}
+
+============================================================
+FIN P7-A5.3.5-A1-C1
+============================================================

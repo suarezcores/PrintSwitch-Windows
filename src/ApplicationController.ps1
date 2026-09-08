@@ -24,7 +24,7 @@ Set-StrictMode -Version Latest
 # - SIN cambio Wi-Fi
 # ============================================================
 
-$script:ControllerVersion = "0.2"
+$script:ControllerVersion = "0.3"
 
 $script:RootPath =
     Split-Path `
@@ -114,6 +114,9 @@ $script:ControllerState =
             $null
         RecoveryEnabled =
             $false
+
+        MonitoringEventPath =
+            $null
 
         SelectedPrinter =
             $null
@@ -1071,6 +1074,33 @@ function Start-PrintSwitchMonitoring {
         # --------------------------------------------------------
 
         $Job =
+        $MonitoringEventDirectory =
+            Join-Path `
+                $script:RootPath `
+                "runtime\events"
+
+        if (-not (Test-Path $MonitoringEventDirectory)) {
+
+            New-Item `
+                -ItemType Directory `
+                -Path $MonitoringEventDirectory `
+                -Force |
+                Out-Null
+        }
+
+        $MonitoringEventPath =
+            Join-Path `
+                $MonitoringEventDirectory `
+                (
+                    "PrintSwitch-Events-{0}-{1}.jsonl" -f `
+                        (Get-Date -Format "yyyyMMdd-HHmmss"),
+                        ([guid]::NewGuid().ToString("N").Substring(0,8))
+                )
+
+        $script:ControllerState.MonitoringEventPath =
+            $MonitoringEventPath
+
+        $Job =
             Start-Job `
                 -Name (
                     "PrintSwitch-Monitor-{0}-{1}" -f `
@@ -1082,26 +1112,30 @@ function Start-PrintSwitchMonitoring {
                     param (
                         [string]$QueueWatcherPath,
                         [string]$SelectedPrinter,
-                        [bool]$RecoveryEnabled
+                        [bool]$RecoveryEnabled,
+                        [string]$ApplicationEventPath
                     )
 
                     if ($RecoveryEnabled) {
 
                         & $QueueWatcherPath `
                             -PrinterName $SelectedPrinter `
-                            -EnableRecovery
+                            -EnableRecovery `
+                            -EventPath $ApplicationEventPath
                     }
                     else {
 
                         & $QueueWatcherPath `
-                            -PrinterName $SelectedPrinter
+                            -PrinterName $SelectedPrinter `
+                            -EventPath $ApplicationEventPath
                     }
 
                 } `
                 -ArgumentList `
                     $WatcherPath,
                     $PrinterName,
-                    $RecoveryAllowed
+                    $RecoveryAllowed,
+                    $MonitoringEventPath
 
         if ($null -eq $Job) {
 
