@@ -1,0 +1,783 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-A5.3.5-A2-R1 - CONTRATO EVENTOS
+Fecha: 2026-09-08 19:47:00
+============================================================
+
+===== 1. READ-PRINTSWITCHEVENTS =====
+  293: function Read-PrintSwitchEvents {
+  294: 
+  295:     [CmdletBinding()]
+  296:     param (
+  297:         [Parameter(Mandatory)]
+  298:         [string]$Path,
+  299: 
+  300:         [int]$MaxEvents = 0
+  301:     )
+  302: 
+  303:     if (-not (Test-Path $Path)) {
+  304: 
+  305:         return @()
+  306:     }
+  307: 
+  308:     $Lines =
+  309:         @(
+  310:             Get-Content `
+  311:                 $Path `
+  312:                 -Encoding UTF8 |
+  313:             Where-Object {
+  314:                 -not [string]::IsNullOrWhiteSpace($_)
+  315:             }
+  316:         )
+  317: 
+  318:     if (
+  319:         $MaxEvents -gt 0 -and
+  320:         $Lines.Count -gt $MaxEvents
+  321:     ) {
+  322: 
+  323:         $StartIndex =
+  324:             $Lines.Count - $MaxEvents
+  325: 
+  326:         $Lines =
+  327:             @(
+  328:                 $Lines[
+  329:                     $StartIndex..($Lines.Count - 1)
+  330:                 ]
+  331:             )
+  332:     }
+  333: 
+  334:     $Events =
+  335:         @()
+  336: 
+  337:     foreach ($Line in $Lines) {
+  338: 
+  339:         try {
+  340: 
+  341:             $Decoded =
+  342:                 $Line |
+  343:                 ConvertFrom-Json `
+  344:                     -ErrorAction Stop
+  345: 
+  346:             $Events +=
+  347:                 $Decoded
+  348:         }
+  349:         catch {
+  350: 
+  351:             $Events +=
+  352:                 [PSCustomObject]@{
+  353: 
+  354:                     Component =
+  355:                         "PrintSwitchEventReadError"
+  356: 
+  357:                     RawLine =
+  358:                         $Line
+  359: 
+  360:                     Error =
+  361:                         $_.Exception.Message
+  362:                 }
+  363:         }
+  364:     }
+  365: 
+  366:     return $Events
+  367: }
+  368: 
+  369: function Test-PrintSwitchEventContract {
+  370: 
+
+===== 2. EVENT CONTRACT / VALIDATION =====
+  130: 
+  131: function New-PrintSwitchEvent {
+  132: 
+  133:     [CmdletBinding()]
+  134:     param (
+  135:         [Parameter(Mandatory)]
+  136:         [string]$EventType,
+  137: 
+  138:         [Parameter(Mandatory)]
+  139:         [string]$Source,
+  140: 
+  141:         [string]$PrinterName = $null,
+  142: 
+  143:         [string]$CorrelationId = $null,
+  144: 
+  145:         [ValidateSet(
+  146:             "DEBUG",
+  147:             "INFO",
+  148:             "WARNING",
+  149:             "ERROR"
+  150:         )]
+  151:         [string]$Severity = "INFO",
+  152: 
+  153:         [object]$Data = $null,
+  154: 
+  155:         [long]$SequenceNumber = 0
+  156:     )
+  157: 
+  158:     if ([string]::IsNullOrWhiteSpace($CorrelationId)) {
+  159: 
+  160:         $CorrelationId =
+  161:             [guid]::NewGuid().ToString()
+  162:     }
+  163: 
+  164:     $EventId =
+  165:         [guid]::NewGuid().ToString()
+  166: 
+  167:     return [PSCustomObject]@{
+  168: 
+  169:         Component =
+  170:             "PrintSwitchEvent"
+  171: 
+  172:         EventVersion =
+  173:             $script:PrintSwitchEventVersion
+  174: 
+  175:         EventId =
+  176:             $EventId
+  177: 
+  178:         SequenceNumber =
+  179:             $SequenceNumber
+  180: 
+  181:         EventType =
+  182:             $EventType
+  183: 
+  184:         Timestamp =
+  185:             (Get-Date).ToString("o")
+  186: 
+  187:         Source =
+  188:             $Source
+  189: 
+  190:         PrinterName =
+  191:             $PrinterName
+  192: 
+  193:         CorrelationId =
+  194:             $CorrelationId
+  195: 
+  196:         Severity =
+  197:             $Severity
+  198: 
+  199:         Data =
+  200:             $Data
+  201:     }
+  202: }
+  203: 
+  204: function Write-PrintSwitchEvent {
+  205: 
+  370: 
+  371:     [CmdletBinding()]
+  372:     param (
+  373:         [Parameter(Mandatory)]
+  374:         [object]$Event
+  375:     )
+  376: 
+  377:     $RequiredFields =
+  378:         @(
+  379:             "Component",
+  380:             "EventVersion",
+  381:             "EventId",
+  382:             "SequenceNumber",
+  383:             "EventType",
+  384:             "Timestamp",
+  385:             "Source",
+  386:             "PrinterName",
+  387:             "CorrelationId",
+  388:             "Severity",
+  389:             "Data"
+  390:         )
+  391: 
+  392:     $Missing =
+  393:         @()
+  394: 
+  395:     foreach ($Field in $RequiredFields) {
+  396: 
+  397:         if (
+  398:             -not (
+  399:                 $Event.PSObject.Properties.Name -contains $Field
+  400:             )
+  401:         ) {
+  402: 
+  403:             $Missing +=
+  404:                 $Field
+  405:         }
+  406:     }
+  407: 
+  408:     $Valid =
+  409:         (
+  410:             $Missing.Count -eq 0 -and
+  411:             $Event.Component -eq "PrintSwitchEvent" -and
+  412:             [int]$Event.EventVersion -eq 1
+  413:         )
+  414: 
+  415:     return [PSCustomObject]@{
+  416: 
+  417:         Component =
+  418:             "EventContractValidator"
+  419: 
+  420:         Valid =
+  421:             $Valid
+  422: 
+  423:         MissingFields =
+  424:             $Missing
+  425: 
+  426:         EventType =
+  427:             if (
+  428:                 $Event.PSObject.Properties.Name -contains "EventType"
+  429:             ) {
+  430:                 $Event.EventType
+  431:             }
+  432:             else {
+  433:                 $null
+  434:             }
+  435: 
+  436:         EventId =
+  437:             if (
+  438:                 $Event.PSObject.Properties.Name -contains "EventId"
+  439:             ) {
+  440:                 $Event.EventId
+  441:             }
+  442:             else {
+  443:                 $null
+  444:             }
+  445:     }
+  446: }
+
+===== 3. QUEUEWATCHER DECISION EVENT =====
+  650:         Out-Null
+  651: 
+  652:     continue
+  653: }
+  654: 
+  655: Write-Host ""
+  656: Write-Host "Resultado del orquestador:"
+  657: Write-Host "FinalClassification : $($OrchestratorResult.FinalClassification)"
+  658: Write-Host "SwitchDecision      : $($OrchestratorResult.SwitchDecision)"
+  659: Write-Host "SwitchAuthorized    : $($OrchestratorResult.SwitchAuthorized)"
+  660: Write-Host "SwitchExecuted      : $($OrchestratorResult.SwitchExecuted)"
+  661: 
+  662: # ============================================================
+  663: # APPLICATION EVENTS - ORCHESTRATOR RESULT
+  664: # ============================================================
+  665: 
+  666: if ($EventWriterEnabled) {
+  667: 
+  668:     try {
+  669: 
+  670:         $GetOrchestratorValue = {
+  671: 
+  672:             param (
+  673:                 [string]$Name
+  674:             )
+  675: 
+  676:             if (
+  677:                 $null -ne $OrchestratorResult -and
+  678:                 $OrchestratorResult.PSObject.Properties.Name -contains $Name
+  679:             ) {
+  680: 
+  681:                 return $OrchestratorResult.$Name
+  682:             }
+  683: 
+  684:             return $null
+  685:         }
+  686: 
+  687:         # ----------------------------------------------------
+  688:         # DecisionProduced
+  689:         # ----------------------------------------------------
+  690: 
+  691:         $EventSequence++
+  692: 
+  693:         $DecisionEvent =
+  694:             New-PrintSwitchEvent `
+  695:                 -EventType "DecisionProduced" `
+  696:                 -Source "PrintRecoveryOrchestrator" `
+  697:                 -PrinterName $PrinterName `
+  698:                 -CorrelationId $CorrelationId `
+  699:                 -SequenceNumber $EventSequence `
+  700:                 -Severity "INFO" `
+  701:                 -Data (
+  702:                     [PSCustomObject]@{
+  703: 
+  704:                         JobId =
+  705:                             $Event.JobId
+  706: 
+  707:                         PolicyDecision =
+  708:                             & $GetOrchestratorValue "PolicyDecision"
+  709: 
+  710:                         RouteClassification =
+  711:                             & $GetOrchestratorValue "InitialRouteClassification"
+  712: 
+  713:                         WiFiClassification =
+  714:                             & $GetOrchestratorValue "WiFiClassification"
+  715: 
+  716:                         SwitchDecision =
+  717:                             & $GetOrchestratorValue "SwitchDecision"
+  718: 
+  719:                         SwitchAuthorized =
+  720:                             & $GetOrchestratorValue "SwitchAuthorized"
+  721: 
+  722:                         ShouldExecuteSwitch =
+  723:                             & $GetOrchestratorValue "ShouldExecuteSwitch"
+  724: 
+  725:                         PreserveEthernet =
+  726:                             & $GetOrchestratorValue "PreserveEthernet"
+  727: 
+  728:                         CurrentSSID =
+  729:                             & $GetOrchestratorValue "CurrentSSID"
+  730: 
+  731:                         TargetSSID =
+  732:                             & $GetOrchestratorValue "TargetSSID"
+  733:                     }
+  734:                 )
+  735: 
+  736:         Write-PrintSwitchEvent `
+  737:             -Event $DecisionEvent `
+  738:             -Path $EventPath |
+  739:             Out-Null
+  740: 
+  741:         # ----------------------------------------------------
+  742:         # RecoveryCompleted
+
+===== 4. QUEUEWATCHER RECOVERY EVENT =====
+  742:         # RecoveryCompleted
+  743:         # ----------------------------------------------------
+  744: 
+  745:         $EventSequence++
+  746: 
+  747:         $RecoveryEvent =
+  748:             New-PrintSwitchEvent `
+  749:                 -EventType "RecoveryCompleted" `
+  750:                 -Source "PrintRecoveryOrchestrator" `
+  751:                 -PrinterName $PrinterName `
+  752:                 -CorrelationId $CorrelationId `
+  753:                 -SequenceNumber $EventSequence `
+  754:                 -Severity "INFO" `
+  755:                 -Data (
+  756:                     [PSCustomObject]@{
+  757: 
+  758:                         JobId =
+  759:                             $Event.JobId
+  760: 
+  761:                         FinalClassification =
+  762:                             & $GetOrchestratorValue "FinalClassification"
+  763: 
+  764:                         SwitchDecision =
+  765:                             & $GetOrchestratorValue "SwitchDecision"
+  766: 
+  767:                         SwitchAuthorized =
+  768:                             & $GetOrchestratorValue "SwitchAuthorized"
+  769: 
+  770:                         SwitchExecuted =
+  771:                             & $GetOrchestratorValue "SwitchExecuted"
+  772: 
+  773:                         RecoverySucceeded =
+  774:                             & $GetOrchestratorValue "RecoverySucceeded"
+  775: 
+  776:                         PreserveEthernet =
+  777:                             & $GetOrchestratorValue "PreserveEthernet"
+  778: 
+  779:                         TargetSSID =
+  780:                             & $GetOrchestratorValue "TargetSSID"
+  781: 
+  782:                         ConnectivityAfter =
+  783:                             & $GetOrchestratorValue "ConnectivityAfter"
+  784: 
+  785:                         RouteAfter =
+  786:                             & $GetOrchestratorValue "RouteAfter"
+  787: 
+  788:                         RecoveryValidationClassification =
+  789:                             & $GetOrchestratorValue "RecoveryValidationClassification"
+  790: 
+  791:                         RecoveryValidationConfirmed =
+  792:                             & $GetOrchestratorValue "RecoveryValidationConfirmed"
+  793: 
+  794:                         CompletedAt =
+  795:                             Get-Date
+  796:                     }
+  797:                 )
+  798: 
+  799:         Write-PrintSwitchEvent `
+  800:             -Event $RecoveryEvent `
+  801:             -Path $EventPath |
+  802:             Out-Null
+  803:     }
+  804:     catch {
+  805: 
+  806:         Write-PrintSwitchLog `
+  807:             -Component "QueueWatcher" `
+  808:             -Event "APPLICATION_EVENT_WRITE_FAILED" `
+  809:             -Level "WARNING" `
+  810:             -Data @{
+  811:                 Printer =
+  812:                     $PrinterName
+  813: 
+  814:                 JobId =
+  815:                     $Event.JobId
+  816: 
+  817:                 Stage =
+  818:                     "ORCHESTRATOR_RESULT"
+  819: 
+  820:                 Message =
+  821:                     $_.Exception.Message
+  822:             } |
+  823:             Out-Null
+  824:     }
+  825: }
+
+===== 5. QUEUEWATCHER PRINTJOB EVENT =====
+  470:             $KnownJobs[$JobKey] = $true
+  471: 
+  472:             # =================================================
+  473:             # NUEVO TRABAJO
+  474:             # =================================================
+  475: 
+  476:             $Event = [PSCustomObject]@{
+  477: 
+  478:                 EventType =
+  479:                     "PrintJobDetected"
+  480: 
+  481:                 Timestamp =
+  482:                     Get-Date
+  483: 
+  484:                 PrinterName =
+  485:                     $PrinterName
+  486: 
+  487:                 JobId =
+  488:                     $Job.JobId
+  489: 
+  490:                 Document =
+  491:                     $Job.Document
+  492: 
+  493:                 Owner =
+  494:                     $Job.Owner
+  495: 
+  496:                 Status =
+  497:                     $Job.Status
+  498: 
+  499:                 JobStatus =
+  500:                     $Job.JobStatus
+  501: 
+  502:                 TotalPages =
+  503:                     $Job.TotalPages
+  504: 
+  505:                 PagesPrinted =
+  506:                     $Job.PagesPrinted
+  507: 
+  508:                 SizeBytes =
+  509:                     $Job.Size
+  510:             }
+  511: 
+  512:             if ($EventWriterEnabled) {
+  513: 
+  514:                 $CorrelationId =
+  515:                     [guid]::NewGuid().ToString()
+  516: 
+  517:                 $EventSequence++
+  518: 
+  519:                 $PrintJobEvent =
+  520:                     New-PrintSwitchEvent `
+  521:                         -EventType "PrintJobDetected" `
+  522:                         -Source "QueueWatcher" `
+  523:                         -PrinterName $PrinterName `
+  524:                         -CorrelationId $CorrelationId `
+  525:                         -SequenceNumber $EventSequence `
+  526:                         -Severity "INFO" `
+  527:                         -Data (
+  528:                             [PSCustomObject]@{
+  529: 
+  530:                                 JobId =
+  531:                                     $Event.JobId
+  532: 
+  533:                                 DocumentName =
+  534:                                     $Event.Document
+  535: 
+  536:                                 Owner =
+  537:                                     $Event.Owner
+  538: 
+  539:                                 JobStatus =
+  540:                                     $Event.JobStatus
+  541: 
+  542:                                 QueueName =
+  543:                                     $Event.PrinterName
+  544: 
+  545:                                 SubmittedTime =
+  546:                                     $null
+  547:                             }
+  548:                         )
+  549: 
+  550:                 try {
+  551: 
+  552:                     Write-PrintSwitchEvent `
+  553:                         -Event $PrintJobEvent `
+  554:                         -Path $EventPath |
+  555:                         Out-Null
+  556:                 }
+  557:                 catch {
+  558: 
+  559:                     Write-PrintSwitchLog `
+  560:                         -Component "QueueWatcher" `
+  561:                         -Event "APPLICATION_EVENT_WRITE_FAILED" `
+  562:                         -Level "WARNING" `
+  563:                         -Data @{
+  564:                             Printer = $PrinterName
+  565:                             JobId   = $Event.JobId
+  566:                             Message = $_.Exception.Message
+  567:                         } |
+  568:                         Out-Null
+  569:                 }
+  570:             }
+
+===== 6. CONTROLLER STATE WRITERS =====
+
+--- alrededor de linea 607 ---
+  589:                 -Classification "QUEUE_NOT_FOUND"
+  590:         }
+  591: 
+  592:         if ($Matches.Count -gt 1) {
+  593: 
+  594:             return New-PrintSwitchControllerResult `
+  595:                 -Operation "GetQueueContext" `
+  596:                 -Success $false `
+  597:                 -Classification "QUEUE_AMBIGUOUS" `
+  598:                 -Data $Matches
+  599:         }
+  600: 
+  601:         $QueueContext =
+  602:             $Matches[0]
+  603: 
+  604:         $script:ControllerState.SelectedPrinter =
+  605:             $PrinterName
+  606: 
+  607:         $script:ControllerState.CurrentQueueContext =
+  608:             $QueueContext
+  609: 
+  610:         $script:ControllerState.LastUpdatedAt =
+  611:             Get-Date
+  612: 
+  613:         Clear-PrintSwitchControllerError
+  614: 
+  615:         return New-PrintSwitchControllerResult `
+  616:             -Operation "GetQueueContext" `
+  617:             -Success $true `
+  618:             -Classification "QUEUE_FOUND" `
+  619:             -Data $QueueContext
+  620:     }
+  621:     catch {
+  622: 
+  623:         $ControllerError =
+  624:             New-PrintSwitchControllerError `
+  625:                 -Code "QUEUE_CONTEXT_FAILED" `
+  626:                 -Message $_.Exception.Message `
+  627:                 -SourceComponent "ApplicationController" `
+  628:                 -ExceptionType $_.Exception.GetType().FullName
+  629: 
+  630:         Set-PrintSwitchControllerError `
+  631:             -ErrorObject $ControllerError
+  632: 
+
+--- alrededor de linea 670 ---
+  652: 
+  653:     try {
+  654: 
+  655:         $Endpoint =
+  656:             Resolve-PrintSwitchEndpoint `
+  657:                 -PrinterName $PrinterName
+  658: 
+  659:         if ($null -eq $Endpoint) {
+  660: 
+  661:             return New-PrintSwitchControllerResult `
+  662:                 -Operation "GetEndpoint" `
+  663:                 -Success $false `
+  664:                 -Classification "ENDPOINT_UNKNOWN"
+  665:         }
+  666: 
+  667:         $script:ControllerState.SelectedPrinter =
+  668:             $PrinterName
+  669: 
+  670:         $script:ControllerState.CurrentEndpoint =
+  671:             $Endpoint
+  672: 
+  673:         $script:ControllerState.LastUpdatedAt =
+  674:             Get-Date
+  675: 
+  676:         Clear-PrintSwitchControllerError
+  677: 
+  678:         return New-PrintSwitchControllerResult `
+  679:             -Operation "GetEndpoint" `
+  680:             -Success $true `
+  681:             -Classification "ENDPOINT_RESOLVED" `
+  682:             -Data $Endpoint
+  683:     }
+  684:     catch {
+  685: 
+  686:         $ControllerError =
+  687:             New-PrintSwitchControllerError `
+  688:                 -Code "ENDPOINT_RESOLUTION_FAILED" `
+  689:                 -Message $_.Exception.Message `
+  690:                 -SourceComponent "PrinterEndpointResolver" `
+  691:                 -ExceptionType $_.Exception.GetType().FullName
+  692: 
+  693:         Set-PrintSwitchControllerError `
+  694:             -ErrorObject $ControllerError
+  695: 
+
+--- alrededor de linea 746 ---
+  728:                 -Success $false `
+  729:                 -Classification "ENDPOINT_NOT_AVAILABLE" `
+  730:                 -ErrorObject $EndpointResult.Error
+  731:         }
+  732: 
+  733:         $Reachability =
+  734:             Test-PrintSwitchEndpointReachability `
+  735:                 -Endpoint $EndpointResult.Data `
+  736:                 -TimeoutMs $TimeoutMs
+  737: 
+  738:         if ($null -eq $Reachability) {
+  739: 
+  740:             return New-PrintSwitchControllerResult `
+  741:                 -Operation "GetReachability" `
+  742:                 -Success $false `
+  743:                 -Classification "REACHABILITY_UNKNOWN"
+  744:         }
+  745: 
+  746:         $script:ControllerState.CurrentReachability =
+  747:             $Reachability
+  748: 
+  749:         $script:ControllerState.LastUpdatedAt =
+  750:             Get-Date
+  751: 
+  752:         Clear-PrintSwitchControllerError
+  753: 
+  754:         return New-PrintSwitchControllerResult `
+  755:             -Operation "GetReachability" `
+  756:             -Success $true `
+  757:             -Classification "REACHABILITY_AVAILABLE" `
+  758:             -Data $Reachability
+  759:     }
+  760:     catch {
+  761: 
+  762:         $ControllerError =
+  763:             New-PrintSwitchControllerError `
+  764:                 -Code "REACHABILITY_FAILED" `
+  765:                 -Message $_.Exception.Message `
+  766:                 -SourceComponent "PrinterEndpointReachability" `
+  767:                 -ExceptionType $_.Exception.GetType().FullName
+  768: 
+  769:         Set-PrintSwitchControllerError `
+  770:             -ErrorObject $ControllerError
+  771: 
+
+--- alrededor de linea 836 ---
+  818:     $script:ControllerState.LastUpdatedAt =
+  819:         Get-Date
+  820: 
+  821:     return New-PrintSwitchControllerResult `
+  822:         -Operation "DisableRecovery" `
+  823:         -Success $true `
+  824:         -Classification "RECOVERY_DISABLED" `
+  825:         -Data (
+  826:             [PSCustomObject]@{
+  827:                 RecoveryEnabled = $false
+  828:             }
+  829:         )
+  830: }
+  831: 
+  832: # ============================================================
+  833: # 13. LAST DECISION
+  834: # ============================================================
+  835: 
+  836: function Get-PrintSwitchLastDecision {
+  837: 
+  838:     [CmdletBinding()]
+  839:     param ()
+  840: 
+  841:     return New-PrintSwitchControllerResult `
+  842:         -Operation "GetLastDecision" `
+  843:         -Success $true `
+  844:         -Classification $(
+  845:             if ($null -eq $script:ControllerState.LastDecision) {
+  846:                 "NO_DECISION_AVAILABLE"
+  847:             }
+  848:             else {
+  849:                 "DECISION_AVAILABLE"
+  850:             }
+  851:         ) `
+  852:         -Data $script:ControllerState.LastDecision
+  853: }
+  854: 
+  855: # ============================================================
+  856: # 14. LAST RECOVERY
+  857: # ============================================================
+  858: 
+  859: function Get-PrintSwitchLastRecovery {
+  860: 
+  861:     [CmdletBinding()]
+
+--- alrededor de linea 859 ---
+  841:     return New-PrintSwitchControllerResult `
+  842:         -Operation "GetLastDecision" `
+  843:         -Success $true `
+  844:         -Classification $(
+  845:             if ($null -eq $script:ControllerState.LastDecision) {
+  846:                 "NO_DECISION_AVAILABLE"
+  847:             }
+  848:             else {
+  849:                 "DECISION_AVAILABLE"
+  850:             }
+  851:         ) `
+  852:         -Data $script:ControllerState.LastDecision
+  853: }
+  854: 
+  855: # ============================================================
+  856: # 14. LAST RECOVERY
+  857: # ============================================================
+  858: 
+  859: function Get-PrintSwitchLastRecovery {
+  860: 
+  861:     [CmdletBinding()]
+  862:     param ()
+  863: 
+  864:     return New-PrintSwitchControllerResult `
+  865:         -Operation "GetLastRecovery" `
+  866:         -Success $true `
+  867:         -Classification $(
+  868:             if ($null -eq $script:ControllerState.LastRecovery) {
+  869:                 "NO_RECOVERY_AVAILABLE"
+  870:             }
+  871:             else {
+  872:                 "RECOVERY_AVAILABLE"
+  873:             }
+  874:         ) `
+  875:         -Data $script:ControllerState.LastRecovery
+  876: }
+  877: 
+  878: # ============================================================
+  879: # 15. LAST ERROR
+  880: # ============================================================
+  881: 
+  882: function Get-PrintSwitchLastError {
+  883: 
+  884:     [CmdletBinding()]
+
+===== 7. PARSER =====
+PASS - todos los PS1 parsean
+
+===== 8. GIT =====
+ba4ffc7 P7 A5.3.5 A1: controller owns monitoring EventPath
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-R1-EventContract-20260908-194700.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/runtime-test/
+
+============================================================
+FIN P7-A5.3.5-A2-R1
+============================================================

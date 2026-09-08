@@ -1,0 +1,421 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-A5.3.5-A2-C1-R1 - AUDITORIA FINAL ROBUSTA
+Fecha: 2026-09-08 20:50:11
+============================================================
+
+===== 1. HEAD =====
+ba4ffc7 P7 A5.3.5 A1: controller owns monitoring EventPath
+
+===== 2. STATUS =====
+ M src/ApplicationController.ps1
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-R1-PreCommit-20260908-205011.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-R1-EventContract-20260908-194700.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-A2-T2-GetStatusAutoSync-20260908-204025.txt
+?? docs/evidence/P7-A5.3.5-A2-T3A-E2EReal-20260908-204319.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/runtime-test/
+
+===== 3. VERSION =====
+
+LineNumber Line                                 
+---------- ----                                 
+        27 $script:ControllerVersion = "0.5"    
+       312             $script:ControllerVersion
+      1582             $script:ControllerVersion
+
+
+
+PASS - ControllerVersion 0.5
+
+===== 4. PARSER GLOBAL =====
+PASS - todos los PS1 parsean
+
+===== 5. ESTRUCTURA A2 =====
+PASS - EventWriterPath
+
+LineNumber Line                            
+---------- ----                            
+        64 $script:EventWriterPath =       
+        83         $script:EventWriterPath,
+
+
+
+PASS - ProcessedMonitoringEventIds
+
+LineNumber Line                                                                        
+---------- ----                                                                        
+       128         ProcessedMonitoringEventIds =                                       
+       233             $script:ControllerState.ProcessedMonitoringEventIds.ContainsKey(
+       262         $script:ControllerState.ProcessedMonitoringEventIds[$EventId] =     
+      1206         $script:ControllerState.ProcessedMonitoringEventIds =               
+
+
+
+PASS - function Sync-PrintSwitchMonitoringEvents
+
+LineNumber Line                                       
+---------- ----                                       
+       170 function Sync-PrintSwitchMonitoringEvents {
+
+
+
+PASS - LastPrintJob
+
+LineNumber Line                                                    
+---------- ----                                                    
+       137         LastPrintJob =                                  
+       245                 $script:ControllerState.LastPrintJob =  
+       563                 LastPrintJob =                          
+       564                     $script:ControllerState.LastPrintJob
+      1209         $script:ControllerState.LastPrintJob =          
+
+
+
+PASS - "DecisionProduced"
+
+LineNumber Line                            
+---------- ----                            
+       249             "DecisionProduced" {
+
+
+
+PASS - "RecoveryCompleted"
+
+LineNumber Line                             
+---------- ----                             
+       255             "RecoveryCompleted" {
+
+
+
+PASS - Reset monitoring event consumption for new session
+
+LineNumber Line                                                         
+---------- ----                                                         
+      1205         # Reset monitoring event consumption for new session.
+
+
+
+
+===== 6. GETSTATUS HOOK =====
+PASS - GetStatus invoca Sync
+PASS - GetStatus expone LastPrintJob
+
+===== 7. UTF8 / BOM =====
+BOM = False
+PASS - sin BOM
+
+===== 8. DIFF STAT =====
+warning: in the working copy of 'src/ApplicationController.ps1', LF will be replaced by CRLF the next time Git touches it
+ src/ApplicationController.ps1 | 151 +++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 150 insertions(+), 1 deletion(-)
+
+===== 9. DIFF CONTROLLER =====
+warning: in the working copy of 'src/ApplicationController.ps1', LF will be replaced by CRLF the next time Git touches it
+diff --git a/src/ApplicationController.ps1 b/src/ApplicationController.ps1
+index 05e0b5f..eb777c1 100644
+--- a/src/ApplicationController.ps1
++++ b/src/ApplicationController.ps1
+@@ -24,7 +24,7 @@ Set-StrictMode -Version Latest
+ # - SIN cambio Wi-Fi
+ # ============================================================
+ 
+-$script:ControllerVersion = "0.3"
++$script:ControllerVersion = "0.5"
+ 
+ $script:RootPath =
+     Split-Path `
+@@ -61,6 +61,11 @@ $script:QueueWatcherPath =
+         $PSScriptRoot `
+         "QueueWatcher.ps1"
+ 
++$script:EventWriterPath =
++    Join-Path `
++        $PSScriptRoot `
++        "EventWriter.ps1"
++
+ $script:LogsPath =
+     Join-Path `
+         $script:RootPath `
+@@ -75,6 +80,7 @@ foreach (
+         $script:PrinterEndpointResolverPath,
+         $script:PrinterEndpointReachabilityPath,
+         $script:PrinterServiceProbePath,
++        $script:EventWriterPath,
+         $script:LoggerPath
+     )
+ ) {
+@@ -118,12 +124,19 @@ $script:ControllerState =
+         MonitoringEventPath =
+             $null
+ 
++
++        ProcessedMonitoringEventIds =
++            @{}
+         SelectedPrinter =
+             $null
+ 
+         CurrentQueueContext =
+             $null
+ 
++
++        LastPrintJob =
++            $null
++
+         CurrentEndpoint =
+             $null
+ 
+@@ -149,6 +162,122 @@ $script:ControllerState =
+             Get-Date
+     }
+ 
++
++# ============================================================
++# MONITORING EVENT SYNCHRONIZATION
++# ============================================================
++
++function Sync-PrintSwitchMonitoringEvents {
++
++    [CmdletBinding()]
++    param ()
++
++    $EventPath =
++        $script:ControllerState.MonitoringEventPath
++
++    if ([string]::IsNullOrWhiteSpace($EventPath)) {
++
++        return [PSCustomObject]@{
++            EventsRead      = 0
++            EventsProcessed = 0
++            EventsSkipped   = 0
++            ReadErrors      = 0
++        }
++    }
++
++    $Events =
++        @(
++            Read-PrintSwitchEvents `
++                -Path $EventPath
++        )
++
++    $Processed  = 0
++    $Skipped    = 0
++    $ReadErrors = 0
++
++    foreach ($Event in $Events) {
++
++        if ($null -eq $Event) {
++
++            $ReadErrors++
++            continue
++        }
++
++        if (
++            $Event.PSObject.Properties.Name -contains "Component" -and
++            $Event.Component -eq "PrintSwitchEventReadError"
++        ) {
++
++            $ReadErrors++
++            continue
++        }
++
++        $Contract =
++            Test-PrintSwitchEventContract `
++                -Event $Event
++
++        if (-not $Contract.Valid) {
++            $Skipped++
++            continue
++        }
++
++        $EventId =
++            [string]$Event.EventId
++
++        if ([string]::IsNullOrWhiteSpace($EventId)) {
++            $Skipped++
++            continue
++        }
++
++        if (
++            $script:ControllerState.ProcessedMonitoringEventIds.ContainsKey(
++                $EventId
++            )
++        ) {
++            $Skipped++
++            continue
++        }
++
++        switch ([string]$Event.EventType) {
++
++            "PrintJobDetected" {
++
++                $script:ControllerState.LastPrintJob =
++                    $Event.Data
++            }
++
++            "DecisionProduced" {
++
++                $script:ControllerState.LastDecision =
++                    $Event.Data
++            }
++
++            "RecoveryCompleted" {
++
++                $script:ControllerState.LastRecovery =
++                    $Event.Data
++            }
++        }
++
++        $script:ControllerState.ProcessedMonitoringEventIds[$EventId] =
++            $true
++
++        $Processed++
++    }
++
++    if ($Processed -gt 0) {
++
++        $script:ControllerState.LastUpdatedAt =
++            Get-Date
++    }
++
++    return [PSCustomObject]@{
++        EventsRead      = $Events.Count
++        EventsProcessed = $Processed
++        EventsSkipped   = $Skipped
++        ReadErrors      = $ReadErrors
++    }
++}
+ # ============================================================
+ # 3. RESULT CONTRACT
+ # ============================================================
+@@ -323,6 +452,9 @@ function Get-PrintSwitchStatus {
+ 
+     try {
+ 
++
++        $MonitoringSync =
++            Sync-PrintSwitchMonitoringEvents
+         # --------------------------------------------------------
+         # Reconciliar MonitoringState con el PowerShell Job real.
+         # --------------------------------------------------------
+@@ -427,6 +559,10 @@ function Get-PrintSwitchStatus {
+                 CurrentQueueContext =
+                     $script:ControllerState.CurrentQueueContext
+ 
++
++                LastPrintJob =
++                    $script:ControllerState.LastPrintJob
++
+                 CurrentEndpoint =
+                     $script:ControllerState.CurrentEndpoint
+ 
+@@ -1065,6 +1201,19 @@ function Start-PrintSwitchMonitoring {
+         $RecoveryAllowed =
+             [bool]$script:ControllerState.RecoveryEnabled
+ 
++
++        # Reset monitoring event consumption for new session.
++        $script:ControllerState.ProcessedMonitoringEventIds =
++            @{}
++
++        $script:ControllerState.LastPrintJob =
++            $null
++
++        $script:ControllerState.LastDecision =
++            $null
++
++        $script:ControllerState.LastRecovery =
++            $null
+         # --------------------------------------------------------
+         # IMPORTANTE:
+         #
+
+===== 10. EVIDENCIAS A2 =====
+
+Name                                                      Length LastWriteTime    
+----                                                      ------ -------------    
+P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt               2083 8/9/2026 20:48:30
+P7-A5.3.5-A2-C1-R1-PreCommit-20260908-205011.txt            4872 8/9/2026 20:50:11
+P7-A5.3.5-A2-I1-Header.txt                                  3553 8/9/2026 20:06:04
+P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt        8808 8/9/2026 20:10:47
+P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt             8526 8/9/2026 20:12:33
+P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt        11432 8/9/2026 20:37:15
+P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt        11432 8/9/2026 20:40:21
+P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt    43332 8/9/2026 19:05:38
+P7-A5.3.5-A2-R1-EventContract-20260908-194700.txt          26431 8/9/2026 19:47:00
+P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt      4720 8/9/2026 20:15:20
+P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt                 1550 8/9/2026 20:16:31
+P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt   3757 8/9/2026 20:18:08
+P7-A5.3.5-A2-T2-GetStatusAutoSync-20260908-204025.txt       2166 8/9/2026 20:40:26
+P7-A5.3.5-A2-T3A-E2EReal-20260908-204319.txt                6117 8/9/2026 20:43:30
+
+
+
+
+===== 11. RUNTIME IGNORADO =====
+.gitignore:22:runtime/	runtime/events/*
+
+===== 12. BACKUPS IGNORADOS =====
+.gitignore:23:*.bak	src/*.bak
+
+===== 13. STATUS FINAL =====
+ M src/ApplicationController.ps1
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-R1-PreCommit-20260908-205011.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-R1-EventContract-20260908-194700.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-A2-T2-GetStatusAutoSync-20260908-204025.txt
+?? docs/evidence/P7-A5.3.5-A2-T3A-E2EReal-20260908-204319.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/runtime-test/
+
+===== 14. RESULTADO =====
+RESULTADO: PASS
+
+============================================================
+FIN P7-A5.3.5-A2-C1-R1
+============================================================

@@ -1,0 +1,216 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-A5.3.5-A2-T3A - E2E REAL NO DESTRUCTIVO
+Fecha: 2026-09-08 20:43:19
+============================================================
+
+===== 1. CARGAR CONTROLLER =====
+ControllerVersion: 0.5
+PASS - Controller 0.5
+
+===== 2. PRECONDICIONES RED =====
+
+    SSID                   : Claro640
+
+Ethernet adapters UP: 0
+
+===== 3. SNAPSHOT COLA PREVIO =====
+Jobs antes: 1
+
+ID DocumentName               UserName SubmittedTime                     JobStatus Size
+-- ------------               -------- -------------                     --------- ----
+13 *Sin título: Bloc de notas Suarez   8/9/2026 18:46:48 Error, Printing, Retained  136
+
+
+
+PASS - trabajo preexistente detectado
+
+===== 4. WORKERS PREVIOS =====
+Workers previos: 0
+PASS - cero workers previos
+
+===== 5. FORZAR RECOVERY DISABLED =====
+
+
+Component         : ApplicationController
+ContractVersion   : 1
+ControllerVersion : 0.5
+Operation         : DisableRecovery
+Success           : True
+Classification    : RECOVERY_DISABLED
+Timestamp         : 8/9/2026 20:43:20
+Data              : @{RecoveryEnabled=False}
+Error             : 
+
+
+
+
+PASS - RecoveryEnabled=False
+
+===== 6. START MONITORING =====
+
+
+Component         : ApplicationController
+ContractVersion   : 1
+ControllerVersion : 0.5
+Operation         : StartMonitoring
+Success           : True
+Classification    : MONITORING_STARTED
+Timestamp         : 8/9/2026 20:43:23
+Data              : @{PrinterName=L365 Series(Red); JobId=143; JobName=PrintSwitch-Monitor-20260908204321-a4f26fce; JobState=Running; 
+                    MonitoringState=WATCHING; RecoveryEnabled=False; StartedAt=8/9/2026 20:43:23}
+Error             : 
+
+
+
+
+MonitoringEventPath: C:\Users\Suarez\Documents\PrintSwitch-Windows\runtime\events\PrintSwitch-Events-20260908-204321-de37e2ab.jsonl
+MonitoringJobId    : 143
+
+===== 7. ESPERA WORKER REAL =====
+
+ Id Name                                        State   HasMoreData
+ -- ----                                        -----   -----------
+143 PrintSwitch-Monitor-20260908204321-a4f26fce Running        True
+
+
+
+PASS - worker real Running
+
+===== 8. EVENT FILE REAL =====
+Eventos antes de GetStatus: 1
+EventType=PrintJobDetected EventId=8f36a557-88b9-4309-94d3-b588589ddb08 CorrelationId=d0423e4d-902c-40ce-ac28-e4cf4f28a376
+PASS - eventos reales generados
+
+===== 9. STATE ANTES DE GETSTATUS =====
+LastPrintJob = 
+LastDecision = 
+LastRecovery = 
+ProcessedIds = 0
+
+===== 10. GETSTATUS REAL =====
+
+
+Component         : ApplicationController
+ContractVersion   : 1
+ControllerVersion : 0.5
+Operation         : GetStatus
+Success           : True
+Classification    : STATUS_AVAILABLE
+Timestamp         : 8/9/2026 20:43:29
+Data              : @{ApplicationState=RUNNING; MonitoringState=WATCHING; MonitoringJobId=143; MonitoringStartedAt=8/9/2026 20:43:23; 
+                    MonitoringStoppedAt=; RecoveryEnabled=False; SelectedPrinter=L365 Series(Red); CurrentQueueContext=; LastPrintJob=; 
+                    CurrentEndpoint=; CurrentReachability=; CurrentSSID=Claro640; LastDecision=; LastRecovery=; LastError=; StartedAt=8/9/2026 20:43:19; 
+                    LastUpdatedAt=8/9/2026 20:43:29}
+Error             : 
+
+
+
+
+
+LastPrintJob:
+
+
+JobId         : 13
+DocumentName  : *Sin título: Bloc de notas
+Owner         : Suarez
+JobStatus     : Error | Imprimiendo
+QueueName     : L365 Series(Red)
+SubmittedTime : 
+
+
+
+
+LastDecision:
+
+LastRecovery:
+
+ProcessedIds despues GetStatus: 1
+PASS - GetStatus refleja LastPrintJob real
+INFO - DecisionProduced aun no disponible
+INFO - RecoveryCompleted aun no disponible
+
+===== 11. OUTPUT DEL WORKER =====
+
+
+===== 12. SNAPSHOT COLA DURANTE =====
+Jobs durante: 1
+
+ID DocumentName               UserName SubmittedTime                     JobStatus Size
+-- ------------               -------- -------------                     --------- ----
+13 *Sin título: Bloc de notas Suarez   8/9/2026 18:46:48 Error, Printing, Retained  136
+
+
+
+
+===== 13. SSID DURANTE =====
+    SSID                   : Claro640
+
+===== 14. STOP MONITORING =====
+
+
+Component         : ApplicationController
+ContractVersion   : 1
+ControllerVersion : 0.5
+Operation         : StopMonitoring
+Success           : True
+Classification    : MONITORING_STOPPED
+Timestamp         : 8/9/2026 20:43:30
+Data              : @{PrinterName=L365 Series(Red); PreviousJobId=143; PreviousJobState=Running; FinalJobState=Stopped; MonitoringState=STOPPED; 
+                    StoppedAt=8/9/2026 20:43:30}
+Error             : 
+
+
+
+
+PASS - monitoring detenido
+
+===== 15. NO INTERFERENCIA COLA =====
+Jobs despues: 1
+
+ID DocumentName               UserName SubmittedTime                     JobStatus Size
+-- ------------               -------- -------------                     --------- ----
+13 *Sin título: Bloc de notas Suarez   8/9/2026 18:46:48 Error, Printing, Retained  136
+
+
+
+PASS - cola no alterada por la prueba
+
+===== 16. NO INTERFERENCIA WIFI =====
+    SSID                   : Claro640
+PASS - Wi-Fi permanece en Claro640
+
+===== 17. WORKERS RESIDUALES =====
+PASS - cero workers residuales
+
+===== 18. EVENTOS FINALES =====
+Eventos finales: 1
+
+----------------------------------------
+
+
+Component      : PrintSwitchEvent
+EventVersion   : 1
+EventId        : 8f36a557-88b9-4309-94d3-b588589ddb08
+SequenceNumber : 1
+EventType      : PrintJobDetected
+Timestamp      : 2026-09-08T20:43:25.7254155-03:00
+Source         : QueueWatcher
+PrinterName    : L365 Series(Red)
+CorrelationId  : d0423e4d-902c-40ce-ac28-e4cf4f28a376
+Severity       : INFO
+Data           : @{JobId=13; DocumentName=*Sin título: Bloc de notas; Owner=Suarez; JobStatus=Error | Imprimiendo; QueueName=L365 Series(Red); 
+                 SubmittedTime=}
+
+
+
+
+
+===== 19. RESULTADO =====
+RESULTADO: PASS
+
+============================================================
+FIN P7-A5.3.5-A2-T3A
+============================================================
+
+

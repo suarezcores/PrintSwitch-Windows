@@ -24,7 +24,7 @@ Set-StrictMode -Version Latest
 # - SIN cambio Wi-Fi
 # ============================================================
 
-$script:ControllerVersion = "0.3"
+$script:ControllerVersion = "0.5"
 
 $script:RootPath =
     Split-Path `
@@ -61,6 +61,11 @@ $script:QueueWatcherPath =
         $PSScriptRoot `
         "QueueWatcher.ps1"
 
+$script:EventWriterPath =
+    Join-Path `
+        $PSScriptRoot `
+        "EventWriter.ps1"
+
 $script:LogsPath =
     Join-Path `
         $script:RootPath `
@@ -75,6 +80,7 @@ foreach (
         $script:PrinterEndpointResolverPath,
         $script:PrinterEndpointReachabilityPath,
         $script:PrinterServiceProbePath,
+        $script:EventWriterPath,
         $script:LoggerPath
     )
 ) {
@@ -118,10 +124,17 @@ $script:ControllerState =
         MonitoringEventPath =
             $null
 
+
+        ProcessedMonitoringEventIds =
+            @{}
         SelectedPrinter =
             $null
 
         CurrentQueueContext =
+            $null
+
+
+        LastPrintJob =
             $null
 
         CurrentEndpoint =
@@ -149,6 +162,122 @@ $script:ControllerState =
             Get-Date
     }
 
+
+# ============================================================
+# MONITORING EVENT SYNCHRONIZATION
+# ============================================================
+
+function Sync-PrintSwitchMonitoringEvents {
+
+    [CmdletBinding()]
+    param ()
+
+    $EventPath =
+        $script:ControllerState.MonitoringEventPath
+
+    if ([string]::IsNullOrWhiteSpace($EventPath)) {
+
+        return [PSCustomObject]@{
+            EventsRead      = 0
+            EventsProcessed = 0
+            EventsSkipped   = 0
+            ReadErrors      = 0
+        }
+    }
+
+    $Events =
+        @(
+            Read-PrintSwitchEvents `
+                -Path $EventPath
+        )
+
+    $Processed  = 0
+    $Skipped    = 0
+    $ReadErrors = 0
+
+    foreach ($Event in $Events) {
+
+        if ($null -eq $Event) {
+
+            $ReadErrors++
+            continue
+        }
+
+        if (
+            $Event.PSObject.Properties.Name -contains "Component" -and
+            $Event.Component -eq "PrintSwitchEventReadError"
+        ) {
+
+            $ReadErrors++
+            continue
+        }
+
+        $Contract =
+            Test-PrintSwitchEventContract `
+                -Event $Event
+
+        if (-not $Contract.Valid) {
+            $Skipped++
+            continue
+        }
+
+        $EventId =
+            [string]$Event.EventId
+
+        if ([string]::IsNullOrWhiteSpace($EventId)) {
+            $Skipped++
+            continue
+        }
+
+        if (
+            $script:ControllerState.ProcessedMonitoringEventIds.ContainsKey(
+                $EventId
+            )
+        ) {
+            $Skipped++
+            continue
+        }
+
+        switch ([string]$Event.EventType) {
+
+            "PrintJobDetected" {
+
+                $script:ControllerState.LastPrintJob =
+                    $Event.Data
+            }
+
+            "DecisionProduced" {
+
+                $script:ControllerState.LastDecision =
+                    $Event.Data
+            }
+
+            "RecoveryCompleted" {
+
+                $script:ControllerState.LastRecovery =
+                    $Event.Data
+            }
+        }
+
+        $script:ControllerState.ProcessedMonitoringEventIds[$EventId] =
+            $true
+
+        $Processed++
+    }
+
+    if ($Processed -gt 0) {
+
+        $script:ControllerState.LastUpdatedAt =
+            Get-Date
+    }
+
+    return [PSCustomObject]@{
+        EventsRead      = $Events.Count
+        EventsProcessed = $Processed
+        EventsSkipped   = $Skipped
+        ReadErrors      = $ReadErrors
+    }
+}
 # ============================================================
 # 3. RESULT CONTRACT
 # ============================================================
@@ -323,6 +452,9 @@ function Get-PrintSwitchStatus {
 
     try {
 
+
+        $MonitoringSync =
+            Sync-PrintSwitchMonitoringEvents
         # --------------------------------------------------------
         # Reconciliar MonitoringState con el PowerShell Job real.
         # --------------------------------------------------------
@@ -426,6 +558,10 @@ function Get-PrintSwitchStatus {
 
                 CurrentQueueContext =
                     $script:ControllerState.CurrentQueueContext
+
+
+                LastPrintJob =
+                    $script:ControllerState.LastPrintJob
 
                 CurrentEndpoint =
                     $script:ControllerState.CurrentEndpoint
@@ -1065,6 +1201,19 @@ function Start-PrintSwitchMonitoring {
         $RecoveryAllowed =
             [bool]$script:ControllerState.RecoveryEnabled
 
+
+        # Reset monitoring event consumption for new session.
+        $script:ControllerState.ProcessedMonitoringEventIds =
+            @{}
+
+        $script:ControllerState.LastPrintJob =
+            $null
+
+        $script:ControllerState.LastDecision =
+            $null
+
+        $script:ControllerState.LastRecovery =
+            $null
         # --------------------------------------------------------
         # IMPORTANTE:
         #

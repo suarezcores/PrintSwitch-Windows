@@ -1,0 +1,91 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-A5.3.5-A2-T2 - GETSTATUS AUTO SYNC
+Fecha: 2026-09-08 20:40:25
+============================================================
+
+===== 1. CARGAR CONTROLLER =====
+Version: 0.5
+PASS - Controller 0.5
+
+===== 2. PREPARAR SESION SINTETICA =====
+EventPath: .\runtime\events\A2-T2-20260908-204025.jsonl
+
+===== 3. CREAR EVENTOS =====
+PASS - 3 eventos escritos
+
+===== 4. ESTADO ANTES DE GETSTATUS =====
+LastPrintJob = 
+LastDecision = 
+LastRecovery = 
+ProcessedIds = 0
+PASS - state previo limpio
+
+===== 5. GETSTATUS UNICO =====
+
+
+Component         : ApplicationController
+ContractVersion   : 1
+ControllerVersion : 0.5
+Operation         : GetStatus
+Success           : True
+Classification    : STATUS_AVAILABLE
+Timestamp         : 8/9/2026 20:40:26
+Data              : @{ApplicationState=RUNNING; MonitoringState=NOT_STARTED; MonitoringJobId=; MonitoringStartedAt=; MonitoringStoppedAt=; 
+                    RecoveryEnabled=False; SelectedPrinter=; CurrentQueueContext=; LastPrintJob=; CurrentEndpoint=; CurrentReachability=; 
+                    CurrentSSID=Claro640; LastDecision=; LastRecovery=; LastError=; StartedAt=8/9/2026 20:40:25; LastUpdatedAt=8/9/2026 20:40:26}
+Error             : 
+
+
+
+
+LastPrintJob:
+
+
+JobId        : 9101
+JobStatus    : Error
+DocumentName : A2-T2-Test
+
+
+
+
+LastDecision:
+
+
+SwitchAuthorized : False
+PolicyDecision   : TEST_POLICY
+SwitchDecision   : NO_SWITCH
+
+
+
+
+LastRecovery:
+
+
+RecoverySucceeded   : False
+FinalClassification : TEST_FINAL
+
+
+
+
+PASS - GetStatus sincronizo los 3 estados
+
+===== 6. IDEMPOTENCIA VIA SEGUNDO GETSTATUS =====
+ProcessedIds antes  : 3
+ProcessedIds despues: 3
+PASS - segundo GetStatus idempotente
+
+===== 7. CURRENTQUEUECONTEXT NO CONTAMINADO =====
+CurrentQueueContext:
+
+PASS - QueueContext separado de LastPrintJob
+
+===== 8. PARSER =====
+PASS - todos los PS1 parsean
+
+===== 9. RESULTADO =====
+RESULTADO: PASS
+
+============================================================
+FIN P7-A5.3.5-A2-T2
+============================================================
