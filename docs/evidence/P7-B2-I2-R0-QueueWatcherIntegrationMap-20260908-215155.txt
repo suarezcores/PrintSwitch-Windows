@@ -1,0 +1,1199 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-I2-R0 - AUDITORIA INTEGRACION QUEUEWATCHER
+Fecha: 2026-09-08 21:51:55
+============================================================
+
+===== 1. VERSION / HEAD =====
+9f3ad8e (HEAD -> main, origin/main) P7 A5.3.5 A2: controller consumes monitoring events
+
+
+LineNumber Line                                                                       
+---------- ----                                                                       
+        16 #   - descubre colas instaladas mediante PrinterDiscovery                  
+        26 # - usa PrinterDiscovery como fuente operacional de colas                  
+        35 $EventWriterPath = Join-Path `                                             
+        37     "EventWriter.ps1"                                                      
+        39 $EventWriterEnabled = `                                                    
+        42 if ($EventWriterEnabled) {                                                 
+        44     if (-not (Test-Path $EventWriterPath)) {                               
+        47         Write-Host "ERROR: EventWriter no encontrado." -ForegroundColor Red
+        48         Write-Host "Ruta esperada: $EventWriterPath"                       
+        55         . $EventWriterPath                                                 
+        60         Write-Host "ERROR cargando EventWriter." -ForegroundColor Red      
+        69 $PrinterDiscoveryPath = Join-Path `                                        
+        71     "PrinterDiscovery.ps1"                                                 
+        76 $KnownJobs = @{}                                                           
+       138 if (-not (Test-Path -LiteralPath $PrinterDiscoveryPath)) {                 
+       142         "ERROR: PrinterDiscovery no encontrado." `                         
+       145     Write-Host "Ruta esperada: $PrinterDiscoveryPath"                      
+       152             Path = $PrinterDiscoveryPath                                   
+       168         & $PrinterDiscoveryPath                                            
+       175         "ERROR ejecutando PrinterDiscovery." `                             
+       196         "ERROR: PrinterDiscovery no encontro colas fisicas." `             
+       374 Write-Host "Fuente de colas      : Windows / PrinterDiscovery"             
+       379 Write-Host "PrinterDiscovery     : $PrinterDiscoveryPath"                  
+       468         if (-not $KnownJobs.ContainsKey($JobKey)) {                        
+       470             $KnownJobs[$JobKey] = $true                                    
+       512             if ($EventWriterEnabled) {                                     
+       666 if ($EventWriterEnabled) {                                                 
+       857     foreach ($KnownKey in @($KnownJobs.Keys)) {                            
+       861             $KnownJobs.Remove($KnownKey)                                   
+
+
+
+
+===== 2. HEADER / DEPENDENCIAS =====
+    1: param (
+    2:     [switch]$EnableRecovery,
+    3: 
+    4:     [string]$PrinterName,
+    5: 
+    6:     [string]$EventPath = $null
+    7: )
+    8: 
+    9: $ErrorActionPreference = "Continue"
+   10: 
+   11: # PrintSwitch - QueueWatcher v0.7
+   12: #
+   13: # Orquestador de observacion de trabajos.
+   14: #
+   15: # Funciones:
+   16: #   - descubre colas instaladas mediante PrinterDiscovery
+   17: #   - selecciona la cola observada mediante QueueContext
+   18: #   - observa trabajos
+   19: #   - solicita diagnostico
+   20: #   - solicita recuperacion de red
+   21: #   - registra eventos importantes mediante Logger
+   22: #
+   23: # v0.7:
+   24: # - elimina la dependencia operacional de config/printers.json
+   25: # - deja de usar ConfigValidator para seleccionar impresoras
+   26: # - usa PrinterDiscovery como fuente operacional de colas
+   27: # - no selecciona arbitrariamente una cola cuando existen varias
+   28: 
+   29: $PollingMilliseconds = 500
+   30: 
+   31: $LoggerPath = Join-Path `
+   32:     $PSScriptRoot `
+   33:     "Logger.ps1"
+   34: 
+   35: $EventWriterPath = Join-Path `
+   36:     $PSScriptRoot `
+   37:     "EventWriter.ps1"
+   38: 
+   39: $EventWriterEnabled = `
+   40:     -not [string]::IsNullOrWhiteSpace($EventPath)
+   41: 
+   42: if ($EventWriterEnabled) {
+   43: 
+   44:     if (-not (Test-Path $EventWriterPath)) {
+   45: 
+   46:         Write-Host ""
+   47:         Write-Host "ERROR: EventWriter no encontrado." -ForegroundColor Red
+   48:         Write-Host "Ruta esperada: $EventWriterPath"
+   49: 
+   50:         return
+   51:     }
+   52: 
+   53:     try {
+   54: 
+   55:         . $EventWriterPath
+   56:     }
+   57:     catch {
+   58: 
+   59:         Write-Host ""
+   60:         Write-Host "ERROR cargando EventWriter." -ForegroundColor Red
+   61:         Write-Host $_.Exception.Message
+   62: 
+   63:         return
+   64:     }
+   65: }
+   66: 
+   67: $EventSequence = 0
+   68: 
+   69: $PrinterDiscoveryPath = Join-Path `
+   70:     $PSScriptRoot `
+   71:     "PrinterDiscovery.ps1"
+   72: 
+   73: $PrintRecoveryOrchestratorPath = Join-Path `
+   74:     $PSScriptRoot `
+   75:     "PrintRecoveryOrchestrator.ps1"
+   76: $KnownJobs = @{}
+   77: 
+   78: # ============================================================
+   79: # 0. CARGAR LOGGER
+   80: # ============================================================
+   81: 
+   82: if (-not (Test-Path $LoggerPath)) {
+   83: 
+   84:     Write-Host ""
+   85:     Write-Host `
+   86:         "ERROR: Logger no encontrado." `
+   87:         -ForegroundColor Red
+   88: 
+   89:     Write-Host "Ruta esperada: $LoggerPath"
+   90: 
+   91:     return
+   92: }
+   93: 
+   94: try {
+   95: 
+   96:     . $LoggerPath
+   97: }
+   98: catch {
+   99: 
+  100:     Write-Host ""
+  101:     Write-Host `
+  102:         "ERROR: no se pudo cargar Logger." `
+  103:         -ForegroundColor Red
+  104: 
+  105:     Write-Host $_.Exception.Message
+  106: 
+  107:     return
+  108: }
+  109: 
+  110: # ============================================================
+  111: # 1. ARRANQUE
+  112: # ============================================================
+  113: 
+  114: Write-Host ""
+  115: Write-Host "PrintSwitch - QueueWatcher v0.7" `
+  116:     -ForegroundColor Cyan
+  117: 
+  118: Write-Host ""
+  119: 
+  120: Write-PrintSwitchLog `
+  121:     -Component "QueueWatcher" `
+  122:     -Event "PRINTSWITCH_STARTED" `
+  123:     -Level "INFO" `
+  124:     -Data @{
+  125:         RecoveryEnabled = [bool]$EnableRecovery
+  126:         RequestedPrinter = $PrinterName
+  127:     } |
+  128:     Out-Null
+  129: 
+  130: # ============================================================
+  131: # 2. VALIDAR PRINTER DISCOVERY
+  132: # ============================================================
+  133: 
+  134: Write-Host "========================================"
+  135: Write-Host "1. PRINTER DISCOVERY"
+  136: Write-Host "========================================"
+  137: 
+  138: if (-not (Test-Path -LiteralPath $PrinterDiscoveryPath)) {
+  139: 
+  140:     Write-Host ""
+  141:     Write-Host `
+  142:         "ERROR: PrinterDiscovery no encontrado." `
+  143:         -ForegroundColor Red
+  144: 
+  145:     Write-Host "Ruta esperada: $PrinterDiscoveryPath"
+  146: 
+  147:     Write-PrintSwitchLog `
+  148:         -Component "QueueWatcher" `
+  149:         -Event "PRINTER_DISCOVERY_NOT_FOUND" `
+  150:         -Level "ERROR" `
+  151:         -Data @{
+  152:             Path = $PrinterDiscoveryPath
+  153:         } |
+  154:         Out-Null
+  155: 
+  156:     return
+  157: }
+  158: 
+  159: # ============================================================
+  160: # 3. EJECUTAR DISCOVERY
+  161: # ============================================================
+  162: 
+  163: $QueueContexts = @()
+  164: 
+  165: try {
+  166: 
+  167:     $QueueContexts = @(
+  168:         & $PrinterDiscoveryPath
+  169:     )
+  170: }
+  171: catch {
+  172: 
+  173:     Write-Host ""
+  174:     Write-Host `
+  175:         "ERROR ejecutando PrinterDiscovery." `
+  176:         -ForegroundColor Red
+  177: 
+  178:     Write-Host $_.Exception.Message
+  179: 
+  180:     Write-PrintSwitchLog `
+
+===== 3. LOCALIZAR OBTENCION DE JOBS =====
+
+  src\QueueWatcher.ps1:72:
+  src\QueueWatcher.ps1:73:$PrintRecoveryOrchestratorPath = Join-Path `
+  src\QueueWatcher.ps1:74:    $PSScriptRoot `
+  src\QueueWatcher.ps1:75:    "PrintRecoveryOrchestrator.ps1"
+> src\QueueWatcher.ps1:76:$KnownJobs = @{}
+  src\QueueWatcher.ps1:77:
+  src\QueueWatcher.ps1:78:# ============================================================
+  src\QueueWatcher.ps1:79:# 0. CARGAR LOGGER
+  src\QueueWatcher.ps1:80:# ============================================================
+  src\QueueWatcher.ps1:81:
+  src\QueueWatcher.ps1:82:if (-not (Test-Path $LoggerPath)) {
+  src\QueueWatcher.ps1:83:
+  src\QueueWatcher.ps1:84:    Write-Host ""
+  src\QueueWatcher.ps1:85:    Write-Host `
+  src\QueueWatcher.ps1:86:        "ERROR: Logger no encontrado." `
+  src\QueueWatcher.ps1:87:        -ForegroundColor Red
+  src\QueueWatcher.ps1:88:
+  src\QueueWatcher.ps1:89:    Write-Host "Ruta esperada: $LoggerPath"
+  src\QueueWatcher.ps1:90:
+  src\QueueWatcher.ps1:397:# ============================================================
+  src\QueueWatcher.ps1:398:# FUNCION: obtener trabajos
+  src\QueueWatcher.ps1:399:# ============================================================
+  src\QueueWatcher.ps1:400:
+> src\QueueWatcher.ps1:401:function Get-PrintJobs {
+  src\QueueWatcher.ps1:402:
+  src\QueueWatcher.ps1:403:    param(
+  src\QueueWatcher.ps1:404:        [string]$TargetPrinter
+  src\QueueWatcher.ps1:405:    )
+  src\QueueWatcher.ps1:406:
+> src\QueueWatcher.ps1:407:    Get-CimInstance Win32_PrintJob `
+  src\QueueWatcher.ps1:408:        -ErrorAction SilentlyContinue |
+  src\QueueWatcher.ps1:409:        Where-Object {
+  src\QueueWatcher.ps1:410:
+  src\QueueWatcher.ps1:411:            $_.Name -like "$TargetPrinter,*" -or
+  src\QueueWatcher.ps1:412:            $_.Name -like "*$TargetPrinter*"
+  src\QueueWatcher.ps1:413:        }
+  src\QueueWatcher.ps1:414:}
+  src\QueueWatcher.ps1:415:
+  src\QueueWatcher.ps1:416:# ============================================================
+  src\QueueWatcher.ps1:417:# FUNCION: ConnectivityAnalyzer
+  src\QueueWatcher.ps1:418:# ============================================================
+  src\QueueWatcher.ps1:419:
+  src\QueueWatcher.ps1:420:
+  src\QueueWatcher.ps1:421:# ============================================================
+  src\QueueWatcher.ps1:455:# ============================================================
+  src\QueueWatcher.ps1:456:
+  src\QueueWatcher.ps1:457:while ($true) {
+  src\QueueWatcher.ps1:458:
+> src\QueueWatcher.ps1:459:    $Jobs = @(
+> src\QueueWatcher.ps1:460:        Get-PrintJobs `
+  src\QueueWatcher.ps1:461:            -TargetPrinter $PrinterName
+  src\QueueWatcher.ps1:462:    )
+  src\QueueWatcher.ps1:463:
+> src\QueueWatcher.ps1:464:    foreach ($Job in $Jobs) {
+  src\QueueWatcher.ps1:465:
+  src\QueueWatcher.ps1:466:        $JobKey = "$($Job.JobId)-$($Job.Name)"
+  src\QueueWatcher.ps1:467:
+> src\QueueWatcher.ps1:468:        if (-not $KnownJobs.ContainsKey($JobKey)) {
+  src\QueueWatcher.ps1:469:
+> src\QueueWatcher.ps1:470:            $KnownJobs[$JobKey] = $true
+  src\QueueWatcher.ps1:471:
+  src\QueueWatcher.ps1:472:            # =================================================
+  src\QueueWatcher.ps1:473:            # NUEVO TRABAJO
+  src\QueueWatcher.ps1:474:            # =================================================
+  src\QueueWatcher.ps1:475:
+  src\QueueWatcher.ps1:476:            $Event = [PSCustomObject]@{
+  src\QueueWatcher.ps1:477:
+  src\QueueWatcher.ps1:478:                EventType =
+  src\QueueWatcher.ps1:479:                    "PrintJobDetected"
+  src\QueueWatcher.ps1:480:
+  src\QueueWatcher.ps1:481:                Timestamp =
+  src\QueueWatcher.ps1:482:                    Get-Date
+  src\QueueWatcher.ps1:483:
+  src\QueueWatcher.ps1:484:                PrinterName =
+  src\QueueWatcher.ps1:853:            "$($_.JobId)-$($_.Name)"
+  src\QueueWatcher.ps1:854:        }
+  src\QueueWatcher.ps1:855:    )
+  src\QueueWatcher.ps1:856:
+> src\QueueWatcher.ps1:857:    foreach ($KnownKey in @($KnownJobs.Keys)) {
+  src\QueueWatcher.ps1:858:
+  src\QueueWatcher.ps1:859:        if ($KnownKey -notin $CurrentKeys) {
+  src\QueueWatcher.ps1:860:
+> src\QueueWatcher.ps1:861:            $KnownJobs.Remove($KnownKey)
+  src\QueueWatcher.ps1:862:
+  src\QueueWatcher.ps1:863:            Write-Host ""
+  src\QueueWatcher.ps1:864:
+  src\QueueWatcher.ps1:865:            Write-Host `
+  src\QueueWatcher.ps1:866:                "Trabajo finalizado o eliminado: $KnownKey" `
+  src\QueueWatcher.ps1:867:                -ForegroundColor DarkGray
+  src\QueueWatcher.ps1:868:        }
+  src\QueueWatcher.ps1:869:    }
+  src\QueueWatcher.ps1:870:
+  src\QueueWatcher.ps1:871:    Start-Sleep `
+  src\QueueWatcher.ps1:872:        -Milliseconds $PollingMilliseconds
+  src\QueueWatcher.ps1:873:}
+
+
+
+
+===== 4. BLOQUE DETECCION NUEVO JOB =====
+
+  src\QueueWatcher.ps1:460:        Get-PrintJobs `
+  src\QueueWatcher.ps1:461:            -TargetPrinter $PrinterName
+  src\QueueWatcher.ps1:462:    )
+  src\QueueWatcher.ps1:463:
+  src\QueueWatcher.ps1:464:    foreach ($Job in $Jobs) {
+  src\QueueWatcher.ps1:465:
+  src\QueueWatcher.ps1:466:        $JobKey = "$($Job.JobId)-$($Job.Name)"
+  src\QueueWatcher.ps1:467:
+> src\QueueWatcher.ps1:468:        if (-not $KnownJobs.ContainsKey($JobKey)) {
+  src\QueueWatcher.ps1:469:
+  src\QueueWatcher.ps1:470:            $KnownJobs[$JobKey] = $true
+  src\QueueWatcher.ps1:471:
+  src\QueueWatcher.ps1:472:            # =================================================
+  src\QueueWatcher.ps1:473:            # NUEVO TRABAJO
+  src\QueueWatcher.ps1:474:            # =================================================
+  src\QueueWatcher.ps1:475:
+  src\QueueWatcher.ps1:476:            $Event = [PSCustomObject]@{
+  src\QueueWatcher.ps1:477:
+  src\QueueWatcher.ps1:478:                EventType =
+  src\QueueWatcher.ps1:479:                    "PrintJobDetected"
+  src\QueueWatcher.ps1:480:
+  src\QueueWatcher.ps1:481:                Timestamp =
+  src\QueueWatcher.ps1:482:                    Get-Date
+  src\QueueWatcher.ps1:483:
+  src\QueueWatcher.ps1:484:                PrinterName =
+  src\QueueWatcher.ps1:485:                    $PrinterName
+  src\QueueWatcher.ps1:486:
+  src\QueueWatcher.ps1:487:                JobId =
+  src\QueueWatcher.ps1:488:                    $Job.JobId
+  src\QueueWatcher.ps1:489:
+  src\QueueWatcher.ps1:490:                Document =
+  src\QueueWatcher.ps1:491:                    $Job.Document
+  src\QueueWatcher.ps1:492:
+  src\QueueWatcher.ps1:493:                Owner =
+  src\QueueWatcher.ps1:494:                    $Job.Owner
+  src\QueueWatcher.ps1:495:
+  src\QueueWatcher.ps1:496:                Status =
+  src\QueueWatcher.ps1:497:                    $Job.Status
+  src\QueueWatcher.ps1:498:
+  src\QueueWatcher.ps1:499:                JobStatus =
+  src\QueueWatcher.ps1:500:                    $Job.JobStatus
+  src\QueueWatcher.ps1:501:
+  src\QueueWatcher.ps1:502:                TotalPages =
+  src\QueueWatcher.ps1:503:                    $Job.TotalPages
+  src\QueueWatcher.ps1:504:
+  src\QueueWatcher.ps1:505:                PagesPrinted =
+  src\QueueWatcher.ps1:506:                    $Job.PagesPrinted
+  src\QueueWatcher.ps1:507:
+  src\QueueWatcher.ps1:508:                SizeBytes =
+  src\QueueWatcher.ps1:509:                    $Job.Size
+  src\QueueWatcher.ps1:510:            }
+  src\QueueWatcher.ps1:511:
+  src\QueueWatcher.ps1:512:            if ($EventWriterEnabled) {
+  src\QueueWatcher.ps1:513:
+  src\QueueWatcher.ps1:514:                $CorrelationId =
+  src\QueueWatcher.ps1:515:                    [guid]::NewGuid().ToString()
+  src\QueueWatcher.ps1:516:
+  src\QueueWatcher.ps1:517:                $EventSequence++
+  src\QueueWatcher.ps1:518:
+  src\QueueWatcher.ps1:519:                $PrintJobEvent =
+  src\QueueWatcher.ps1:520:                    New-PrintSwitchEvent `
+  src\QueueWatcher.ps1:521:                        -EventType "PrintJobDetected" `
+  src\QueueWatcher.ps1:522:                        -Source "QueueWatcher" `
+  src\QueueWatcher.ps1:523:                        -PrinterName $PrinterName `
+  src\QueueWatcher.ps1:524:                        -CorrelationId $CorrelationId `
+  src\QueueWatcher.ps1:525:                        -SequenceNumber $EventSequence `
+  src\QueueWatcher.ps1:526:                        -Severity "INFO" `
+  src\QueueWatcher.ps1:527:                        -Data (
+  src\QueueWatcher.ps1:528:                            [PSCustomObject]@{
+  src\QueueWatcher.ps1:529:
+  src\QueueWatcher.ps1:530:                                JobId =
+  src\QueueWatcher.ps1:531:                                    $Event.JobId
+  src\QueueWatcher.ps1:532:
+  src\QueueWatcher.ps1:533:                                DocumentName =
+  src\QueueWatcher.ps1:534:                                    $Event.Document
+  src\QueueWatcher.ps1:535:
+  src\QueueWatcher.ps1:536:                                Owner =
+  src\QueueWatcher.ps1:537:                                    $Event.Owner
+  src\QueueWatcher.ps1:538:
+  src\QueueWatcher.ps1:539:                                JobStatus =
+  src\QueueWatcher.ps1:540:                                    $Event.JobStatus
+  src\QueueWatcher.ps1:541:
+  src\QueueWatcher.ps1:542:                                QueueName =
+  src\QueueWatcher.ps1:543:                                    $Event.PrinterName
+  src\QueueWatcher.ps1:544:
+  src\QueueWatcher.ps1:545:                                SubmittedTime =
+  src\QueueWatcher.ps1:546:                                    $null
+  src\QueueWatcher.ps1:547:                            }
+  src\QueueWatcher.ps1:548:                        )
+  src\QueueWatcher.ps1:549:
+  src\QueueWatcher.ps1:550:                try {
+  src\QueueWatcher.ps1:551:
+  src\QueueWatcher.ps1:552:                    Write-PrintSwitchEvent `
+  src\QueueWatcher.ps1:553:                        -Event $PrintJobEvent `
+  src\QueueWatcher.ps1:554:                        -Path $EventPath |
+  src\QueueWatcher.ps1:555:                        Out-Null
+  src\QueueWatcher.ps1:556:                }
+  src\QueueWatcher.ps1:557:                catch {
+  src\QueueWatcher.ps1:558:
+  src\QueueWatcher.ps1:559:                    Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:560:                        -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:561:                        -Event "APPLICATION_EVENT_WRITE_FAILED" `
+  src\QueueWatcher.ps1:562:                        -Level "WARNING" `
+  src\QueueWatcher.ps1:563:                        -Data @{
+  src\QueueWatcher.ps1:564:                            Printer = $PrinterName
+  src\QueueWatcher.ps1:565:                            JobId   = $Event.JobId
+  src\QueueWatcher.ps1:566:                            Message = $_.Exception.Message
+  src\QueueWatcher.ps1:567:                        } |
+  src\QueueWatcher.ps1:568:                        Out-Null
+  src\QueueWatcher.ps1:569:                }
+  src\QueueWatcher.ps1:570:            }
+  src\QueueWatcher.ps1:571:
+  src\QueueWatcher.ps1:572:            Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:573:                -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:574:                -Event "PRINT_JOB_DETECTED" `
+  src\QueueWatcher.ps1:575:                -Level "INFO" `
+  src\QueueWatcher.ps1:576:                -Data @{
+  src\QueueWatcher.ps1:577:                    Printer = $Event.PrinterName
+  src\QueueWatcher.ps1:578:                    JobId   = $Event.JobId
+
+
+
+
+===== 5. EVENTO PRINTJOBDETECTED =====
+
+  src\QueueWatcher.ps1:471:
+  src\QueueWatcher.ps1:472:            # =================================================
+  src\QueueWatcher.ps1:473:            # NUEVO TRABAJO
+  src\QueueWatcher.ps1:474:            # =================================================
+  src\QueueWatcher.ps1:475:
+  src\QueueWatcher.ps1:476:            $Event = [PSCustomObject]@{
+  src\QueueWatcher.ps1:477:
+  src\QueueWatcher.ps1:478:                EventType =
+> src\QueueWatcher.ps1:479:                    "PrintJobDetected"
+  src\QueueWatcher.ps1:480:
+  src\QueueWatcher.ps1:481:                Timestamp =
+  src\QueueWatcher.ps1:482:                    Get-Date
+  src\QueueWatcher.ps1:483:
+  src\QueueWatcher.ps1:484:                PrinterName =
+  src\QueueWatcher.ps1:485:                    $PrinterName
+  src\QueueWatcher.ps1:486:
+  src\QueueWatcher.ps1:487:                JobId =
+  src\QueueWatcher.ps1:488:                    $Job.JobId
+  src\QueueWatcher.ps1:489:
+  src\QueueWatcher.ps1:490:                Document =
+  src\QueueWatcher.ps1:491:                    $Job.Document
+  src\QueueWatcher.ps1:492:
+  src\QueueWatcher.ps1:493:                Owner =
+  src\QueueWatcher.ps1:494:                    $Job.Owner
+  src\QueueWatcher.ps1:495:
+  src\QueueWatcher.ps1:496:                Status =
+  src\QueueWatcher.ps1:497:                    $Job.Status
+  src\QueueWatcher.ps1:498:
+  src\QueueWatcher.ps1:499:                JobStatus =
+  src\QueueWatcher.ps1:500:                    $Job.JobStatus
+  src\QueueWatcher.ps1:501:
+  src\QueueWatcher.ps1:502:                TotalPages =
+  src\QueueWatcher.ps1:503:                    $Job.TotalPages
+  src\QueueWatcher.ps1:504:
+  src\QueueWatcher.ps1:505:                PagesPrinted =
+  src\QueueWatcher.ps1:506:                    $Job.PagesPrinted
+  src\QueueWatcher.ps1:507:
+  src\QueueWatcher.ps1:508:                SizeBytes =
+  src\QueueWatcher.ps1:509:                    $Job.Size
+  src\QueueWatcher.ps1:512:            if ($EventWriterEnabled) {
+  src\QueueWatcher.ps1:513:
+  src\QueueWatcher.ps1:514:                $CorrelationId =
+  src\QueueWatcher.ps1:515:                    [guid]::NewGuid().ToString()
+  src\QueueWatcher.ps1:516:
+  src\QueueWatcher.ps1:517:                $EventSequence++
+  src\QueueWatcher.ps1:518:
+  src\QueueWatcher.ps1:519:                $PrintJobEvent =
+> src\QueueWatcher.ps1:520:                    New-PrintSwitchEvent `
+> src\QueueWatcher.ps1:521:                        -EventType "PrintJobDetected" `
+  src\QueueWatcher.ps1:522:                        -Source "QueueWatcher" `
+  src\QueueWatcher.ps1:523:                        -PrinterName $PrinterName `
+  src\QueueWatcher.ps1:524:                        -CorrelationId $CorrelationId `
+  src\QueueWatcher.ps1:525:                        -SequenceNumber $EventSequence `
+  src\QueueWatcher.ps1:526:                        -Severity "INFO" `
+  src\QueueWatcher.ps1:527:                        -Data (
+  src\QueueWatcher.ps1:528:                            [PSCustomObject]@{
+  src\QueueWatcher.ps1:529:
+  src\QueueWatcher.ps1:530:                                JobId =
+  src\QueueWatcher.ps1:531:                                    $Event.JobId
+  src\QueueWatcher.ps1:532:
+  src\QueueWatcher.ps1:533:                                DocumentName =
+  src\QueueWatcher.ps1:534:                                    $Event.Document
+  src\QueueWatcher.ps1:535:
+  src\QueueWatcher.ps1:536:                                Owner =
+  src\QueueWatcher.ps1:537:                                    $Event.Owner
+  src\QueueWatcher.ps1:538:
+  src\QueueWatcher.ps1:539:                                JobStatus =
+  src\QueueWatcher.ps1:540:                                    $Event.JobStatus
+  src\QueueWatcher.ps1:541:
+  src\QueueWatcher.ps1:542:                                QueueName =
+  src\QueueWatcher.ps1:543:                                    $Event.PrinterName
+  src\QueueWatcher.ps1:544:
+  src\QueueWatcher.ps1:545:                                SubmittedTime =
+  src\QueueWatcher.ps1:546:                                    $null
+  src\QueueWatcher.ps1:547:                            }
+  src\QueueWatcher.ps1:548:                        )
+  src\QueueWatcher.ps1:549:
+  src\QueueWatcher.ps1:550:                try {
+  src\QueueWatcher.ps1:551:
+> src\QueueWatcher.ps1:552:                    Write-PrintSwitchEvent `
+  src\QueueWatcher.ps1:553:                        -Event $PrintJobEvent `
+  src\QueueWatcher.ps1:554:                        -Path $EventPath |
+  src\QueueWatcher.ps1:555:                        Out-Null
+  src\QueueWatcher.ps1:556:                }
+  src\QueueWatcher.ps1:557:                catch {
+  src\QueueWatcher.ps1:558:
+  src\QueueWatcher.ps1:559:                    Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:560:                        -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:561:                        -Event "APPLICATION_EVENT_WRITE_FAILED" `
+  src\QueueWatcher.ps1:562:                        -Level "WARNING" `
+  src\QueueWatcher.ps1:563:                        -Data @{
+  src\QueueWatcher.ps1:564:                            Printer = $PrinterName
+  src\QueueWatcher.ps1:565:                            JobId   = $Event.JobId
+  src\QueueWatcher.ps1:566:                            Message = $_.Exception.Message
+  src\QueueWatcher.ps1:567:                        } |
+  src\QueueWatcher.ps1:568:                        Out-Null
+  src\QueueWatcher.ps1:569:                }
+  src\QueueWatcher.ps1:570:            }
+  src\QueueWatcher.ps1:571:
+  src\QueueWatcher.ps1:572:            Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:573:                -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:574:                -Event "PRINT_JOB_DETECTED" `
+  src\QueueWatcher.ps1:575:                -Level "INFO" `
+  src\QueueWatcher.ps1:576:                -Data @{
+  src\QueueWatcher.ps1:577:                    Printer = $Event.PrinterName
+  src\QueueWatcher.ps1:578:                    JobId   = $Event.JobId
+  src\QueueWatcher.ps1:579:                } |
+  src\QueueWatcher.ps1:580:                Out-Null
+  src\QueueWatcher.ps1:581:
+  src\QueueWatcher.ps1:582:            Write-Host ""
+  src\QueueWatcher.ps1:686:
+  src\QueueWatcher.ps1:687:        # ----------------------------------------------------
+  src\QueueWatcher.ps1:688:        # DecisionProduced
+  src\QueueWatcher.ps1:689:        # ----------------------------------------------------
+  src\QueueWatcher.ps1:690:
+  src\QueueWatcher.ps1:691:        $EventSequence++
+  src\QueueWatcher.ps1:692:
+  src\QueueWatcher.ps1:693:        $DecisionEvent =
+> src\QueueWatcher.ps1:694:            New-PrintSwitchEvent `
+  src\QueueWatcher.ps1:695:                -EventType "DecisionProduced" `
+  src\QueueWatcher.ps1:696:                -Source "PrintRecoveryOrchestrator" `
+  src\QueueWatcher.ps1:697:                -PrinterName $PrinterName `
+  src\QueueWatcher.ps1:698:                -CorrelationId $CorrelationId `
+  src\QueueWatcher.ps1:699:                -SequenceNumber $EventSequence `
+  src\QueueWatcher.ps1:700:                -Severity "INFO" `
+  src\QueueWatcher.ps1:701:                -Data (
+  src\QueueWatcher.ps1:702:                    [PSCustomObject]@{
+  src\QueueWatcher.ps1:703:
+  src\QueueWatcher.ps1:704:                        JobId =
+  src\QueueWatcher.ps1:705:                            $Event.JobId
+  src\QueueWatcher.ps1:706:
+  src\QueueWatcher.ps1:707:                        PolicyDecision =
+  src\QueueWatcher.ps1:708:                            & $GetOrchestratorValue "PolicyDecision"
+  src\QueueWatcher.ps1:709:
+  src\QueueWatcher.ps1:710:                        RouteClassification =
+  src\QueueWatcher.ps1:711:                            & $GetOrchestratorValue "InitialRouteClassification"
+  src\QueueWatcher.ps1:712:
+  src\QueueWatcher.ps1:713:                        WiFiClassification =
+  src\QueueWatcher.ps1:714:                            & $GetOrchestratorValue "WiFiClassification"
+  src\QueueWatcher.ps1:715:
+  src\QueueWatcher.ps1:716:                        SwitchDecision =
+  src\QueueWatcher.ps1:717:                            & $GetOrchestratorValue "SwitchDecision"
+  src\QueueWatcher.ps1:718:
+  src\QueueWatcher.ps1:719:                        SwitchAuthorized =
+  src\QueueWatcher.ps1:720:                            & $GetOrchestratorValue "SwitchAuthorized"
+  src\QueueWatcher.ps1:721:
+  src\QueueWatcher.ps1:722:                        ShouldExecuteSwitch =
+  src\QueueWatcher.ps1:723:                            & $GetOrchestratorValue "ShouldExecuteSwitch"
+  src\QueueWatcher.ps1:724:
+  src\QueueWatcher.ps1:728:                        CurrentSSID =
+  src\QueueWatcher.ps1:729:                            & $GetOrchestratorValue "CurrentSSID"
+  src\QueueWatcher.ps1:730:
+  src\QueueWatcher.ps1:731:                        TargetSSID =
+  src\QueueWatcher.ps1:732:                            & $GetOrchestratorValue "TargetSSID"
+  src\QueueWatcher.ps1:733:                    }
+  src\QueueWatcher.ps1:734:                )
+  src\QueueWatcher.ps1:735:
+> src\QueueWatcher.ps1:736:        Write-PrintSwitchEvent `
+  src\QueueWatcher.ps1:737:            -Event $DecisionEvent `
+  src\QueueWatcher.ps1:738:            -Path $EventPath |
+  src\QueueWatcher.ps1:739:            Out-Null
+  src\QueueWatcher.ps1:740:
+  src\QueueWatcher.ps1:741:        # ----------------------------------------------------
+  src\QueueWatcher.ps1:742:        # RecoveryCompleted
+  src\QueueWatcher.ps1:743:        # ----------------------------------------------------
+  src\QueueWatcher.ps1:744:
+  src\QueueWatcher.ps1:745:        $EventSequence++
+  src\QueueWatcher.ps1:746:
+  src\QueueWatcher.ps1:747:        $RecoveryEvent =
+> src\QueueWatcher.ps1:748:            New-PrintSwitchEvent `
+  src\QueueWatcher.ps1:749:                -EventType "RecoveryCompleted" `
+  src\QueueWatcher.ps1:750:                -Source "PrintRecoveryOrchestrator" `
+  src\QueueWatcher.ps1:751:                -PrinterName $PrinterName `
+  src\QueueWatcher.ps1:752:                -CorrelationId $CorrelationId `
+  src\QueueWatcher.ps1:753:                -SequenceNumber $EventSequence `
+  src\QueueWatcher.ps1:754:                -Severity "INFO" `
+  src\QueueWatcher.ps1:755:                -Data (
+  src\QueueWatcher.ps1:756:                    [PSCustomObject]@{
+  src\QueueWatcher.ps1:757:
+  src\QueueWatcher.ps1:758:                        JobId =
+  src\QueueWatcher.ps1:759:                            $Event.JobId
+  src\QueueWatcher.ps1:760:
+  src\QueueWatcher.ps1:761:                        FinalClassification =
+  src\QueueWatcher.ps1:762:                            & $GetOrchestratorValue "FinalClassification"
+  src\QueueWatcher.ps1:763:
+  src\QueueWatcher.ps1:764:                        SwitchDecision =
+  src\QueueWatcher.ps1:765:                            & $GetOrchestratorValue "SwitchDecision"
+  src\QueueWatcher.ps1:766:
+  src\QueueWatcher.ps1:767:                        SwitchAuthorized =
+  src\QueueWatcher.ps1:768:                            & $GetOrchestratorValue "SwitchAuthorized"
+  src\QueueWatcher.ps1:769:
+  src\QueueWatcher.ps1:770:                        SwitchExecuted =
+  src\QueueWatcher.ps1:771:                            & $GetOrchestratorValue "SwitchExecuted"
+  src\QueueWatcher.ps1:772:
+  src\QueueWatcher.ps1:773:                        RecoverySucceeded =
+  src\QueueWatcher.ps1:774:                            & $GetOrchestratorValue "RecoverySucceeded"
+  src\QueueWatcher.ps1:775:
+  src\QueueWatcher.ps1:776:                        PreserveEthernet =
+  src\QueueWatcher.ps1:777:                            & $GetOrchestratorValue "PreserveEthernet"
+  src\QueueWatcher.ps1:778:
+  src\QueueWatcher.ps1:791:                        RecoveryValidationConfirmed =
+  src\QueueWatcher.ps1:792:                            & $GetOrchestratorValue "RecoveryValidationConfirmed"
+  src\QueueWatcher.ps1:793:
+  src\QueueWatcher.ps1:794:                        CompletedAt =
+  src\QueueWatcher.ps1:795:                            Get-Date
+  src\QueueWatcher.ps1:796:                    }
+  src\QueueWatcher.ps1:797:                )
+  src\QueueWatcher.ps1:798:
+> src\QueueWatcher.ps1:799:        Write-PrintSwitchEvent `
+  src\QueueWatcher.ps1:800:            -Event $RecoveryEvent `
+  src\QueueWatcher.ps1:801:            -Path $EventPath |
+  src\QueueWatcher.ps1:802:            Out-Null
+  src\QueueWatcher.ps1:803:    }
+  src\QueueWatcher.ps1:804:    catch {
+  src\QueueWatcher.ps1:805:
+  src\QueueWatcher.ps1:806:        Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:807:            -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:808:            -Event "APPLICATION_EVENT_WRITE_FAILED" `
+  src\QueueWatcher.ps1:809:            -Level "WARNING" `
+  src\QueueWatcher.ps1:810:            -Data @{
+  src\QueueWatcher.ps1:811:                Printer =
+  src\QueueWatcher.ps1:812:                    $PrinterName
+  src\QueueWatcher.ps1:813:
+  src\QueueWatcher.ps1:814:                JobId =
+  src\QueueWatcher.ps1:815:                    $Event.JobId
+  src\QueueWatcher.ps1:816:
+  src\QueueWatcher.ps1:817:                Stage =
+  src\QueueWatcher.ps1:818:                    "ORCHESTRATOR_RESULT"
+  src\QueueWatcher.ps1:819:
+  src\QueueWatcher.ps1:820:                Message =
+  src\QueueWatcher.ps1:821:                    $_.Exception.Message
+  src\QueueWatcher.ps1:822:            } |
+  src\QueueWatcher.ps1:823:            Out-Null
+  src\QueueWatcher.ps1:824:    }
+  src\QueueWatcher.ps1:825:}
+  src\QueueWatcher.ps1:826:
+  src\QueueWatcher.ps1:827:Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:828:    -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:829:    -Event "RECOVERY_ORCHESTRATOR_RESULT" `
+
+
+
+
+===== 6. CAMPOS DE JOB HOY =====
+
+LineNumber Line                                          
+---------- ----                                          
+       466         $JobKey = "$($Job.JobId)-$($Job.Name)"
+       488                     $Job.JobId                
+       491                     $Job.Document             
+       494                     $Job.Owner                
+       497                     $Job.Status               
+       500                     $Job.JobStatus            
+       503                     $Job.TotalPages           
+       506                     $Job.PagesPrinted         
+       509                     $Job.Size                 
+
+
+
+
+===== 7. FLUJO ORCHESTRATOR DESPUES DEL EVENTO =====
+
+  src\QueueWatcher.ps1:1:param (
+> src\QueueWatcher.ps1:2:    [switch]$EnableRecovery,
+  src\QueueWatcher.ps1:3:
+  src\QueueWatcher.ps1:4:    [string]$PrinterName,
+  src\QueueWatcher.ps1:5:
+  src\QueueWatcher.ps1:6:    [string]$EventPath = $null
+  src\QueueWatcher.ps1:7:)
+  src\QueueWatcher.ps1:8:
+  src\QueueWatcher.ps1:9:$ErrorActionPreference = "Continue"
+  src\QueueWatcher.ps1:10:
+  src\QueueWatcher.ps1:11:# PrintSwitch - QueueWatcher v0.7
+  src\QueueWatcher.ps1:12:#
+  src\QueueWatcher.ps1:13:# Orquestador de observacion de trabajos.
+  src\QueueWatcher.ps1:14:#
+  src\QueueWatcher.ps1:15:# Funciones:
+  src\QueueWatcher.ps1:16:#   - descubre colas instaladas mediante PrinterDiscovery
+  src\QueueWatcher.ps1:17:#   - selecciona la cola observada mediante QueueContext
+  src\QueueWatcher.ps1:18:#   - observa trabajos
+  src\QueueWatcher.ps1:19:#   - solicita diagnostico
+  src\QueueWatcher.ps1:20:#   - solicita recuperacion de red
+  src\QueueWatcher.ps1:21:#   - registra eventos importantes mediante Logger
+  src\QueueWatcher.ps1:22:#
+  src\QueueWatcher.ps1:23:# v0.7:
+  src\QueueWatcher.ps1:24:# - elimina la dependencia operacional de config/printers.json
+  src\QueueWatcher.ps1:25:# - deja de usar ConfigValidator para seleccionar impresoras
+  src\QueueWatcher.ps1:26:# - usa PrinterDiscovery como fuente operacional de colas
+  src\QueueWatcher.ps1:27:# - no selecciona arbitrariamente una cola cuando existen varias
+  src\QueueWatcher.ps1:28:
+  src\QueueWatcher.ps1:29:$PollingMilliseconds = 500
+  src\QueueWatcher.ps1:30:
+  src\QueueWatcher.ps1:67:$EventSequence = 0
+  src\QueueWatcher.ps1:68:
+  src\QueueWatcher.ps1:69:$PrinterDiscoveryPath = Join-Path `
+  src\QueueWatcher.ps1:70:    $PSScriptRoot `
+  src\QueueWatcher.ps1:71:    "PrinterDiscovery.ps1"
+  src\QueueWatcher.ps1:72:
+> src\QueueWatcher.ps1:73:$PrintRecoveryOrchestratorPath = Join-Path `
+  src\QueueWatcher.ps1:74:    $PSScriptRoot `
+> src\QueueWatcher.ps1:75:    "PrintRecoveryOrchestrator.ps1"
+  src\QueueWatcher.ps1:76:$KnownJobs = @{}
+  src\QueueWatcher.ps1:77:
+  src\QueueWatcher.ps1:78:# ============================================================
+  src\QueueWatcher.ps1:79:# 0. CARGAR LOGGER
+  src\QueueWatcher.ps1:80:# ============================================================
+  src\QueueWatcher.ps1:81:
+  src\QueueWatcher.ps1:82:if (-not (Test-Path $LoggerPath)) {
+  src\QueueWatcher.ps1:83:
+  src\QueueWatcher.ps1:84:    Write-Host ""
+  src\QueueWatcher.ps1:85:    Write-Host `
+  src\QueueWatcher.ps1:86:        "ERROR: Logger no encontrado." `
+  src\QueueWatcher.ps1:87:        -ForegroundColor Red
+  src\QueueWatcher.ps1:88:
+  src\QueueWatcher.ps1:89:    Write-Host "Ruta esperada: $LoggerPath"
+  src\QueueWatcher.ps1:90:
+  src\QueueWatcher.ps1:91:    return
+  src\QueueWatcher.ps1:92:}
+  src\QueueWatcher.ps1:93:
+  src\QueueWatcher.ps1:94:try {
+  src\QueueWatcher.ps1:95:
+  src\QueueWatcher.ps1:96:    . $LoggerPath
+  src\QueueWatcher.ps1:97:}
+  src\QueueWatcher.ps1:98:catch {
+  src\QueueWatcher.ps1:99:
+  src\QueueWatcher.ps1:100:    Write-Host ""
+  src\QueueWatcher.ps1:101:    Write-Host `
+  src\QueueWatcher.ps1:102:        "ERROR: no se pudo cargar Logger." `
+  src\QueueWatcher.ps1:103:        -ForegroundColor Red
+  src\QueueWatcher.ps1:119:
+  src\QueueWatcher.ps1:120:Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:121:    -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:122:    -Event "PRINTSWITCH_STARTED" `
+  src\QueueWatcher.ps1:123:    -Level "INFO" `
+  src\QueueWatcher.ps1:124:    -Data @{
+> src\QueueWatcher.ps1:125:        RecoveryEnabled = [bool]$EnableRecovery
+  src\QueueWatcher.ps1:126:        RequestedPrinter = $PrinterName
+  src\QueueWatcher.ps1:127:    } |
+  src\QueueWatcher.ps1:128:    Out-Null
+  src\QueueWatcher.ps1:129:
+  src\QueueWatcher.ps1:130:# ============================================================
+  src\QueueWatcher.ps1:131:# 2. VALIDAR PRINTER DISCOVERY
+  src\QueueWatcher.ps1:132:# ============================================================
+  src\QueueWatcher.ps1:133:
+  src\QueueWatcher.ps1:134:Write-Host "========================================"
+  src\QueueWatcher.ps1:135:Write-Host "1. PRINTER DISCOVERY"
+  src\QueueWatcher.ps1:136:Write-Host "========================================"
+  src\QueueWatcher.ps1:137:
+  src\QueueWatcher.ps1:138:if (-not (Test-Path -LiteralPath $PrinterDiscoveryPath)) {
+  src\QueueWatcher.ps1:139:
+  src\QueueWatcher.ps1:140:    Write-Host ""
+  src\QueueWatcher.ps1:141:    Write-Host `
+  src\QueueWatcher.ps1:142:        "ERROR: PrinterDiscovery no encontrado." `
+  src\QueueWatcher.ps1:143:        -ForegroundColor Red
+  src\QueueWatcher.ps1:144:
+  src\QueueWatcher.ps1:145:    Write-Host "Ruta esperada: $PrinterDiscoveryPath"
+  src\QueueWatcher.ps1:146:
+  src\QueueWatcher.ps1:147:    Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:148:        -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:149:        -Event "PRINTER_DISCOVERY_NOT_FOUND" `
+  src\QueueWatcher.ps1:150:        -Level "ERROR" `
+  src\QueueWatcher.ps1:151:        -Data @{
+  src\QueueWatcher.ps1:152:            Path = $PrinterDiscoveryPath
+  src\QueueWatcher.ps1:153:        } |
+  src\QueueWatcher.ps1:347:
+  src\QueueWatcher.ps1:348:Write-Host ""
+  src\QueueWatcher.ps1:349:Write-Host "========================================"
+  src\QueueWatcher.ps1:350:Write-Host "3. PRINTSWITCH READY"
+  src\QueueWatcher.ps1:351:Write-Host "========================================"
+  src\QueueWatcher.ps1:352:
+> src\QueueWatcher.ps1:353:if ($EnableRecovery) {
+  src\QueueWatcher.ps1:354:
+  src\QueueWatcher.ps1:355:    Write-Host `
+  src\QueueWatcher.ps1:356:        "Modo: RECOVERY AUTOMATICO HABILITADO" `
+  src\QueueWatcher.ps1:357:        -ForegroundColor Yellow
+  src\QueueWatcher.ps1:358:
+  src\QueueWatcher.ps1:359:    Write-Host `
+  src\QueueWatcher.ps1:360:        "Cambios de Wi-Fi permitidos." `
+  src\QueueWatcher.ps1:361:        -ForegroundColor Yellow
+  src\QueueWatcher.ps1:362:}
+  src\QueueWatcher.ps1:363:else {
+  src\QueueWatcher.ps1:364:
+  src\QueueWatcher.ps1:365:    Write-Host `
+  src\QueueWatcher.ps1:366:        "Modo: DRY-RUN" `
+  src\QueueWatcher.ps1:367:        -ForegroundColor Green
+  src\QueueWatcher.ps1:368:
+  src\QueueWatcher.ps1:369:    Write-Host `
+  src\QueueWatcher.ps1:370:        "No se modificara ninguna red Wi-Fi." `
+  src\QueueWatcher.ps1:371:        -ForegroundColor Green
+  src\QueueWatcher.ps1:372:}
+  src\QueueWatcher.ps1:373:
+  src\QueueWatcher.ps1:374:Write-Host "Fuente de colas      : Windows / PrinterDiscovery"
+  src\QueueWatcher.ps1:375:Write-Host "Impresora observada  : $PrinterName"
+  src\QueueWatcher.ps1:376:Write-Host "DiscoveryStatus      : $($SelectedQueueContext.DiscoveryStatus)"
+  src\QueueWatcher.ps1:377:Write-Host "Intervalo            : $PollingMilliseconds ms"
+  src\QueueWatcher.ps1:378:Write-Host "Logger               : $LoggerPath"
+  src\QueueWatcher.ps1:379:Write-Host "PrinterDiscovery     : $PrinterDiscoveryPath"
+  src\QueueWatcher.ps1:380:
+  src\QueueWatcher.ps1:381:
+  src\QueueWatcher.ps1:382:Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:383:    -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:384:    -Event "PRINTSWITCH_READY" `
+  src\QueueWatcher.ps1:385:    -Level "INFO" `
+  src\QueueWatcher.ps1:386:    -Data @{
+  src\QueueWatcher.ps1:387:        Printer         = $PrinterName
+> src\QueueWatcher.ps1:388:        RecoveryEnabled = [bool]$EnableRecovery
+  src\QueueWatcher.ps1:389:    } |
+  src\QueueWatcher.ps1:390:    Out-Null
+  src\QueueWatcher.ps1:391:
+  src\QueueWatcher.ps1:392:Write-Host ""
+  src\QueueWatcher.ps1:393:Write-Host "Esperando trabajos de impresion..."
+  src\QueueWatcher.ps1:394:Write-Host "Ctrl+C para finalizar."
+  src\QueueWatcher.ps1:395:Write-Host ""
+  src\QueueWatcher.ps1:396:
+  src\QueueWatcher.ps1:397:# ============================================================
+  src\QueueWatcher.ps1:398:# FUNCION: obtener trabajos
+  src\QueueWatcher.ps1:399:# ============================================================
+  src\QueueWatcher.ps1:400:
+  src\QueueWatcher.ps1:401:function Get-PrintJobs {
+  src\QueueWatcher.ps1:402:
+  src\QueueWatcher.ps1:403:    param(
+  src\QueueWatcher.ps1:404:        [string]$TargetPrinter
+  src\QueueWatcher.ps1:405:    )
+  src\QueueWatcher.ps1:406:
+  src\QueueWatcher.ps1:407:    Get-CimInstance Win32_PrintJob `
+  src\QueueWatcher.ps1:408:        -ErrorAction SilentlyContinue |
+  src\QueueWatcher.ps1:409:        Where-Object {
+  src\QueueWatcher.ps1:410:
+  src\QueueWatcher.ps1:411:            $_.Name -like "$TargetPrinter,*" -or
+  src\QueueWatcher.ps1:412:            $_.Name -like "*$TargetPrinter*"
+  src\QueueWatcher.ps1:413:        }
+  src\QueueWatcher.ps1:414:}
+  src\QueueWatcher.ps1:415:
+  src\QueueWatcher.ps1:416:# ============================================================
+  src\QueueWatcher.ps1:424:
+  src\QueueWatcher.ps1:425:
+  src\QueueWatcher.ps1:426:# ============================================================
+  src\QueueWatcher.ps1:427:# VALIDAR PRINT RECOVERY ORCHESTRATOR
+  src\QueueWatcher.ps1:428:# ============================================================
+  src\QueueWatcher.ps1:429:
+> src\QueueWatcher.ps1:430:if (-not (Test-Path $PrintRecoveryOrchestratorPath)) {
+  src\QueueWatcher.ps1:431:
+  src\QueueWatcher.ps1:432:    Write-Host ""
+  src\QueueWatcher.ps1:433:    Write-Host `
+> src\QueueWatcher.ps1:434:        "ERROR: PrintRecoveryOrchestrator no encontrado." `
+  src\QueueWatcher.ps1:435:        -ForegroundColor Red
+  src\QueueWatcher.ps1:436:
+  src\QueueWatcher.ps1:437:    Write-Host `
+> src\QueueWatcher.ps1:438:        "Ruta esperada: $PrintRecoveryOrchestratorPath"
+  src\QueueWatcher.ps1:439:
+  src\QueueWatcher.ps1:440:    Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:441:        -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:442:        -Event "RECOVERY_ORCHESTRATOR_NOT_FOUND" `
+  src\QueueWatcher.ps1:443:        -Level "ERROR" `
+  src\QueueWatcher.ps1:444:        -Data @{
+> src\QueueWatcher.ps1:445:            Path = $PrintRecoveryOrchestratorPath
+  src\QueueWatcher.ps1:446:        } |
+  src\QueueWatcher.ps1:447:        Out-Null
+  src\QueueWatcher.ps1:448:
+  src\QueueWatcher.ps1:449:    return
+  src\QueueWatcher.ps1:450:}
+  src\QueueWatcher.ps1:451:
+  src\QueueWatcher.ps1:452:
+  src\QueueWatcher.ps1:453:# ============================================================
+  src\QueueWatcher.ps1:454:# LOOP PRINCIPAL
+  src\QueueWatcher.ps1:455:# ============================================================
+  src\QueueWatcher.ps1:456:
+  src\QueueWatcher.ps1:457:while ($true) {
+  src\QueueWatcher.ps1:458:
+  src\QueueWatcher.ps1:459:    $Jobs = @(
+  src\QueueWatcher.ps1:460:        Get-PrintJobs `
+  src\QueueWatcher.ps1:461:            -TargetPrinter $PrinterName
+  src\QueueWatcher.ps1:462:    )
+  src\QueueWatcher.ps1:463:
+  src\QueueWatcher.ps1:464:    foreach ($Job in $Jobs) {
+  src\QueueWatcher.ps1:465:
+  src\QueueWatcher.ps1:466:        $JobKey = "$($Job.JobId)-$($Job.Name)"
+  src\QueueWatcher.ps1:467:
+  src\QueueWatcher.ps1:468:        if (-not $KnownJobs.ContainsKey($JobKey)) {
+  src\QueueWatcher.ps1:469:
+  src\QueueWatcher.ps1:470:            $KnownJobs[$JobKey] = $true
+  src\QueueWatcher.ps1:471:
+  src\QueueWatcher.ps1:472:            # =================================================
+  src\QueueWatcher.ps1:473:            # NUEVO TRABAJO
+  src\QueueWatcher.ps1:605:try {
+  src\QueueWatcher.ps1:606:
+  src\QueueWatcher.ps1:607:   $OrchestratorParameters = @{
+  src\QueueWatcher.ps1:608:    PrinterName = $PrinterName
+  src\QueueWatcher.ps1:609:}
+  src\QueueWatcher.ps1:610:
+> src\QueueWatcher.ps1:611:if ($EnableRecovery) {
+  src\QueueWatcher.ps1:612:
+  src\QueueWatcher.ps1:613:    $OrchestratorParameters.Execute = $true
+  src\QueueWatcher.ps1:614:}
+  src\QueueWatcher.ps1:615:
+> src\QueueWatcher.ps1:616:$OrchestratorResult = & $PrintRecoveryOrchestratorPath `
+  src\QueueWatcher.ps1:617:    @OrchestratorParameters
+  src\QueueWatcher.ps1:618:}
+  src\QueueWatcher.ps1:619:catch {
+  src\QueueWatcher.ps1:620:
+  src\QueueWatcher.ps1:621:    Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:622:        -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:623:        -Event "RECOVERY_ORCHESTRATOR_ERROR" `
+  src\QueueWatcher.ps1:624:        -Level "ERROR" `
+  src\QueueWatcher.ps1:625:        -Data @{
+  src\QueueWatcher.ps1:626:            Printer = $PrinterName
+  src\QueueWatcher.ps1:627:            JobId   = $Event.JobId
+  src\QueueWatcher.ps1:628:            Message = $_.Exception.Message
+  src\QueueWatcher.ps1:629:        } |
+  src\QueueWatcher.ps1:630:        Out-Null
+  src\QueueWatcher.ps1:631:
+  src\QueueWatcher.ps1:632:    Write-Host ""
+  src\QueueWatcher.ps1:633:    Write-Host `
+> src\QueueWatcher.ps1:634:        "ERROR ejecutando PrintRecoveryOrchestrator." `
+  src\QueueWatcher.ps1:635:        -ForegroundColor Red
+  src\QueueWatcher.ps1:636:
+  src\QueueWatcher.ps1:637:    continue
+  src\QueueWatcher.ps1:638:}
+  src\QueueWatcher.ps1:639:
+  src\QueueWatcher.ps1:640:if ($null -eq $OrchestratorResult) {
+  src\QueueWatcher.ps1:641:
+  src\QueueWatcher.ps1:642:    Write-PrintSwitchLog `
+  src\QueueWatcher.ps1:643:        -Component "QueueWatcher" `
+  src\QueueWatcher.ps1:644:        -Event "RECOVERY_ORCHESTRATOR_NO_RESULT" `
+  src\QueueWatcher.ps1:645:        -Level "ERROR" `
+  src\QueueWatcher.ps1:646:        -Data @{
+  src\QueueWatcher.ps1:647:            Printer = $PrinterName
+  src\QueueWatcher.ps1:648:            JobId   = $Event.JobId
+  src\QueueWatcher.ps1:649:        } |
+  src\QueueWatcher.ps1:650:        Out-Null
+  src\QueueWatcher.ps1:651:
+  src\QueueWatcher.ps1:652:    continue
+  src\QueueWatcher.ps1:653:}
+  src\QueueWatcher.ps1:654:
+  src\QueueWatcher.ps1:655:Write-Host ""
+  src\QueueWatcher.ps1:656:Write-Host "Resultado del orquestador:"
+  src\QueueWatcher.ps1:657:Write-Host "FinalClassification : $($OrchestratorResult.FinalClassification)"
+  src\QueueWatcher.ps1:658:Write-Host "SwitchDecision      : $($OrchestratorResult.SwitchDecision)"
+  src\QueueWatcher.ps1:659:Write-Host "SwitchAuthorized    : $($OrchestratorResult.SwitchAuthorized)"
+  src\QueueWatcher.ps1:660:Write-Host "SwitchExecuted      : $($OrchestratorResult.SwitchExecuted)"
+  src\QueueWatcher.ps1:661:
+  src\QueueWatcher.ps1:662:# ============================================================
+  src\QueueWatcher.ps1:682:            }
+  src\QueueWatcher.ps1:683:
+  src\QueueWatcher.ps1:684:            return $null
+  src\QueueWatcher.ps1:685:        }
+  src\QueueWatcher.ps1:686:
+  src\QueueWatcher.ps1:687:        # ----------------------------------------------------
+> src\QueueWatcher.ps1:688:        # DecisionProduced
+  src\QueueWatcher.ps1:689:        # ----------------------------------------------------
+  src\QueueWatcher.ps1:690:
+  src\QueueWatcher.ps1:691:        $EventSequence++
+  src\QueueWatcher.ps1:692:
+  src\QueueWatcher.ps1:693:        $DecisionEvent =
+  src\QueueWatcher.ps1:694:            New-PrintSwitchEvent `
+> src\QueueWatcher.ps1:695:                -EventType "DecisionProduced" `
+> src\QueueWatcher.ps1:696:                -Source "PrintRecoveryOrchestrator" `
+  src\QueueWatcher.ps1:697:                -PrinterName $PrinterName `
+  src\QueueWatcher.ps1:698:                -CorrelationId $CorrelationId `
+  src\QueueWatcher.ps1:699:                -SequenceNumber $EventSequence `
+  src\QueueWatcher.ps1:700:                -Severity "INFO" `
+  src\QueueWatcher.ps1:701:                -Data (
+  src\QueueWatcher.ps1:702:                    [PSCustomObject]@{
+  src\QueueWatcher.ps1:703:
+  src\QueueWatcher.ps1:704:                        JobId =
+  src\QueueWatcher.ps1:705:                            $Event.JobId
+  src\QueueWatcher.ps1:706:
+  src\QueueWatcher.ps1:707:                        PolicyDecision =
+  src\QueueWatcher.ps1:708:                            & $GetOrchestratorValue "PolicyDecision"
+  src\QueueWatcher.ps1:709:
+  src\QueueWatcher.ps1:710:                        RouteClassification =
+  src\QueueWatcher.ps1:711:                            & $GetOrchestratorValue "InitialRouteClassification"
+  src\QueueWatcher.ps1:712:
+  src\QueueWatcher.ps1:713:                        WiFiClassification =
+  src\QueueWatcher.ps1:714:                            & $GetOrchestratorValue "WiFiClassification"
+  src\QueueWatcher.ps1:715:
+  src\QueueWatcher.ps1:716:                        SwitchDecision =
+  src\QueueWatcher.ps1:717:                            & $GetOrchestratorValue "SwitchDecision"
+  src\QueueWatcher.ps1:718:
+  src\QueueWatcher.ps1:719:                        SwitchAuthorized =
+  src\QueueWatcher.ps1:720:                            & $GetOrchestratorValue "SwitchAuthorized"
+  src\QueueWatcher.ps1:721:
+  src\QueueWatcher.ps1:722:                        ShouldExecuteSwitch =
+  src\QueueWatcher.ps1:723:                            & $GetOrchestratorValue "ShouldExecuteSwitch"
+  src\QueueWatcher.ps1:724:
+  src\QueueWatcher.ps1:736:        Write-PrintSwitchEvent `
+  src\QueueWatcher.ps1:737:            -Event $DecisionEvent `
+  src\QueueWatcher.ps1:738:            -Path $EventPath |
+  src\QueueWatcher.ps1:739:            Out-Null
+  src\QueueWatcher.ps1:740:
+  src\QueueWatcher.ps1:741:        # ----------------------------------------------------
+> src\QueueWatcher.ps1:742:        # RecoveryCompleted
+  src\QueueWatcher.ps1:743:        # ----------------------------------------------------
+  src\QueueWatcher.ps1:744:
+  src\QueueWatcher.ps1:745:        $EventSequence++
+  src\QueueWatcher.ps1:746:
+  src\QueueWatcher.ps1:747:        $RecoveryEvent =
+  src\QueueWatcher.ps1:748:            New-PrintSwitchEvent `
+> src\QueueWatcher.ps1:749:                -EventType "RecoveryCompleted" `
+> src\QueueWatcher.ps1:750:                -Source "PrintRecoveryOrchestrator" `
+  src\QueueWatcher.ps1:751:                -PrinterName $PrinterName `
+  src\QueueWatcher.ps1:752:                -CorrelationId $CorrelationId `
+  src\QueueWatcher.ps1:753:                -SequenceNumber $EventSequence `
+  src\QueueWatcher.ps1:754:                -Severity "INFO" `
+  src\QueueWatcher.ps1:755:                -Data (
+  src\QueueWatcher.ps1:756:                    [PSCustomObject]@{
+  src\QueueWatcher.ps1:757:
+  src\QueueWatcher.ps1:758:                        JobId =
+  src\QueueWatcher.ps1:759:                            $Event.JobId
+  src\QueueWatcher.ps1:760:
+  src\QueueWatcher.ps1:761:                        FinalClassification =
+  src\QueueWatcher.ps1:762:                            & $GetOrchestratorValue "FinalClassification"
+  src\QueueWatcher.ps1:763:
+  src\QueueWatcher.ps1:764:                        SwitchDecision =
+  src\QueueWatcher.ps1:765:                            & $GetOrchestratorValue "SwitchDecision"
+  src\QueueWatcher.ps1:766:
+  src\QueueWatcher.ps1:767:                        SwitchAuthorized =
+  src\QueueWatcher.ps1:768:                            & $GetOrchestratorValue "SwitchAuthorized"
+  src\QueueWatcher.ps1:769:
+  src\QueueWatcher.ps1:770:                        SwitchExecuted =
+  src\QueueWatcher.ps1:771:                            & $GetOrchestratorValue "SwitchExecuted"
+  src\QueueWatcher.ps1:772:
+  src\QueueWatcher.ps1:773:                        RecoverySucceeded =
+  src\QueueWatcher.ps1:774:                            & $GetOrchestratorValue "RecoverySucceeded"
+  src\QueueWatcher.ps1:775:
+  src\QueueWatcher.ps1:776:                        PreserveEthernet =
+  src\QueueWatcher.ps1:777:                            & $GetOrchestratorValue "PreserveEthernet"
+  src\QueueWatcher.ps1:778:
+
+
+
+
+===== 8. REMOCION DE KNOWNJOBS =====
+
+  src\QueueWatcher.ps1:849:    # ========================================================
+  src\QueueWatcher.ps1:850:
+  src\QueueWatcher.ps1:851:    $CurrentKeys = @(
+  src\QueueWatcher.ps1:852:        $Jobs | ForEach-Object {
+  src\QueueWatcher.ps1:853:            "$($_.JobId)-$($_.Name)"
+  src\QueueWatcher.ps1:854:        }
+  src\QueueWatcher.ps1:855:    )
+  src\QueueWatcher.ps1:856:
+> src\QueueWatcher.ps1:857:    foreach ($KnownKey in @($KnownJobs.Keys)) {
+  src\QueueWatcher.ps1:858:
+  src\QueueWatcher.ps1:859:        if ($KnownKey -notin $CurrentKeys) {
+  src\QueueWatcher.ps1:860:
+> src\QueueWatcher.ps1:861:            $KnownJobs.Remove($KnownKey)
+  src\QueueWatcher.ps1:862:
+  src\QueueWatcher.ps1:863:            Write-Host ""
+  src\QueueWatcher.ps1:864:
+  src\QueueWatcher.ps1:865:            Write-Host `
+  src\QueueWatcher.ps1:866:                "Trabajo finalizado o eliminado: $KnownKey" `
+  src\QueueWatcher.ps1:867:                -ForegroundColor DarkGray
+  src\QueueWatcher.ps1:868:        }
+  src\QueueWatcher.ps1:869:    }
+  src\QueueWatcher.ps1:870:
+  src\QueueWatcher.ps1:871:    Start-Sleep `
+  src\QueueWatcher.ps1:872:        -Milliseconds $PollingMilliseconds
+  src\QueueWatcher.ps1:873:}
+
+
+
+
+===== 9. CONTRATO DEL CLASIFICADOR =====
+
+LineNumber Line                                              
+---------- ----                                              
+        22 $script:QueueJobClassifierVersion = "0.1"         
+        97 function ConvertTo-PrintSwitchQueueJobContext {   
+       409     $SummaryClassification =                      
+       539         SummaryClassification =                   
+       540             $SummaryClassification                
+       548 function Test-PrintSwitchQueueJobContextContract {
+       585             "SummaryClassification"               
+       654         [string]$Context.SummaryClassification    
+       765         $Context.SummaryClassification -eq        
+       784         $Context.SummaryClassification -notin     
+
+
+
+
+===== 10. DEPENDENCIAS PROHIBIDAS EN CLASIFICADOR =====
+PASS - clasificador sigue puro
+
+===== 11. CANDIDATOS DE INTEGRACION =====
+CANDIDATO A:
+  despues de obtener el Job raw y antes de crear PrintJobDetected
+
+CANDIDATO B:
+  enriquecer Data de PrintJobDetected con QueueJobContext
+
+CANDIDATO C:
+  mantener flujo actual del Orchestrator sin consumir SummaryClassification
+
+NO PROPUESTO EN I2:
+  usar STALLED_ERROR para decidir recovery
+  bloquear jobs
+  eliminar jobs
+  alterar KnownJobs semantics
+  cambiar thresholds desde QueueWatcher
+
+===== 12. PARSER GLOBAL =====
+PASS - todos los PS1 parsean
+
+===== 13. GIT STATUS =====
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C2-Staging-20260908-205321.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/P7-B1-R1-PreexistingJob-20260908-210209.txt
+?? docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+?? docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt
+?? docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+?? docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+?? docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+?? docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+?? docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt
+?? docs/evidence/runtime-test/
+?? src/QueueJobClassifier.ps1
+
+============================================================
+FIN P7-B2-I2-R0
+============================================================

@@ -1,0 +1,112 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-T1 - BATERIA SINTETICA EXHAUSTIVA
+Fecha: 2026-09-08 21:44:26
+============================================================
+
+===== 1. RESUMEN =====
+Total  : 36
+PASS   : 36
+FAIL   : 0
+
+===== 2. RESULTADOS =====
+
+Id  Passed Name                               Detail                                                                                                     
+--  ------ ----                               ------                                                                                                     
+C01   True Schema invalido                    Valid=False; Errors=INVALID_SCHEMA_VERSION                                                                 
+C02   True JobId null                         Valid=False; Errors=JOB_ID_MISSING                                                                         
+C03   True PrinterName vacio                  Valid=False; Errors=PRINTER_NAME_MISSING                                                                   
+C04   True Origin invalido                    Valid=False; Errors=INVALID_ORIGIN                                                                         
+C05   True Age bucket invalido                Valid=False; Errors=INVALID_AGE_BUCKET,STALLED_ERROR_INVARIANT_BROKEN                                      
+C06   True Health invalido                    Valid=False; Errors=INVALID_HEALTH,STALLED_ERROR_INVARIANT_BROKEN                                          
+C07   True Progress invalido                  Valid=False; Errors=INVALID_PROGRESS,STALLED_ERROR_INVARIANT_BROKEN                                        
+C08   True Summary invalido                   Valid=False; Errors=INVALID_SUMMARY                                                                        
+C09   True STALLED_ERROR inconsistente        Valid=False; Errors=STALLED_ERROR_INVARIANT_BROKEN                                                         
+N01   True Queued normal fresh                Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True
+N02   True Printing sin progreso              Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=PRINTING_UNCONFIRMED; Contra...
+N03   True Printing con progreso parcial      Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=PARTIAL_PROGRESS; Summary=PROGRESSING; Contract=True
+N04   True Error fresh                        Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=NO_PROGRESS; Summary=ERROR_ACTIVE; Contract=True     
+N05   True Error stale sin progreso           Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=STALLED_ERROR; Contract=True    
+N06   True Paused                             Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=PAUSED; Contract=True          
+N07   True Paused + Error                     Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=PAUSED; Contract=True           
+N08   True Deleting precedence                Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=TRANSITIONING; Contract=True    
+N09   True Retained no implica complete       Origin=PREEXISTING; Age=AGING; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True
+N10   True Retained complete                  Origin=PREEXISTING; Age=AGING; Health=NORMAL; Progress=COMPLETE; Summary=COMPLETE; Contract=True           
+N11   True SubmittedTime null                 Origin=UNKNOWN; Age=UNKNOWN; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True  
+N12   True JobStatus null                     Origin=PREEXISTING; Age=FRESH; Health=UNKNOWN; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=...
+N13   True TotalPages cero                    Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=UNKNOWN; Summary=ACTIVE_OR_QUEUED; Contract=True    
+N14   True PagesPrinted null                  Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=UNKNOWN; Summary=ACTIVE_OR_QUEUED; Contract=True    
+N15   True Estado desconocido                 Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True
+N16   True Error + Printing fresh             Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=NO_PROGRESS; Summary=ERROR_ACTIVE; Contract=True     
+N17   True Error + Printing stale             Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=STALLED_ERROR; Contract=True    
+N18   True New job                            Origin=NEW; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True        
+N19   True Boundary exacto 2 minutos          Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True
+N20   True Boundary apenas mayor 2 minutos    Origin=PREEXISTING; Age=AGING; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True
+N21   True Boundary exacto 15 minutos         Origin=PREEXISTING; Age=AGING; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True
+N22   True Boundary mayor 15 minutos          Origin=PREEXISTING; Age=STALE; Health=NORMAL; Progress=NO_PROGRESS; Summary=STALLED_NO_ERROR; Contract=True
+N23   True Complete + Error precedence        Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=COMPLETE; Summary=ERROR_ACTIVE; Contract=True        
+N24   True Partial + Error precedence         Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=PARTIAL_PROGRESS; Summary=ERROR_ACTIVE; Contract=True
+N25   True Offline es flag independiente      Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=PRINTING_UNCONFIRMED; Contra...
+P01   True Fresh threshold negativo rechazado FreshThresholdMinutes no puede ser negativo.                                                               
+P02   True Thresholds invertidos rechazados   StaleThresholdMinutes debe ser mayor que FreshThresholdMinutes.                                            
+
+
+
+
+===== 3. FAILURES =====
+PASS - cero fallos
+
+===== 4. SIDE EFFECT BOUNDARY =====
+Test sintetico:
+- no Get-PrintJob
+- no QueueWatcher
+- no ApplicationController
+- no NetworkManager
+- no recovery
+- no mutacion de cola
+
+===== 5. PARSER GLOBAL =====
+PASS - todos los PS1 parsean
+
+===== 6. GIT =====
+9f3ad8e (HEAD -> main, origin/main) P7 A5.3.5 A2: controller consumes monitoring events
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C2-Staging-20260908-205321.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/P7-B1-R1-PreexistingJob-20260908-210209.txt
+?? docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+?? docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+?? docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+?? docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+?? docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+?? docs/evidence/runtime-test/
+?? src/QueueJobClassifier.ps1
+
+===== 7. RESULTADO FINAL =====
+RESULTADO: PASS
+
+============================================================
+FIN P7-B2-T1
+============================================================

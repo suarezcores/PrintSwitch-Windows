@@ -1,0 +1,252 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-I2-T2 - E2E REAL QUEUEWATCHER + QUEUEJOBCONTEXT
+Fecha: 2026-09-08 23:33:24
+============================================================
+
+===== 1. PRECONDICIONES =====
+Printer: L365 Series(Red)
+JobId: 13
+WiFi: SSID                   : Claro640
+Ethernet: Disconnected
+
+
+
+JobStatus             : Error, Printing, Retained
+Caption               : 
+Description           : 
+ElementName           : 
+InstanceID            : 
+CommunicationStatus   : 
+DetailedStatus        : 
+HealthState           : 
+InstallDate           : 
+Name                  : 
+OperatingStatus       : 
+OperationalStatus     : 
+PrimaryStatus         : 
+Status                : 
+StatusDescriptions    : 
+ComputerName          : 
+Datatype              : NT EMF 1.008
+DocumentName          : *Sin título: Bloc de notas
+Id                    : 13
+JobTime               : 285484625
+PagesPrinted          : 0
+Position              : 1
+PrinterName           : L365 Series(Red)
+Priority              : 1
+Size                  : 136
+SubmittedTime         : 8/9/2026 18:46:48
+TotalPages            : 1
+UserName              : Suarez
+PSComputerName        : 
+CimClass              : ROOT/StandardCimv2:MSFT_PrintJob
+CimInstanceProperties : {Caption, Description, ElementName, InstanceID...}
+CimSystemProperties   : Microsoft.Management.Infrastructure.CimSystemProperties
+
+
+
+
+
+===== 2. TIMELINE =====
+
+Second State   EventExists EventLength
+------ -----   ----------- -----------
+     1 Running       False           0
+     2 Running       False           0
+     3 Running       False           0
+     4 Running        True        1016
+
+
+
+
+===== 3. WORKER OUTPUT =====
+SIN OUTPUT
+
+===== 4. WORKER ERRORS =====
+SIN ERRORES
+
+===== 5. EVENT FILE RAW =====
+{"Component":"PrintSwitchEvent","EventVersion":1,"EventId":"7d39fc17-9947-4cfb-949d-e30df40e40bb","SequenceNumber":1,"EventType":"PrintJobDetected","Timestamp":"2026-09-08T23:33:22.7040901-03:00","Source":"QueueWatcher","PrinterName":"L365 Series(Red)","CorrelationId":"f6c01544-3d46-49f2-b1f3-7cc1684a1215","Severity":"INFO","Data":{"JobId":13,"DocumentName":"*Sin tÃ­tulo: Bloc de notas","Owner":"Suarez","JobStatus":"Error | Imprimiendo","QueueName":"L365 Series(Red)","SubmittedTime":null,"QueueJobContext":{"SchemaVersion":1,"JobId":13,"PrinterName":"L365 Series(Red)","DocumentName":"*Sin tÃ­tulo: Bloc de notas","SubmittedTime":"2026-09-08T18:46:48.6920000-03:00","Raw":{"JobStatus":"Error | Imprimiendo","PagesPrinted":0,"TotalPages":1,"SizeBytes":136},"Origin":"PREEXISTING","Age":{"Bucket":"STALE","Minutes":286.56},"Health":"ERROR","Progress":"NO_PROGRESS","Flags":{"Printing":true,"Retained":false,"Paused":false,"Deleting":false,"Offline":false,"Error":true},"SummaryClassification":"STALLED_ERROR"}}}
+
+===== 6. PRINTJOBDETECTED =====
+{
+    "Component":  "PrintSwitchEvent",
+    "EventVersion":  1,
+    "EventId":  "7d39fc17-9947-4cfb-949d-e30df40e40bb",
+    "SequenceNumber":  1,
+    "EventType":  "PrintJobDetected",
+    "Timestamp":  "2026-09-08T23:33:22.7040901-03:00",
+    "Source":  "QueueWatcher",
+    "PrinterName":  "L365 Series(Red)",
+    "CorrelationId":  "f6c01544-3d46-49f2-b1f3-7cc1684a1215",
+    "Severity":  "INFO",
+    "Data":  {
+                 "JobId":  13,
+                 "DocumentName":  "*Sin tÃ­tulo: Bloc de notas",
+                 "Owner":  "Suarez",
+                 "JobStatus":  "Error | Imprimiendo",
+                 "QueueName":  "L365 Series(Red)",
+                 "SubmittedTime":  null,
+                 "QueueJobContext":  {
+                                         "SchemaVersion":  1,
+                                         "JobId":  13,
+                                         "PrinterName":  "L365 Series(Red)",
+                                         "DocumentName":  "*Sin tÃ­tulo: Bloc de notas",
+                                         "SubmittedTime":  "2026-09-08T18:46:48.6920000-03:00",
+                                         "Raw":  {
+                                                     "JobStatus":  "Error | Imprimiendo",
+                                                     "PagesPrinted":  0,
+                                                     "TotalPages":  1,
+                                                     "SizeBytes":  136
+                                                 },
+                                         "Origin":  "PREEXISTING",
+                                         "Age":  {
+                                                     "Bucket":  "STALE",
+                                                     "Minutes":  286.56
+                                                 },
+                                         "Health":  "ERROR",
+                                         "Progress":  "NO_PROGRESS",
+                                         "Flags":  {
+                                                       "Printing":  true,
+                                                       "Retained":  false,
+                                                       "Paused":  false,
+                                                       "Deleting":  false,
+                                                       "Offline":  false,
+                                                       "Error":  true
+                                                   },
+                                         "SummaryClassification":  "STALLED_ERROR"
+                                     }
+             }
+}
+
+===== 7. QUEUEJOBCONTEXT =====
+{
+    "SchemaVersion":  1,
+    "JobId":  13,
+    "PrinterName":  "L365 Series(Red)",
+    "DocumentName":  "*Sin tÃ­tulo: Bloc de notas",
+    "SubmittedTime":  "2026-09-08T18:46:48.6920000-03:00",
+    "Raw":  {
+                "JobStatus":  "Error | Imprimiendo",
+                "PagesPrinted":  0,
+                "TotalPages":  1,
+                "SizeBytes":  136
+            },
+    "Origin":  "PREEXISTING",
+    "Age":  {
+                "Bucket":  "STALE",
+                "Minutes":  286.56
+            },
+    "Health":  "ERROR",
+    "Progress":  "NO_PROGRESS",
+    "Flags":  {
+                  "Printing":  true,
+                  "Retained":  false,
+                  "Paused":  false,
+                  "Deleting":  false,
+                  "Offline":  false,
+                  "Error":  true
+              },
+    "SummaryClassification":  "STALLED_ERROR"
+}
+
+===== 8. CHECKS =====
+WorkerDidNotFail              : True
+NoResidualWorker              : True
+EventFileExists               : True
+JsonValid                     : True
+PrintJobDetected              : True
+QueueJobContextNotNull        : True
+SchemaVersion1                : True
+JobId13                       : True
+PrinterName                   : True
+OriginPreexisting             : True
+AgeStale                      : True
+HealthError                   : True
+NoProgress                    : True
+PrintingTrue                  : True
+ErrorTrue                     : True
+StalledError                  : True
+JobStillPresent               : True
+JobStatusUnchanged            : True
+PagesUnchanged                : True
+WifiUnchanged                 : True
+EthernetUnchanged             : True
+
+===== 9. POSTCONDICIONES =====
+WiFi After: SSID                   : Claro640
+Ethernet After: Disconnected
+
+
+
+JobStatus             : Error, Printing, Retained
+Caption               : 
+Description           : 
+ElementName           : 
+InstanceID            : 
+CommunicationStatus   : 
+DetailedStatus        : 
+HealthState           : 
+InstallDate           : 
+Name                  : 
+OperatingStatus       : 
+OperationalStatus     : 
+PrimaryStatus         : 
+Status                : 
+StatusDescriptions    : 
+ComputerName          : 
+Datatype              : NT EMF 1.008
+DocumentName          : *Sin título: Bloc de notas
+Id                    : 13
+JobTime               : 285484625
+PagesPrinted          : 0
+Position              : 1
+PrinterName           : L365 Series(Red)
+Priority              : 1
+Size                  : 136
+SubmittedTime         : 8/9/2026 18:46:48
+TotalPages            : 1
+UserName              : Suarez
+PSComputerName        : 
+CimClass              : ROOT/StandardCimv2:MSFT_PrintJob
+CimInstanceProperties : {Caption, Description, ElementName, InstanceID...}
+CimSystemProperties   : Microsoft.Management.Infrastructure.CimSystemProperties
+
+
+
+
+
+===== 10. PARSER GLOBAL =====
+PASS - todos los PS1 parsean
+
+===== 11. GIT STATUS =====
+ D docs/evidence/P7-A5.3.5-A1-C1-PreCommit-20260908-185524.txt
+ D docs/evidence/P7-A5.3.5-A2-C1-R1-PreCommit-20260908-205011.txt
+ D docs/evidence/P7-A5.3.5-A2-R1-EventContract-20260908-194700.txt
+ D docs/evidence/P7-A5.3.5-A2-T2-GetStatusAutoSync-20260908-204025.txt
+ D docs/evidence/P7-A5.3.5-A2-T3A-E2EReal-20260908-204319.txt
+ M src/QueueWatcher.ps1
+?? docs/evidence/P7-B2-I2-F1-LoggerLevelFix-20260908-230018.txt
+?? docs/evidence/P7-B2-I2-I2-R0-PrinterContext-20260908-231134.txt
+?? docs/evidence/P7-B2-I2-I2-R2-PrinterNameOutputAudit-20260908-231514.txt
+?? docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt
+?? docs/evidence/P7-B2-I2-T1-IntegratedQueueWatcher-20260908-221850.txt
+?? docs/evidence/P7-B2-I2-T1-R1-BaselineAudit-20260908-225416.txt
+?? docs/evidence/P7-B2-I2-T1-R2-WorkerDiagnostic-20260908-225712.txt
+?? docs/evidence/P7-B2-I2-T1-R3-LoggerLevelAudit-20260908-225906.txt
+?? docs/evidence/P7-B2-I2-T1-R4-E2EQueueJobContext-20260908-230252.txt
+?? docs/evidence/P7-B2-I2-T1-R5-ClassifierRealInput-20260908-230808.txt
+?? docs/evidence/P7-B2-I2-T1-R6-PrintJobContractComparison-20260908-230941.txt
+?? docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt
+?? docs/evidence/old_logs/
+?? docs/evidence/runtime-test/
+?? src/QueueJobClassifier.ps1
+
+===== 12. RESULTADO =====
+RESULTADO: PASS
+
+============================================================
+FIN P7-B2-I2-T2
+============================================================

@@ -8,7 +8,7 @@ param (
 
 $ErrorActionPreference = "Continue"
 
-# PrintSwitch - QueueWatcher v0.7
+# PrintSwitch - QueueWatcher v0.8
 #
 # Orquestador de observacion de trabajos.
 #
@@ -35,6 +35,9 @@ $LoggerPath = Join-Path `
 $EventWriterPath = Join-Path `
     $PSScriptRoot `
     "EventWriter.ps1"
+$QueueJobClassifierPath = Join-Path `
+    $PSScriptRoot `
+    "QueueJobClassifier.ps1"
 
 $EventWriterEnabled = `
     -not [string]::IsNullOrWhiteSpace($EventPath)
@@ -62,6 +65,32 @@ if ($EventWriterEnabled) {
 
         return
     }
+}
+
+# ============================================================
+# QueueJobClassifier
+# ============================================================
+
+if (-not (Test-Path -LiteralPath $QueueJobClassifierPath)) {
+
+    Write-Host ""
+    Write-Host "ERROR: QueueJobClassifier no encontrado." -ForegroundColor Red
+    Write-Host "Ruta esperada: $QueueJobClassifierPath"
+
+    return
+}
+
+try {
+
+    . $QueueJobClassifierPath
+}
+catch {
+
+    Write-Host ""
+    Write-Host "ERROR cargando QueueJobClassifier." -ForegroundColor Red
+    Write-Host $_.Exception.Message
+
+    return
 }
 
 $EventSequence = 0
@@ -112,7 +141,7 @@ catch {
 # ============================================================
 
 Write-Host ""
-Write-Host "PrintSwitch - QueueWatcher v0.7" `
+Write-Host "PrintSwitch - QueueWatcher v0.8" `
     -ForegroundColor Cyan
 
 Write-Host ""
@@ -472,6 +501,56 @@ while ($true) {
             # =================================================
             # NUEVO TRABAJO
             # =================================================
+            $QueueJobContext =
+                $null
+
+            try {
+
+                $QueueJobContext =
+                    ConvertTo-PrintSwitchQueueJobContext `
+                        -Job $Job `
+                        -ObservationStartedAt (Get-Date) `
+                        -PrinterName $PrinterName
+
+                $QueueJobContextContract =
+                    Test-PrintSwitchQueueJobContextContract `
+                        -Context $QueueJobContext
+
+                if (-not $QueueJobContextContract.Valid) {
+
+                    Write-PrintSwitchLog `
+                        -Component "QueueWatcher" `
+                        -Event "QUEUE_JOB_CONTEXT_INVALID" `
+                        -Level "WARN" `
+                        -Data @{
+                            Printer = $PrinterName
+                            JobId   = $Job.JobId
+                            Errors  = @(
+                                $QueueJobContextContract.Errors
+                            )
+                        } |
+                        Out-Null
+
+                    $QueueJobContext =
+                        $null
+                }
+            }
+            catch {
+
+                Write-PrintSwitchLog `
+                    -Component "QueueWatcher" `
+                    -Event "QUEUE_JOB_CLASSIFICATION_FAILED" `
+                    -Level "WARN" `
+                    -Data @{
+                        Printer = $PrinterName
+                        JobId   = $Job.JobId
+                        Message = $_.Exception.Message
+                    } |
+                    Out-Null
+
+                $QueueJobContext =
+                    $null
+            }
 
             $Event = [PSCustomObject]@{
 
@@ -507,6 +586,8 @@ while ($true) {
 
                 SizeBytes =
                     $Job.Size
+                QueueJobContext =
+                    $QueueJobContext
             }
 
             if ($EventWriterEnabled) {
@@ -544,6 +625,8 @@ while ($true) {
 
                                 SubmittedTime =
                                     $null
+                                QueueJobContext =
+                                    $Event.QueueJobContext
                             }
                         )
 
@@ -559,7 +642,7 @@ while ($true) {
                     Write-PrintSwitchLog `
                         -Component "QueueWatcher" `
                         -Event "APPLICATION_EVENT_WRITE_FAILED" `
-                        -Level "WARNING" `
+                        -Level "WARN" `
                         -Data @{
                             Printer = $PrinterName
                             JobId   = $Event.JobId
@@ -806,7 +889,7 @@ if ($EventWriterEnabled) {
         Write-PrintSwitchLog `
             -Component "QueueWatcher" `
             -Event "APPLICATION_EVENT_WRITE_FAILED" `
-            -Level "WARNING" `
+            -Level "WARN" `
             -Data @{
                 Printer =
                     $PrinterName

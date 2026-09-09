@@ -1,0 +1,285 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-I2-I2-R4-R1 - PRINTER CONTEXT LINE SAFE
+Fecha: 2026-09-08 23:32:00
+============================================================
+
+===== 1. DESIGN =====
+Job.PrinterName > explicit PrinterName > null
+No inference from Win32_PrintJob.Name.
+
+===== 2. MODERN CONTEXT =====
+{
+    "SchemaVersion":  1,
+    "JobId":  13,
+    "PrinterName":  "L365 Series(Red)",
+    "DocumentName":  "*Sin título: Bloc de notas",
+    "SubmittedTime":  "\/Date(1788904008692)\/",
+    "Raw":  {
+                "JobStatus":  "Error, Printing, Retained",
+                "PagesPrinted":  0,
+                "TotalPages":  1,
+                "SizeBytes":  136
+            },
+    "Origin":  "PREEXISTING",
+    "Age":  {
+                "Bucket":  "STALE",
+                "Minutes":  285.19
+            },
+    "Health":  "ERROR",
+    "Progress":  "NO_PROGRESS",
+    "Flags":  {
+                  "Printing":  true,
+                  "Retained":  true,
+                  "Paused":  false,
+                  "Deleting":  false,
+                  "Offline":  false,
+                  "Error":  true
+              },
+    "SummaryClassification":  "STALLED_ERROR"
+}
+
+===== 3. MODERN CONTRACT =====
+{
+    "Valid":  true,
+    "ErrorCount":  0,
+    "Errors":  [
+
+               ]
+}
+
+===== 4. CIM CONTEXT =====
+{
+    "SchemaVersion":  1,
+    "JobId":  13,
+    "PrinterName":  "L365 Series(Red)",
+    "DocumentName":  "*Sin título: Bloc de notas",
+    "SubmittedTime":  "\/Date(1788904008692)\/",
+    "Raw":  {
+                "JobStatus":  "Error | Imprimiendo",
+                "PagesPrinted":  0,
+                "TotalPages":  1,
+                "SizeBytes":  136
+            },
+    "Origin":  "PREEXISTING",
+    "Age":  {
+                "Bucket":  "STALE",
+                "Minutes":  285.19
+            },
+    "Health":  "ERROR",
+    "Progress":  "NO_PROGRESS",
+    "Flags":  {
+                  "Printing":  true,
+                  "Retained":  false,
+                  "Paused":  false,
+                  "Deleting":  false,
+                  "Offline":  false,
+                  "Error":  true
+              },
+    "SummaryClassification":  "STALLED_ERROR"
+}
+
+===== 5. CIM CONTRACT =====
+{
+    "Valid":  true,
+    "ErrorCount":  0,
+    "Errors":  [
+
+               ]
+}
+
+===== 6. CLASSIFIER DIFF =====
+
+===== 7. QUEUEWATCHER DIFF =====
+diff --git a/src/QueueWatcher.ps1 b/src/QueueWatcher.ps1
+index e589af0..f12b436 100644
+--- a/src/QueueWatcher.ps1
++++ b/src/QueueWatcher.ps1
+@@ -8,7 +8,7 @@ param (
+ 
+ $ErrorActionPreference = "Continue"
+ 
+-# PrintSwitch - QueueWatcher v0.7
++# PrintSwitch - QueueWatcher v0.8
+ #
+ # Orquestador de observacion de trabajos.
+ #
+@@ -35,6 +35,9 @@ $LoggerPath = Join-Path `
+ $EventWriterPath = Join-Path `
+     $PSScriptRoot `
+     "EventWriter.ps1"
++$QueueJobClassifierPath = Join-Path `
++    $PSScriptRoot `
++    "QueueJobClassifier.ps1"
+ 
+ $EventWriterEnabled = `
+     -not [string]::IsNullOrWhiteSpace($EventPath)
+@@ -64,6 +67,32 @@ if ($EventWriterEnabled) {
+     }
+ }
+ 
++# ============================================================
++# QueueJobClassifier
++# ============================================================
++
++if (-not (Test-Path -LiteralPath $QueueJobClassifierPath)) {
++
++    Write-Host ""
++    Write-Host "ERROR: QueueJobClassifier no encontrado." -ForegroundColor Red
++    Write-Host "Ruta esperada: $QueueJobClassifierPath"
++
++    return
++}
++
++try {
++
++    . $QueueJobClassifierPath
++}
++catch {
++
++    Write-Host ""
++    Write-Host "ERROR cargando QueueJobClassifier." -ForegroundColor Red
++    Write-Host $_.Exception.Message
++
++    return
++}
++
+ $EventSequence = 0
+ 
+ $PrinterDiscoveryPath = Join-Path `
+@@ -112,7 +141,7 @@ catch {
+ # ============================================================
+ 
+ Write-Host ""
+-Write-Host "PrintSwitch - QueueWatcher v0.7" `
++Write-Host "PrintSwitch - QueueWatcher v0.8" `
+     -ForegroundColor Cyan
+ 
+ Write-Host ""
+@@ -472,6 +501,56 @@ while ($true) {
+             # =================================================
+             # NUEVO TRABAJO
+             # =================================================
++            $QueueJobContext =
++                $null
++
++            try {
++
++                $QueueJobContext =
++                    ConvertTo-PrintSwitchQueueJobContext `
++                        -Job $Job `
++                        -ObservationStartedAt (Get-Date) `
++                        -PrinterName $PrinterName
++
++                $QueueJobContextContract =
++                    Test-PrintSwitchQueueJobContextContract `
++                        -Context $QueueJobContext
++
++                if (-not $QueueJobContextContract.Valid) {
++
++                    Write-PrintSwitchLog `
++                        -Component "QueueWatcher" `
++                        -Event "QUEUE_JOB_CONTEXT_INVALID" `
++                        -Level "WARN" `
++                        -Data @{
++                            Printer = $PrinterName
++                            JobId   = $Job.JobId
++                            Errors  = @(
++                                $QueueJobContextContract.Errors
++                            )
++                        } |
++                        Out-Null
++
++                    $QueueJobContext =
++                        $null
++                }
++            }
++            catch {
++
++                Write-PrintSwitchLog `
++                    -Component "QueueWatcher" `
++                    -Event "QUEUE_JOB_CLASSIFICATION_FAILED" `
++                    -Level "WARN" `
++                    -Data @{
++                        Printer = $PrinterName
++                        JobId   = $Job.JobId
++                        Message = $_.Exception.Message
++                    } |
++                    Out-Null
++
++                $QueueJobContext =
++                    $null
++            }
+ 
+             $Event = [PSCustomObject]@{
+ 
+@@ -507,6 +586,8 @@ while ($true) {
+ 
+                 SizeBytes =
+                     $Job.Size
++                QueueJobContext =
++                    $QueueJobContext
+             }
+ 
+             if ($EventWriterEnabled) {
+@@ -544,6 +625,8 @@ while ($true) {
+ 
+                                 SubmittedTime =
+                                     $null
++                                QueueJobContext =
++                                    $Event.QueueJobContext
+                             }
+                         )
+ 
+@@ -559,7 +642,7 @@ while ($true) {
+                     Write-PrintSwitchLog `
+                         -Component "QueueWatcher" `
+                         -Event "APPLICATION_EVENT_WRITE_FAILED" `
+-                        -Level "WARNING" `
++                        -Level "WARN" `
+                         -Data @{
+                             Printer = $PrinterName
+                             JobId   = $Event.JobId
+@@ -806,7 +889,7 @@ if ($EventWriterEnabled) {
+         Write-PrintSwitchLog `
+             -Component "QueueWatcher" `
+             -Event "APPLICATION_EVENT_WRITE_FAILED" `
+-            -Level "WARNING" `
++            -Level "WARN" `
+             -Data @{
+                 Printer =
+                     $PrinterName
+
+===== 8. PARSER GLOBAL =====
+PASS - todos los PS1 parsean
+
+===== 9. GIT STATUS =====
+ D docs/evidence/P7-A5.3.5-A1-C1-PreCommit-20260908-185524.txt
+ D docs/evidence/P7-A5.3.5-A2-C1-R1-PreCommit-20260908-205011.txt
+ D docs/evidence/P7-A5.3.5-A2-R1-EventContract-20260908-194700.txt
+ D docs/evidence/P7-A5.3.5-A2-T2-GetStatusAutoSync-20260908-204025.txt
+ D docs/evidence/P7-A5.3.5-A2-T3A-E2EReal-20260908-204319.txt
+ M src/QueueWatcher.ps1
+?? docs/evidence/P7-B2-I2-F1-LoggerLevelFix-20260908-230018.txt
+?? docs/evidence/P7-B2-I2-I2-R0-PrinterContext-20260908-231134.txt
+?? docs/evidence/P7-B2-I2-I2-R2-PrinterNameOutputAudit-20260908-231514.txt
+?? docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt
+?? docs/evidence/P7-B2-I2-T1-IntegratedQueueWatcher-20260908-221850.txt
+?? docs/evidence/P7-B2-I2-T1-R1-BaselineAudit-20260908-225416.txt
+?? docs/evidence/P7-B2-I2-T1-R2-WorkerDiagnostic-20260908-225712.txt
+?? docs/evidence/P7-B2-I2-T1-R3-LoggerLevelAudit-20260908-225906.txt
+?? docs/evidence/P7-B2-I2-T1-R4-E2EQueueJobContext-20260908-230252.txt
+?? docs/evidence/P7-B2-I2-T1-R5-ClassifierRealInput-20260908-230808.txt
+?? docs/evidence/P7-B2-I2-T1-R6-PrintJobContractComparison-20260908-230941.txt
+?? docs/evidence/old_logs/
+?? docs/evidence/runtime-test/
+?? src/QueueJobClassifier.ps1
+
+===== 10. RESULTADO =====
+MSFT_PrintJob             : True
+Win32_PrintJob contextual : True
+RESULTADO: PASS
+
+============================================================
+FIN P7-B2-I2-I2-R4-R1
+============================================================

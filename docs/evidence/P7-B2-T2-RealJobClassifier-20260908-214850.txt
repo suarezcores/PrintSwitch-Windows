@@ -1,0 +1,221 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-T2 - JOB REAL CONTRA QUEUEJOBCLASSIFIER
+Fecha: 2026-09-08 21:48:50
+Printer: L365 Series(Red)
+TargetJobId: 13
+============================================================
+
+===== 1. PRECONDICIONES =====
+ObservationStartedAt: 09/08/2026 21:48:50
+
+    SSID                   : Claro640
+
+Ethernet Status: Disconnected
+
+===== 2. OBTENER JOB REAL =====
+Jobs encontrados: 1
+PASS - Job real encontrado
+
+
+
+JobStatus             : Error, Printing, Retained
+Caption               : 
+Description           : 
+ElementName           : 
+InstanceID            : 
+CommunicationStatus   : 
+DetailedStatus        : 
+HealthState           : 
+InstallDate           : 
+Name                  : 
+OperatingStatus       : 
+OperationalStatus     : 
+PrimaryStatus         : 
+Status                : 
+StatusDescriptions    : 
+ComputerName          : 
+Datatype              : NT EMF 1.008
+DocumentName          : *Sin título: Bloc de notas
+Id                    : 13
+JobTime               : 285484625
+PagesPrinted          : 0
+Position              : 1
+PrinterName           : L365 Series(Red)
+Priority              : 1
+Size                  : 136
+SubmittedTime         : 8/9/2026 18:46:48
+TotalPages            : 1
+UserName              : Suarez
+PSComputerName        : 
+CimClass              : ROOT/StandardCimv2:MSFT_PrintJob
+CimInstanceProperties : {Caption, Description, ElementName, InstanceID...}
+CimSystemProperties   : Microsoft.Management.Infrastructure.CimSystemProperties
+
+
+
+
+
+===== 3. NORMALIZAR JOB REAL =====
+
+
+SchemaVersion         : 1
+JobId                 : 13
+PrinterName           : L365 Series(Red)
+DocumentName          : *Sin título: Bloc de notas
+SubmittedTime         : 8/9/2026 18:46:48
+Raw                   : @{JobStatus=Error, Printing, Retained; PagesPrinted=0; TotalPages=1; SizeBytes=136}
+Origin                : PREEXISTING
+Age                   : @{Bucket=STALE; Minutes=182,02}
+Health                : ERROR
+Progress              : NO_PROGRESS
+Flags                 : @{Printing=True; Retained=True; Paused=False; Deleting=False; Offline=False; Error=True}
+SummaryClassification : STALLED_ERROR
+
+
+
+
+Raw:
+
+
+JobStatus    : Error, Printing, Retained
+PagesPrinted : 0
+TotalPages   : 1
+SizeBytes    : 136
+
+
+
+
+Age:
+
+
+Bucket  : STALE
+Minutes : 182,02
+
+
+
+
+Flags:
+
+
+Printing : True
+Retained : True
+Paused   : False
+Deleting : False
+Offline  : False
+Error    : True
+
+
+
+
+
+===== 4. VALIDAR CONTRATO =====
+
+
+Valid      : True
+ErrorCount : 0
+Errors     : {}
+
+
+
+
+PASS - QueueJobContext real cumple contrato
+
+===== 5. VALIDAR SEMANTICA ESPERADA =====
+SchemaVersion  : True
+JobId          : True
+PrinterName    : True
+Origin         : True
+Age            : True
+Health         : True
+Progress       : True
+Printing       : True
+Retained       : True
+Error          : True
+Summary        : True
+PASS - semantica real coincide con contrato esperado
+
+===== 6. CORROBORACION WIN32_PRINTJOB =====
+
+
+JobId         : 13
+Status        : Error
+JobStatus     : Error | Imprimiendo
+StatusMask    : 8210
+PagesPrinted  : 0
+TotalPages    : 1
+TimeSubmitted : 8/9/2026 18:46:48
+
+
+
+
+
+===== 7. DETERMINISMO =====
+PASS - mismo input produce mismo QueueJobContext
+
+===== 8. NO INTERFERENCIA =====
+PASS - Job 13 sigue presente
+
+Estado despues:
+
+
+ID            : 13
+DocumentName  : *Sin título: Bloc de notas
+SubmittedTime : 8/9/2026 18:46:48
+JobStatus     : Error, Printing, Retained
+PagesPrinted  : 0
+TotalPages    : 1
+Size          : 136
+
+
+
+
+
+===== 9. PARSER GLOBAL =====
+PASS - todos los PS1 parsean
+
+===== 10. GIT =====
+9f3ad8e (HEAD -> main, origin/main) P7 A5.3.5 A2: controller consumes monitoring events
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C2-Staging-20260908-205321.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/P7-B1-R1-PreexistingJob-20260908-210209.txt
+?? docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+?? docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+?? docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+?? docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+?? docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+?? docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt
+?? docs/evidence/runtime-test/
+?? src/QueueJobClassifier.ps1
+
+===== 11. RESULTADO =====
+RESULTADO: PASS
+
+============================================================
+FIN P7-B2-T2
+============================================================
+
+

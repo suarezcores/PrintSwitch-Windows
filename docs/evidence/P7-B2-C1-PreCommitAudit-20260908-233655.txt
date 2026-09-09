@@ -1,0 +1,337 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-C1 - AUDITORIA PRE-COMMIT
+Fecha: 2026-09-08 23:36:55
+============================================================
+
+===== 1. PARSER GLOBAL =====
+PASS - todos los PS1 parsean
+
+===== 2. GIT STATUS =====
+ M src/QueueWatcher.ps1
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C2-Staging-20260908-205321.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/P7-B1-R1-PreexistingJob-20260908-210209.txt
+?? docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+?? docs/evidence/P7-B2-I2-F1-LoggerLevelFix-20260908-230018.txt
+?? docs/evidence/P7-B2-I2-I1-R2-Integracion-Segura.ps1
+?? docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt
+?? docs/evidence/P7-B2-I2-I2-R0-PrinterContext-20260908-231134.txt
+?? docs/evidence/P7-B2-I2-I2-R2-PrinterNameOutputAudit-20260908-231514.txt
+?? docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt
+?? docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt
+?? docs/evidence/P7-B2-I2-T1-IntegratedQueueWatcher-20260908-221850.txt
+?? docs/evidence/P7-B2-I2-T1-R1-BaselineAudit-20260908-225416.txt
+?? docs/evidence/P7-B2-I2-T1-R2-WorkerDiagnostic-20260908-225712.txt
+?? docs/evidence/P7-B2-I2-T1-R3-LoggerLevelAudit-20260908-225906.txt
+?? docs/evidence/P7-B2-I2-T1-R4-E2EQueueJobContext-20260908-230252.txt
+?? docs/evidence/P7-B2-I2-T1-R5-ClassifierRealInput-20260908-230808.txt
+?? docs/evidence/P7-B2-I2-T1-R6-PrintJobContractComparison-20260908-230941.txt
+?? docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt
+?? docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+?? docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+?? docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+?? docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+?? docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt
+?? docs/evidence/runtime-test/
+?? src/QueueJobClassifier.ps1
+
+===== 3. DELETES TRACKED =====
+PASS - cero deletes tracked
+
+===== 4. REQUIRED FILES =====
+.\src\QueueJobClassifier.ps1 : True
+.\src\QueueWatcher.ps1 : True
+.\docs\evidence\P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt : True
+.\docs\evidence\P7-B2-I2-T2-E2EReal-20260908-233318.txt : True
+
+===== 5. TRACKED DIFF NAMES =====
+M	src/QueueWatcher.ps1
+
+===== 6. TRACKED DIFF STAT =====
+ src/QueueWatcher.ps1 | 91 +++++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 87 insertions(+), 4 deletions(-)
+
+===== 7. DIFF QUEUEWATCHER =====
+diff --git a/src/QueueWatcher.ps1 b/src/QueueWatcher.ps1
+index e589af0..f12b436 100644
+--- a/src/QueueWatcher.ps1
++++ b/src/QueueWatcher.ps1
+@@ -8,7 +8,7 @@ param (
+ 
+ $ErrorActionPreference = "Continue"
+ 
+-# PrintSwitch - QueueWatcher v0.7
++# PrintSwitch - QueueWatcher v0.8
+ #
+ # Orquestador de observacion de trabajos.
+ #
+@@ -35,6 +35,9 @@ $LoggerPath = Join-Path `
+ $EventWriterPath = Join-Path `
+     $PSScriptRoot `
+     "EventWriter.ps1"
++$QueueJobClassifierPath = Join-Path `
++    $PSScriptRoot `
++    "QueueJobClassifier.ps1"
+ 
+ $EventWriterEnabled = `
+     -not [string]::IsNullOrWhiteSpace($EventPath)
+@@ -64,6 +67,32 @@ if ($EventWriterEnabled) {
+     }
+ }
+ 
++# ============================================================
++# QueueJobClassifier
++# ============================================================
++
++if (-not (Test-Path -LiteralPath $QueueJobClassifierPath)) {
++
++    Write-Host ""
++    Write-Host "ERROR: QueueJobClassifier no encontrado." -ForegroundColor Red
++    Write-Host "Ruta esperada: $QueueJobClassifierPath"
++
++    return
++}
++
++try {
++
++    . $QueueJobClassifierPath
++}
++catch {
++
++    Write-Host ""
++    Write-Host "ERROR cargando QueueJobClassifier." -ForegroundColor Red
++    Write-Host $_.Exception.Message
++
++    return
++}
++
+ $EventSequence = 0
+ 
+ $PrinterDiscoveryPath = Join-Path `
+@@ -112,7 +141,7 @@ catch {
+ # ============================================================
+ 
+ Write-Host ""
+-Write-Host "PrintSwitch - QueueWatcher v0.7" `
++Write-Host "PrintSwitch - QueueWatcher v0.8" `
+     -ForegroundColor Cyan
+ 
+ Write-Host ""
+@@ -472,6 +501,56 @@ while ($true) {
+             # =================================================
+             # NUEVO TRABAJO
+             # =================================================
++            $QueueJobContext =
++                $null
++
++            try {
++
++                $QueueJobContext =
++                    ConvertTo-PrintSwitchQueueJobContext `
++                        -Job $Job `
++                        -ObservationStartedAt (Get-Date) `
++                        -PrinterName $PrinterName
++
++                $QueueJobContextContract =
++                    Test-PrintSwitchQueueJobContextContract `
++                        -Context $QueueJobContext
++
++                if (-not $QueueJobContextContract.Valid) {
++
++                    Write-PrintSwitchLog `
++                        -Component "QueueWatcher" `
++                        -Event "QUEUE_JOB_CONTEXT_INVALID" `
++                        -Level "WARN" `
++                        -Data @{
++                            Printer = $PrinterName
++                            JobId   = $Job.JobId
++                            Errors  = @(
++                                $QueueJobContextContract.Errors
++                            )
++                        } |
++                        Out-Null
++
++                    $QueueJobContext =
++                        $null
++                }
++            }
++            catch {
++
++                Write-PrintSwitchLog `
++                    -Component "QueueWatcher" `
++                    -Event "QUEUE_JOB_CLASSIFICATION_FAILED" `
++                    -Level "WARN" `
++                    -Data @{
++                        Printer = $PrinterName
++                        JobId   = $Job.JobId
++                        Message = $_.Exception.Message
++                    } |
++                    Out-Null
++
++                $QueueJobContext =
++                    $null
++            }
+ 
+             $Event = [PSCustomObject]@{
+ 
+@@ -507,6 +586,8 @@ while ($true) {
+ 
+                 SizeBytes =
+                     $Job.Size
++                QueueJobContext =
++                    $QueueJobContext
+             }
+ 
+             if ($EventWriterEnabled) {
+@@ -544,6 +625,8 @@ while ($true) {
+ 
+                                 SubmittedTime =
+                                     $null
++                                QueueJobContext =
++                                    $Event.QueueJobContext
+                             }
+                         )
+ 
+@@ -559,7 +642,7 @@ while ($true) {
+                     Write-PrintSwitchLog `
+                         -Component "QueueWatcher" `
+                         -Event "APPLICATION_EVENT_WRITE_FAILED" `
+-                        -Level "WARNING" `
++                        -Level "WARN" `
+                         -Data @{
+                             Printer = $PrinterName
+                             JobId   = $Event.JobId
+@@ -806,7 +889,7 @@ if ($EventWriterEnabled) {
+         Write-PrintSwitchLog `
+             -Component "QueueWatcher" `
+             -Event "APPLICATION_EVENT_WRITE_FAILED" `
+-            -Level "WARNING" `
++            -Level "WARN" `
+             -Data @{
+                 Printer =
+                     $PrinterName
+
+===== 8. DIFF QUEUEJOBCLASSIFIER =====
+
+===== 9. UNTRACKED =====
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C2-Staging-20260908-205321.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/P7-B1-R1-PreexistingJob-20260908-210209.txt
+?? docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+?? docs/evidence/P7-B2-I2-F1-LoggerLevelFix-20260908-230018.txt
+?? docs/evidence/P7-B2-I2-I1-R2-Integracion-Segura.ps1
+?? docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt
+?? docs/evidence/P7-B2-I2-I2-R0-PrinterContext-20260908-231134.txt
+?? docs/evidence/P7-B2-I2-I2-R2-PrinterNameOutputAudit-20260908-231514.txt
+?? docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt
+?? docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt
+?? docs/evidence/P7-B2-I2-T1-IntegratedQueueWatcher-20260908-221850.txt
+?? docs/evidence/P7-B2-I2-T1-R1-BaselineAudit-20260908-225416.txt
+?? docs/evidence/P7-B2-I2-T1-R2-WorkerDiagnostic-20260908-225712.txt
+?? docs/evidence/P7-B2-I2-T1-R3-LoggerLevelAudit-20260908-225906.txt
+?? docs/evidence/P7-B2-I2-T1-R4-E2EQueueJobContext-20260908-230252.txt
+?? docs/evidence/P7-B2-I2-T1-R5-ClassifierRealInput-20260908-230808.txt
+?? docs/evidence/P7-B2-I2-T1-R6-PrintJobContractComparison-20260908-230941.txt
+?? docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt
+?? docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+?? docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+?? docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+?? docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+?? docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt
+?? docs/evidence/runtime-test/
+?? src/QueueJobClassifier.ps1
+
+===== 10. B2 EVIDENCE INVENTORY =====
+
+Name                                                                 Length LastWriteTime    
+----                                                                 ------ -------------    
+P7-B2-I1-QueueJobClassifier-20260908-211848.txt                       23636 8/9/2026 21:18:49
+P7-B2-I2-F1-LoggerLevelFix-20260908-230018.txt                         6873 8/9/2026 23:00:19
+P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt  13566 8/9/2026 22:06:36
+P7-B2-I2-I2-R0-PrinterContext-20260908-231134.txt                      9059 8/9/2026 23:11:34
+P7-B2-I2-I2-R2-PrinterNameOutputAudit-20260908-231514.txt             32338 8/9/2026 23:15:15
+P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt           9046 8/9/2026 23:32:01
+P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt            59765 8/9/2026 21:51:55
+P7-B2-I2-T1-IntegratedQueueWatcher-20260908-221850.txt                 4838 8/9/2026 22:18:58
+P7-B2-I2-T1-R1-BaselineAudit-20260908-225416.txt                      28164 8/9/2026 22:54:16
+P7-B2-I2-T1-R2-WorkerDiagnostic-20260908-225712.txt                   11710 8/9/2026 22:57:22
+P7-B2-I2-T1-R3-LoggerLevelAudit-20260908-225906.txt                   14874 8/9/2026 22:59:06
+P7-B2-I2-T1-R4-E2EQueueJobContext-20260908-230252.txt                  6866 8/9/2026 23:02:59
+P7-B2-I2-T1-R5-ClassifierRealInput-20260908-230808.txt                44120 8/9/2026 23:08:08
+P7-B2-I2-T1-R6-PrintJobContractComparison-20260908-230941.txt         22682 8/9/2026 23:09:41
+P7-B2-I2-T2-E2EReal-20260908-233318.txt                               10179 8/9/2026 23:33:25
+P7-B2-R1-JobTaxonomy-20260908-210644.txt                               5657 8/9/2026 21:06:45
+P7-B2-R2-NormalizedJobModel-20260908-211009.txt                        4225 8/9/2026 21:10:09
+P7-B2-R3-QueueJobContextContract-20260908-211320.txt                   7905 8/9/2026 21:13:21
+P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt                 8772 8/9/2026 21:44:27
+P7-B2-T2-RealJobClassifier-20260908-214850.txt                         6076 8/9/2026 21:48:52
+
+
+
+
+===== 11. B2 EVIDENCE COUNT =====
+Count = 20
+
+===== 12. LAST COMMITS =====
+9f3ad8e (HEAD -> main, origin/main) P7 A5.3.5 A2: controller consumes monitoring events
+ba4ffc7 P7 A5.3.5 A1: controller owns monitoring EventPath
+d9db261 FEAT: emite episodios estructurados desde QueueWatcher
+1ec2cdc FEAT: agrega EventWriter JSONL portable para eventos de aplicacion
+8501c67 DOCS: define contrato estructurado de eventos de aplicacion
+f4f9bac FEAT: integra lifecycle de QueueWatcher en ApplicationController
+5982171 FEAT: agrega frontera ApplicationController para primera beta
+3e557d2 (tag: core-p6-validated, origin/backup/core-p6-pre-ui, backup/core-p6-pre-ui) DOCS: cierra Punto 6 y habilita primera beta
+
+===== 13. RESULTADO =====
+RESULTADO: PASS
+
+============================================================
+FIN P7-B2-C1
+============================================================

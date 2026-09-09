@@ -1,0 +1,114 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-C2-R2 - VALIDACION FINAL CODE-SCOPED
+Fecha: 2026-09-08 23:43:09
+============================================================
+
+===== RESULTADO =====
+RESULTADO: PASS
+
+===== CRITERIO =====
+Whitespace check se aplica solamente a codigo.
+Los TXT de evidencia preservan output original.
+No se normalizan evidencias historicas.
+
+===== STAGED COUNT =====
+Count = 14
+
+===== CODE DIFF CHECK =====
+PASS - codigo sin whitespace errors
+
+===== PARSER =====
+PASS - codigo B2 parsea
+
+===== STAGED =====
+A	docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt
+A	docs/evidence/P7-B2-C2-Staging-20260908-233934.txt
+A	docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+A	docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt
+A	docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt
+A	docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt
+A	docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt
+A	docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+A	docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+A	docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+A	docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+A	docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt
+A	src/QueueJobClassifier.ps1
+M	src/QueueWatcher.ps1
+
+===== STAT =====
+ .../P7-B2-C1-PreCommitAudit-20260908-233655.txt    |  337 ++++++
+ docs/evidence/P7-B2-C2-Staging-20260908-233934.txt |  620 ++++++++++
+ ...P7-B2-I1-QueueJobClassifier-20260908-211848.txt |  984 ++++++++++++++++
+ ...atcherClassifierIntegration-20260908-220635.txt |  334 ++++++
+ ...4-R1-PrinterContextLineSafe-20260908-233159.txt |  285 +++++
+ ...-QueueWatcherIntegrationMap-20260908-215155.txt | 1199 ++++++++++++++++++++
+ .../P7-B2-I2-T2-E2EReal-20260908-233318.txt        |  252 ++++
+ .../P7-B2-R1-JobTaxonomy-20260908-210644.txt       |  188 +++
+ ...P7-B2-R2-NormalizedJobModel-20260908-211009.txt |  180 +++
+ ...-R3-QueueJobContextContract-20260908-211320.txt |  243 ++++
+ ...1-QueueJobClassifier-Matrix-20260908-214425.txt |  112 ++
+ .../P7-B2-T2-RealJobClassifier-20260908-214850.txt |  221 ++++
+ src/QueueJobClassifier.ps1                         |  829 ++++++++++++++
+ src/QueueWatcher.ps1                               |   91 +-
+ 14 files changed, 5871 insertions(+), 4 deletions(-)
+
+===== WORKTREE =====
+A  docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt
+A  docs/evidence/P7-B2-C2-Staging-20260908-233934.txt
+A  docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+A  docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt
+A  docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt
+A  docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt
+A  docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt
+A  docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+A  docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+A  docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+A  docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+A  docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt
+A  src/QueueJobClassifier.ps1
+M  src/QueueWatcher.ps1
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C2-Staging-20260908-205321.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/P7-B1-R1-PreexistingJob-20260908-210209.txt
+?? docs/evidence/P7-B2-C2-R1-StagingFinal-20260908-234141.txt
+?? docs/evidence/P7-B2-I2-F1-LoggerLevelFix-20260908-230018.txt
+?? docs/evidence/P7-B2-I2-I1-R2-Integracion-Segura.ps1
+?? docs/evidence/P7-B2-I2-I2-R0-PrinterContext-20260908-231134.txt
+?? docs/evidence/P7-B2-I2-I2-R2-PrinterNameOutputAudit-20260908-231514.txt
+?? docs/evidence/P7-B2-I2-T1-IntegratedQueueWatcher-20260908-221850.txt
+?? docs/evidence/P7-B2-I2-T1-R1-BaselineAudit-20260908-225416.txt
+?? docs/evidence/P7-B2-I2-T1-R2-WorkerDiagnostic-20260908-225712.txt
+?? docs/evidence/P7-B2-I2-T1-R3-LoggerLevelAudit-20260908-225906.txt
+?? docs/evidence/P7-B2-I2-T1-R4-E2EQueueJobContext-20260908-230252.txt
+?? docs/evidence/P7-B2-I2-T1-R5-ClassifierRealInput-20260908-230808.txt
+?? docs/evidence/P7-B2-I2-T1-R6-PrintJobContractComparison-20260908-230941.txt
+?? docs/evidence/runtime-test/
+
+============================================================
+FIN P7-B2-C2-R2
+============================================================

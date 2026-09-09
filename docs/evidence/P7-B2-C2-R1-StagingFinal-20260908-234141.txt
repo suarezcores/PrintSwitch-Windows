@@ -1,0 +1,1155 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-C2-R1 - STAGING FINAL
+Fecha: 2026-09-08 23:41:41
+============================================================
+
+===== 1. RESULTADO =====
+RESULTADO: FAIL
+ERROR: git diff --cached --check encontro problemas.
+
+===== 2. STAGED COUNT =====
+Count = 14
+
+===== 3. STAGED NAME STATUS =====
+A	docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt
+A	docs/evidence/P7-B2-C2-Staging-20260908-233934.txt
+A	docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+A	docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt
+A	docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt
+A	docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt
+A	docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt
+A	docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+A	docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+A	docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+A	docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+A	docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt
+A	src/QueueJobClassifier.ps1
+M	src/QueueWatcher.ps1
+
+===== 4. STAGED STAT =====
+ .../P7-B2-C1-PreCommitAudit-20260908-233655.txt    |  337 ++++++
+ docs/evidence/P7-B2-C2-Staging-20260908-233934.txt |  620 ++++++++++
+ ...P7-B2-I1-QueueJobClassifier-20260908-211848.txt |  984 ++++++++++++++++
+ ...atcherClassifierIntegration-20260908-220635.txt |  334 ++++++
+ ...4-R1-PrinterContextLineSafe-20260908-233159.txt |  285 +++++
+ ...-QueueWatcherIntegrationMap-20260908-215155.txt | 1199 ++++++++++++++++++++
+ .../P7-B2-I2-T2-E2EReal-20260908-233318.txt        |  252 ++++
+ .../P7-B2-R1-JobTaxonomy-20260908-210644.txt       |  188 +++
+ ...P7-B2-R2-NormalizedJobModel-20260908-211009.txt |  180 +++
+ ...-R3-QueueJobContextContract-20260908-211320.txt |  243 ++++
+ ...1-QueueJobClassifier-Matrix-20260908-214425.txt |  112 ++
+ .../P7-B2-T2-RealJobClassifier-20260908-214850.txt |  221 ++++
+ src/QueueJobClassifier.ps1                         |  829 ++++++++++++++
+ src/QueueWatcher.ps1                               |   91 +-
+ 14 files changed, 5871 insertions(+), 4 deletions(-)
+
+===== 5. DIFF CHECK =====
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:84: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:86: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:99: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:105: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:133: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:137: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:142: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:198: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:200: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:202: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:208: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:211: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:218: trailing whitespace.
++ 
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:293: trailing whitespace.
++Name                                                                 Length LastWriteTime    
+docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt:294: trailing whitespace.
++----                                                                 ------ -------------    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:40: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:42: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:44: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:46: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:48: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:50: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:52: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:54: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:56: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:58: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:60: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:62: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:64: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:66: trailing whitespace.
+++Name                                                                 Length LastWriteTime    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:68: trailing whitespace.
+++----                                                                 ------ -------------    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:70: trailing whitespace.
+++LineNumber Line                                                                    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:72: trailing whitespace.
+++---------- ----                                                                    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:74: trailing whitespace.
+++        38 $QueueJobClassifierPath = Join-Path `                                   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:76: trailing whitespace.
+++        74 if (-not (Test-Path -LiteralPath $QueueJobClassifierPath)) {            
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:78: trailing whitespace.
+++        78     Write-Host "Ruta esperada: $QueueJobClassifierPath"                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:80: trailing whitespace.
+++        85     . $QueueJobClassifierPath                                           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:82: trailing whitespace.
+++LineNumber Line                                                           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:84: trailing whitespace.
+++---------- ----                                                           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:86: trailing whitespace.
+++       504             $QueueJobContext =                                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:88: trailing whitespace.
+++       509                 $QueueJobContext =                             
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:90: trailing whitespace.
+++       510                     ConvertTo-PrintSwitchQueueJobContext `     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:92: trailing whitespace.
+++       514                 $QueueJobContextContract =                     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:94: trailing whitespace.
+++       515                     Test-PrintSwitchQueueJobContextContract `  
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:96: trailing whitespace.
+++       516                         -Context $QueueJobContext              
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:98: trailing whitespace.
+++       518                 if (-not $QueueJobContextContract.Valid) {     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:100: trailing whitespace.
+++       533                     $QueueJobContext =                         
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:102: trailing whitespace.
+++       550                 $QueueJobContext =                             
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:104: trailing whitespace.
+++       588                 QueueJobContext =                              
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:106: trailing whitespace.
+++       589                     $QueueJobContext                           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:108: trailing whitespace.
+++       627                                 QueueJobContext =              
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:110: trailing whitespace.
+++       628                                     $Event.QueueJobContext     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:112: trailing whitespace.
+++LineNumber Line                                               
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:114: trailing whitespace.
+++---------- ----                                               
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:116: trailing whitespace.
+++       943             $KnownJobs.Remove($KnownKey)           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:118: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:120: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:122: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:124: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:126: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:128: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:130: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:132: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:134: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:136: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:138: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:140: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:142: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:145: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:147: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:149: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:151: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:153: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:155: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:157: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:159: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:161: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:163: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:165: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:167: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:169: trailing whitespace.
+++ 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:171: trailing whitespace.
+++LineNumber Line                                                                       
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:173: trailing whitespace.
+++---------- ----                                                                       
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:175: trailing whitespace.
+++        16 #   - descubre colas instaladas mediante PrinterDiscovery                  
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:177: trailing whitespace.
+++        26 # - usa PrinterDiscovery como fuente operacional de colas                  
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:179: trailing whitespace.
+++        35 $EventWriterPath = Join-Path `                                             
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:181: trailing whitespace.
+++        37     "EventWriter.ps1"                                                      
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:183: trailing whitespace.
+++        39 $EventWriterEnabled = `                                                    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:185: trailing whitespace.
+++        42 if ($EventWriterEnabled) {                                                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:187: trailing whitespace.
+++        44     if (-not (Test-Path $EventWriterPath)) {                               
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:189: trailing whitespace.
+++        48         Write-Host "Ruta esperada: $EventWriterPath"                       
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:191: trailing whitespace.
+++        55         . $EventWriterPath                                                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:193: trailing whitespace.
+++        60         Write-Host "ERROR cargando EventWriter." -ForegroundColor Red      
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:195: trailing whitespace.
+++        69 $PrinterDiscoveryPath = Join-Path `                                        
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:197: trailing whitespace.
+++        71     "PrinterDiscovery.ps1"                                                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:199: trailing whitespace.
+++        76 $KnownJobs = @{}                                                           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:201: trailing whitespace.
+++       138 if (-not (Test-Path -LiteralPath $PrinterDiscoveryPath)) {                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:203: trailing whitespace.
+++       142         "ERROR: PrinterDiscovery no encontrado." `                         
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:205: trailing whitespace.
+++       145     Write-Host "Ruta esperada: $PrinterDiscoveryPath"                      
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:207: trailing whitespace.
+++       152             Path = $PrinterDiscoveryPath                                   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:209: trailing whitespace.
+++       168         & $PrinterDiscoveryPath                                            
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:211: trailing whitespace.
+++       175         "ERROR ejecutando PrinterDiscovery." `                             
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:213: trailing whitespace.
+++       196         "ERROR: PrinterDiscovery no encontro colas fisicas." `             
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:215: trailing whitespace.
+++       374 Write-Host "Fuente de colas      : Windows / PrinterDiscovery"             
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:217: trailing whitespace.
+++       379 Write-Host "PrinterDiscovery     : $PrinterDiscoveryPath"                  
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:219: trailing whitespace.
+++       468         if (-not $KnownJobs.ContainsKey($JobKey)) {                        
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:221: trailing whitespace.
+++       470             $KnownJobs[$JobKey] = $true                                    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:223: trailing whitespace.
+++       512             if ($EventWriterEnabled) {                                     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:225: trailing whitespace.
+++       666 if ($EventWriterEnabled) {                                                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:227: trailing whitespace.
+++       857     foreach ($KnownKey in @($KnownJobs.Keys)) {                            
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:229: trailing whitespace.
+++       861             $KnownJobs.Remove($KnownKey)                                   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:231: trailing whitespace.
+++    3: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:233: trailing whitespace.
+++    5: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:235: trailing whitespace.
+++    8: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:237: trailing whitespace.
+++   10: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:239: trailing whitespace.
+++   28: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:241: trailing whitespace.
+++   30: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:243: trailing whitespace.
+++   34: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:245: trailing whitespace.
+++   38: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:247: trailing whitespace.
+++   41: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:249: trailing whitespace.
+++   43: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:251: trailing whitespace.
+++   45: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:253: trailing whitespace.
+++   49: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:255: trailing whitespace.
+++   52: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:257: trailing whitespace.
+++   54: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:259: trailing whitespace.
+++   58: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:261: trailing whitespace.
+++   62: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:263: trailing whitespace.
+++   66: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:265: trailing whitespace.
+++   68: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:267: trailing whitespace.
+++   72: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:269: trailing whitespace.
+++   77: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:271: trailing whitespace.
+++   81: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:273: trailing whitespace.
+++   83: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:275: trailing whitespace.
+++   88: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:277: trailing whitespace.
+++   90: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:279: trailing whitespace.
+++   93: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:281: trailing whitespace.
+++   95: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:283: trailing whitespace.
+++   99: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:285: trailing whitespace.
+++  104: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:287: trailing whitespace.
+++  106: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:289: trailing whitespace.
+++  109: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:291: trailing whitespace.
+++  113: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:293: trailing whitespace.
+++  117: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:295: trailing whitespace.
+++  119: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:297: trailing whitespace.
+++  129: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:299: trailing whitespace.
+++  133: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:301: trailing whitespace.
+++  137: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:303: trailing whitespace.
+++  139: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:305: trailing whitespace.
+++  144: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:307: trailing whitespace.
+++  146: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:309: trailing whitespace.
+++  155: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:311: trailing whitespace.
+++  158: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:313: trailing whitespace.
+++  162: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:315: trailing whitespace.
+++  164: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:317: trailing whitespace.
+++  166: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:319: trailing whitespace.
+++  172: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:321: trailing whitespace.
+++  177: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:323: trailing whitespace.
+++  179: 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:325: trailing whitespace.
+++LineNumber Line                                          
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:327: trailing whitespace.
+++---------- ----                                          
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:329: trailing whitespace.
+++       488                     $Job.JobId                
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:331: trailing whitespace.
+++       491                     $Job.Document             
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:333: trailing whitespace.
+++       494                     $Job.Owner                
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:335: trailing whitespace.
+++       497                     $Job.Status               
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:337: trailing whitespace.
+++       500                     $Job.JobStatus            
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:339: trailing whitespace.
+++       503                     $Job.TotalPages           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:341: trailing whitespace.
+++       506                     $Job.PagesPrinted         
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:343: trailing whitespace.
+++       509                     $Job.Size                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:345: trailing whitespace.
+++LineNumber Line                                              
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:347: trailing whitespace.
+++---------- ----                                              
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:349: trailing whitespace.
+++        22 $script:QueueJobClassifierVersion = "0.1"         
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:351: trailing whitespace.
+++        97 function ConvertTo-PrintSwitchQueueJobContext {   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:353: trailing whitespace.
+++       409     $SummaryClassification =                      
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:355: trailing whitespace.
+++       539         SummaryClassification =                   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:357: trailing whitespace.
+++       540             $SummaryClassification                
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:359: trailing whitespace.
+++       585             "SummaryClassification"               
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:361: trailing whitespace.
+++       654         [string]$Context.SummaryClassification    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:363: trailing whitespace.
+++       765         $Context.SummaryClassification -eq        
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:365: trailing whitespace.
+++       784         $Context.SummaryClassification -notin     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:367: trailing whitespace.
+++Caption               : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:369: trailing whitespace.
+++Description           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:371: trailing whitespace.
+++ElementName           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:373: trailing whitespace.
+++InstanceID            : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:375: trailing whitespace.
+++CommunicationStatus   : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:377: trailing whitespace.
+++DetailedStatus        : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:379: trailing whitespace.
+++HealthState           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:381: trailing whitespace.
+++InstallDate           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:383: trailing whitespace.
+++Name                  : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:385: trailing whitespace.
+++OperatingStatus       : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:387: trailing whitespace.
+++OperationalStatus     : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:389: trailing whitespace.
+++PrimaryStatus         : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:391: trailing whitespace.
+++Status                : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:393: trailing whitespace.
+++StatusDescriptions    : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:395: trailing whitespace.
+++ComputerName          : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:397: trailing whitespace.
+++PSComputerName        : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:399: trailing whitespace.
+++Caption               : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:401: trailing whitespace.
+++Description           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:403: trailing whitespace.
+++ElementName           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:405: trailing whitespace.
+++InstanceID            : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:407: trailing whitespace.
+++CommunicationStatus   : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:409: trailing whitespace.
+++DetailedStatus        : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:411: trailing whitespace.
+++HealthState           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:413: trailing whitespace.
+++InstallDate           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:415: trailing whitespace.
+++Name                  : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:417: trailing whitespace.
+++OperatingStatus       : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:419: trailing whitespace.
+++OperationalStatus     : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:421: trailing whitespace.
+++PrimaryStatus         : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:423: trailing whitespace.
+++Status                : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:425: trailing whitespace.
+++StatusDescriptions    : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:427: trailing whitespace.
+++ComputerName          : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:429: trailing whitespace.
+++PSComputerName        : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:431: trailing whitespace.
+++Path                  Type       Required Nullable Description                                    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:433: trailing whitespace.
+++----                  ----       -------- -------- -----------                                    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:435: trailing whitespace.
+++SchemaVersion         int            True    False Version del contrato QueueJobContext.          
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:437: trailing whitespace.
+++JobId                 uint32/int     True    False Identificador del trabajo dentro de la cola.   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:439: trailing whitespace.
+++PrinterName           string         True    False Nombre exacto de la cola Windows.              
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:441: trailing whitespace.
+++DocumentName          string         True     True Nombre observado del documento.                
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:443: trailing whitespace.
+++SubmittedTime         datetime       True     True Fecha/hora observada de envio del trabajo.     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:445: trailing whitespace.
+++Raw                   object         True    False Evidencia original preservada.                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:447: trailing whitespace.
+++Raw.JobStatus         string         True     True JobStatus original entregado por Windows.      
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:449: trailing whitespace.
+++Raw.PagesPrinted      int            True     True Paginas impresas observadas.                   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:451: trailing whitespace.
+++Raw.TotalPages        int            True     True Paginas totales observadas.                    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:453: trailing whitespace.
+++Raw.SizeBytes         int            True     True Tamano observado del spool/job.                
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:455: trailing whitespace.
+++Age                   object         True    False Contexto temporal normalizado.                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:457: trailing whitespace.
+++Age.Bucket            enum           True    False Bucket temporal normalizado.                   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:459: trailing whitespace.
+++Age.Minutes           double         True     True Antiguedad calculada en minutos.               
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:461: trailing whitespace.
+++Health                enum           True    False Estado de salud normalizado.                   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:463: trailing whitespace.
+++Progress              enum           True    False Progreso normalizado.                          
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:465: trailing whitespace.
+++Flags                 object         True    False Flags de lifecycle independientes.             
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:467: trailing whitespace.
+++Flags.Printing        bool           True    False Windows reporta Printing/Imprimiendo.          
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:469: trailing whitespace.
+++Flags.Retained        bool           True    False Windows reporta Retained.                      
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:471: trailing whitespace.
+++Flags.Paused          bool           True    False Windows reporta Paused.                        
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:473: trailing whitespace.
+++Flags.Deleting        bool           True    False Windows reporta Deleting/Eliminando.           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:475: trailing whitespace.
+++Flags.Offline         bool           True    False Windows reporta Offline.                       
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:477: trailing whitespace.
+++Flags.Error           bool           True    False Windows reporta Error.                         
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:479: trailing whitespace.
+++SummaryClassification enum           True    False Resumen dominante, no reemplaza dimensiones.   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:481: trailing whitespace.
+++Id  Passed Name                               Detail                                                                                                     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:483: trailing whitespace.
+++--  ------ ----                               ------                                                                                                     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:485: trailing whitespace.
+++C01   True Schema invalido                    Valid=False; Errors=INVALID_SCHEMA_VERSION                                                                 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:487: trailing whitespace.
+++C02   True JobId null                         Valid=False; Errors=JOB_ID_MISSING                                                                         
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:489: trailing whitespace.
+++C03   True PrinterName vacio                  Valid=False; Errors=PRINTER_NAME_MISSING                                                                   
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:491: trailing whitespace.
+++C04   True Origin invalido                    Valid=False; Errors=INVALID_ORIGIN                                                                         
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:493: trailing whitespace.
+++C05   True Age bucket invalido                Valid=False; Errors=INVALID_AGE_BUCKET,STALLED_ERROR_INVARIANT_BROKEN                                      
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:495: trailing whitespace.
+++C06   True Health invalido                    Valid=False; Errors=INVALID_HEALTH,STALLED_ERROR_INVARIANT_BROKEN                                          
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:497: trailing whitespace.
+++C07   True Progress invalido                  Valid=False; Errors=INVALID_PROGRESS,STALLED_ERROR_INVARIANT_BROKEN                                        
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:499: trailing whitespace.
+++C08   True Summary invalido                   Valid=False; Errors=INVALID_SUMMARY                                                                        
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:501: trailing whitespace.
+++C09   True STALLED_ERROR inconsistente        Valid=False; Errors=STALLED_ERROR_INVARIANT_BROKEN                                                         
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:503: trailing whitespace.
+++N04   True Error fresh                        Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=NO_PROGRESS; Summary=ERROR_ACTIVE; Contract=True     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:505: trailing whitespace.
+++N05   True Error stale sin progreso           Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=STALLED_ERROR; Contract=True    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:507: trailing whitespace.
+++N06   True Paused                             Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=PAUSED; Contract=True          
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:509: trailing whitespace.
+++N07   True Paused + Error                     Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=PAUSED; Contract=True           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:511: trailing whitespace.
+++N08   True Deleting precedence                Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=TRANSITIONING; Contract=True    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:513: trailing whitespace.
+++N10   True Retained complete                  Origin=PREEXISTING; Age=AGING; Health=NORMAL; Progress=COMPLETE; Summary=COMPLETE; Contract=True           
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:515: trailing whitespace.
+++N11   True SubmittedTime null                 Origin=UNKNOWN; Age=UNKNOWN; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True  
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:517: trailing whitespace.
+++N13   True TotalPages cero                    Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=UNKNOWN; Summary=ACTIVE_OR_QUEUED; Contract=True    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:519: trailing whitespace.
+++N14   True PagesPrinted null                  Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=UNKNOWN; Summary=ACTIVE_OR_QUEUED; Contract=True    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:521: trailing whitespace.
+++N16   True Error + Printing fresh             Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=NO_PROGRESS; Summary=ERROR_ACTIVE; Contract=True     
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:523: trailing whitespace.
+++N17   True Error + Printing stale             Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=STALLED_ERROR; Contract=True    
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:525: trailing whitespace.
+++N18   True New job                            Origin=NEW; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True        
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:527: trailing whitespace.
+++N23   True Complete + Error precedence        Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=COMPLETE; Summary=ERROR_ACTIVE; Contract=True        
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:529: trailing whitespace.
+++P01   True Fresh threshold negativo rechazado FreshThresholdMinutes no puede ser negativo.                                                               
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:531: trailing whitespace.
+++P02   True Thresholds invertidos rechazados   StaleThresholdMinutes debe ser mayor que FreshThresholdMinutes.                                            
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:533: trailing whitespace.
+++Caption               : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:535: trailing whitespace.
+++Description           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:537: trailing whitespace.
+++ElementName           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:539: trailing whitespace.
+++InstanceID            : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:541: trailing whitespace.
+++CommunicationStatus   : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:543: trailing whitespace.
+++DetailedStatus        : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:545: trailing whitespace.
+++HealthState           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:547: trailing whitespace.
+++InstallDate           : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:549: trailing whitespace.
+++Name                  : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:551: trailing whitespace.
+++OperatingStatus       : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:553: trailing whitespace.
+++OperationalStatus     : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:555: trailing whitespace.
+++PrimaryStatus         : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:557: trailing whitespace.
+++Status                : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:559: trailing whitespace.
+++StatusDescriptions    : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:561: trailing whitespace.
+++ComputerName          : 
+docs/evidence/P7-B2-C2-Staging-20260908-233934.txt:563: trailing whitespace.
+++PSComputerName        : 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:14: trailing whitespace.
++LineNumber Line                                                                    
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:15: trailing whitespace.
++---------- ----                                                                    
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:16: trailing whitespace.
++        38 $QueueJobClassifierPath = Join-Path `                                   
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:17: trailing whitespace.
++        74 if (-not (Test-Path -LiteralPath $QueueJobClassifierPath)) {            
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:18: trailing whitespace.
++        78     Write-Host "Ruta esperada: $QueueJobClassifierPath"                 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:19: trailing whitespace.
++        85     . $QueueJobClassifierPath                                           
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:87: trailing whitespace.
++LineNumber Line                                                           
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:88: trailing whitespace.
++---------- ----                                                           
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:89: trailing whitespace.
++       504             $QueueJobContext =                                 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:90: trailing whitespace.
++       509                 $QueueJobContext =                             
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:91: trailing whitespace.
++       510                     ConvertTo-PrintSwitchQueueJobContext `     
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:92: trailing whitespace.
++       514                 $QueueJobContextContract =                     
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:93: trailing whitespace.
++       515                     Test-PrintSwitchQueueJobContextContract `  
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:94: trailing whitespace.
++       516                         -Context $QueueJobContext              
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:95: trailing whitespace.
++       518                 if (-not $QueueJobContextContract.Valid) {     
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:97: trailing whitespace.
++       533                     $QueueJobContext =                         
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:98: trailing whitespace.
++       550                 $QueueJobContext =                             
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:99: trailing whitespace.
++       588                 QueueJobContext =                              
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:100: trailing whitespace.
++       589                     $QueueJobContext                           
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:101: trailing whitespace.
++       627                                 QueueJobContext =              
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:102: trailing whitespace.
++       628                                     $Event.QueueJobContext     
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:131: trailing whitespace.
++LineNumber Line                                               
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:132: trailing whitespace.
++---------- ----                                               
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:134: trailing whitespace.
++       943             $KnownJobs.Remove($KnownKey)           
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:153: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:155: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:168: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:174: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:202: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:206: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:211: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:266: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:268: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:270: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:276: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:279: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:286: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt:333: new blank line at EOF.
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:99: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:101: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:114: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:120: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:148: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:152: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:157: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:213: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:215: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:217: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:223: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:226: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt:233: trailing whitespace.
++ 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:11: trailing whitespace.
++LineNumber Line                                                                       
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:12: trailing whitespace.
++---------- ----                                                                       
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:13: trailing whitespace.
++        16 #   - descubre colas instaladas mediante PrinterDiscovery                  
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:14: trailing whitespace.
++        26 # - usa PrinterDiscovery como fuente operacional de colas                  
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:15: trailing whitespace.
++        35 $EventWriterPath = Join-Path `                                             
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:16: trailing whitespace.
++        37     "EventWriter.ps1"                                                      
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:17: trailing whitespace.
++        39 $EventWriterEnabled = `                                                    
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:18: trailing whitespace.
++        42 if ($EventWriterEnabled) {                                                 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:19: trailing whitespace.
++        44     if (-not (Test-Path $EventWriterPath)) {                               
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:21: trailing whitespace.
++        48         Write-Host "Ruta esperada: $EventWriterPath"                       
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:22: trailing whitespace.
++        55         . $EventWriterPath                                                 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:23: trailing whitespace.
++        60         Write-Host "ERROR cargando EventWriter." -ForegroundColor Red      
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:24: trailing whitespace.
++        69 $PrinterDiscoveryPath = Join-Path `                                        
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:25: trailing whitespace.
++        71     "PrinterDiscovery.ps1"                                                 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:26: trailing whitespace.
++        76 $KnownJobs = @{}                                                           
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:27: trailing whitespace.
++       138 if (-not (Test-Path -LiteralPath $PrinterDiscoveryPath)) {                 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:28: trailing whitespace.
++       142         "ERROR: PrinterDiscovery no encontrado." `                         
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:29: trailing whitespace.
++       145     Write-Host "Ruta esperada: $PrinterDiscoveryPath"                      
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:30: trailing whitespace.
++       152             Path = $PrinterDiscoveryPath                                   
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:31: trailing whitespace.
++       168         & $PrinterDiscoveryPath                                            
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:32: trailing whitespace.
++       175         "ERROR ejecutando PrinterDiscovery." `                             
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:33: trailing whitespace.
++       196         "ERROR: PrinterDiscovery no encontro colas fisicas." `             
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:34: trailing whitespace.
++       374 Write-Host "Fuente de colas      : Windows / PrinterDiscovery"             
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:35: trailing whitespace.
++       379 Write-Host "PrinterDiscovery     : $PrinterDiscoveryPath"                  
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:36: trailing whitespace.
++       468         if (-not $KnownJobs.ContainsKey($JobKey)) {                        
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:37: trailing whitespace.
++       470             $KnownJobs[$JobKey] = $true                                    
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:38: trailing whitespace.
++       512             if ($EventWriterEnabled) {                                     
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:39: trailing whitespace.
++       666 if ($EventWriterEnabled) {                                                 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:40: trailing whitespace.
++       857     foreach ($KnownKey in @($KnownJobs.Keys)) {                            
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:41: trailing whitespace.
++       861             $KnownJobs.Remove($KnownKey)                                   
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:49: trailing whitespace.
++    3: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:51: trailing whitespace.
++    5: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:54: trailing whitespace.
++    8: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:56: trailing whitespace.
++   10: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:74: trailing whitespace.
++   28: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:76: trailing whitespace.
++   30: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:80: trailing whitespace.
++   34: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:84: trailing whitespace.
++   38: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:87: trailing whitespace.
++   41: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:89: trailing whitespace.
++   43: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:91: trailing whitespace.
++   45: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:95: trailing whitespace.
++   49: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:98: trailing whitespace.
++   52: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:100: trailing whitespace.
++   54: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:104: trailing whitespace.
++   58: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:108: trailing whitespace.
++   62: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:112: trailing whitespace.
++   66: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:114: trailing whitespace.
++   68: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:118: trailing whitespace.
++   72: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:123: trailing whitespace.
++   77: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:127: trailing whitespace.
++   81: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:129: trailing whitespace.
++   83: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:134: trailing whitespace.
++   88: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:136: trailing whitespace.
++   90: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:139: trailing whitespace.
++   93: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:141: trailing whitespace.
++   95: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:145: trailing whitespace.
++   99: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:150: trailing whitespace.
++  104: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:152: trailing whitespace.
++  106: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:155: trailing whitespace.
++  109: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:159: trailing whitespace.
++  113: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:163: trailing whitespace.
++  117: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:165: trailing whitespace.
++  119: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:175: trailing whitespace.
++  129: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:179: trailing whitespace.
++  133: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:183: trailing whitespace.
++  137: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:185: trailing whitespace.
++  139: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:190: trailing whitespace.
++  144: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:192: trailing whitespace.
++  146: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:201: trailing whitespace.
++  155: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:204: trailing whitespace.
++  158: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:208: trailing whitespace.
++  162: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:210: trailing whitespace.
++  164: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:212: trailing whitespace.
++  166: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:218: trailing whitespace.
++  172: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:223: trailing whitespace.
++  177: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:225: trailing whitespace.
++  179: 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:701: trailing whitespace.
++LineNumber Line                                          
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:702: trailing whitespace.
++---------- ----                                          
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:704: trailing whitespace.
++       488                     $Job.JobId                
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:705: trailing whitespace.
++       491                     $Job.Document             
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:706: trailing whitespace.
++       494                     $Job.Owner                
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:707: trailing whitespace.
++       497                     $Job.Status               
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:708: trailing whitespace.
++       500                     $Job.JobStatus            
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:709: trailing whitespace.
++       503                     $Job.TotalPages           
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:710: trailing whitespace.
++       506                     $Job.PagesPrinted         
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:711: trailing whitespace.
++       509                     $Job.Size                 
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1121: trailing whitespace.
++LineNumber Line                                              
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1122: trailing whitespace.
++---------- ----                                              
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1123: trailing whitespace.
++        22 $script:QueueJobClassifierVersion = "0.1"         
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1124: trailing whitespace.
++        97 function ConvertTo-PrintSwitchQueueJobContext {   
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1125: trailing whitespace.
++       409     $SummaryClassification =                      
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1126: trailing whitespace.
++       539         SummaryClassification =                   
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1127: trailing whitespace.
++       540             $SummaryClassification                
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1129: trailing whitespace.
++       585             "SummaryClassification"               
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1130: trailing whitespace.
++       654         [string]$Context.SummaryClassification    
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1131: trailing whitespace.
++       765         $Context.SummaryClassification -eq        
+docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt:1132: trailing whitespace.
++       784         $Context.SummaryClassification -notin     
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:16: trailing whitespace.
++Caption               : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:17: trailing whitespace.
++Description           : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:18: trailing whitespace.
++ElementName           : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:19: trailing whitespace.
++InstanceID            : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:20: trailing whitespace.
++CommunicationStatus   : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:21: trailing whitespace.
++DetailedStatus        : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:22: trailing whitespace.
++HealthState           : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:23: trailing whitespace.
++InstallDate           : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:24: trailing whitespace.
++Name                  : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:25: trailing whitespace.
++OperatingStatus       : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:26: trailing whitespace.
++OperationalStatus     : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:27: trailing whitespace.
++PrimaryStatus         : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:28: trailing whitespace.
++Status                : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:29: trailing whitespace.
++StatusDescriptions    : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:30: trailing whitespace.
++ComputerName          : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:43: trailing whitespace.
++PSComputerName        : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:185: trailing whitespace.
++Caption               : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:186: trailing whitespace.
++Description           : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:187: trailing whitespace.
++ElementName           : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:188: trailing whitespace.
++InstanceID            : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:189: trailing whitespace.
++CommunicationStatus   : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:190: trailing whitespace.
++DetailedStatus        : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:191: trailing whitespace.
++HealthState           : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:192: trailing whitespace.
++InstallDate           : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:193: trailing whitespace.
++Name                  : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:194: trailing whitespace.
++OperatingStatus       : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:195: trailing whitespace.
++OperationalStatus     : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:196: trailing whitespace.
++PrimaryStatus         : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:197: trailing whitespace.
++Status                : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:198: trailing whitespace.
++StatusDescriptions    : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:199: trailing whitespace.
++ComputerName          : 
+docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt:212: trailing whitespace.
++PSComputerName        : 
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:52: trailing whitespace.
++Path                  Type       Required Nullable Description                                    
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:53: trailing whitespace.
++----                  ----       -------- -------- -----------                                    
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:54: trailing whitespace.
++SchemaVersion         int            True    False Version del contrato QueueJobContext.          
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:55: trailing whitespace.
++JobId                 uint32/int     True    False Identificador del trabajo dentro de la cola.   
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:56: trailing whitespace.
++PrinterName           string         True    False Nombre exacto de la cola Windows.              
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:57: trailing whitespace.
++DocumentName          string         True     True Nombre observado del documento.                
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:58: trailing whitespace.
++SubmittedTime         datetime       True     True Fecha/hora observada de envio del trabajo.     
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:59: trailing whitespace.
++Raw                   object         True    False Evidencia original preservada.                 
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:60: trailing whitespace.
++Raw.JobStatus         string         True     True JobStatus original entregado por Windows.      
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:61: trailing whitespace.
++Raw.PagesPrinted      int            True     True Paginas impresas observadas.                   
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:62: trailing whitespace.
++Raw.TotalPages        int            True     True Paginas totales observadas.                    
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:63: trailing whitespace.
++Raw.SizeBytes         int            True     True Tamano observado del spool/job.                
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:65: trailing whitespace.
++Age                   object         True    False Contexto temporal normalizado.                 
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:66: trailing whitespace.
++Age.Bucket            enum           True    False Bucket temporal normalizado.                   
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:67: trailing whitespace.
++Age.Minutes           double         True     True Antiguedad calculada en minutos.               
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:68: trailing whitespace.
++Health                enum           True    False Estado de salud normalizado.                   
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:69: trailing whitespace.
++Progress              enum           True    False Progreso normalizado.                          
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:70: trailing whitespace.
++Flags                 object         True    False Flags de lifecycle independientes.             
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:71: trailing whitespace.
++Flags.Printing        bool           True    False Windows reporta Printing/Imprimiendo.          
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:72: trailing whitespace.
++Flags.Retained        bool           True    False Windows reporta Retained.                      
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:73: trailing whitespace.
++Flags.Paused          bool           True    False Windows reporta Paused.                        
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:74: trailing whitespace.
++Flags.Deleting        bool           True    False Windows reporta Deleting/Eliminando.           
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:75: trailing whitespace.
++Flags.Offline         bool           True    False Windows reporta Offline.                       
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:76: trailing whitespace.
++Flags.Error           bool           True    False Windows reporta Error.                         
+docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt:77: trailing whitespace.
++SummaryClassification enum           True    False Resumen dominante, no reemplaza dimensiones.   
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:14: trailing whitespace.
++Id  Passed Name                               Detail                                                                                                     
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:15: trailing whitespace.
++--  ------ ----                               ------                                                                                                     
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:16: trailing whitespace.
++C01   True Schema invalido                    Valid=False; Errors=INVALID_SCHEMA_VERSION                                                                 
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:17: trailing whitespace.
++C02   True JobId null                         Valid=False; Errors=JOB_ID_MISSING                                                                         
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:18: trailing whitespace.
++C03   True PrinterName vacio                  Valid=False; Errors=PRINTER_NAME_MISSING                                                                   
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:19: trailing whitespace.
++C04   True Origin invalido                    Valid=False; Errors=INVALID_ORIGIN                                                                         
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:20: trailing whitespace.
++C05   True Age bucket invalido                Valid=False; Errors=INVALID_AGE_BUCKET,STALLED_ERROR_INVARIANT_BROKEN                                      
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:21: trailing whitespace.
++C06   True Health invalido                    Valid=False; Errors=INVALID_HEALTH,STALLED_ERROR_INVARIANT_BROKEN                                          
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:22: trailing whitespace.
++C07   True Progress invalido                  Valid=False; Errors=INVALID_PROGRESS,STALLED_ERROR_INVARIANT_BROKEN                                        
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:23: trailing whitespace.
++C08   True Summary invalido                   Valid=False; Errors=INVALID_SUMMARY                                                                        
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:24: trailing whitespace.
++C09   True STALLED_ERROR inconsistente        Valid=False; Errors=STALLED_ERROR_INVARIANT_BROKEN                                                         
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:28: trailing whitespace.
++N04   True Error fresh                        Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=NO_PROGRESS; Summary=ERROR_ACTIVE; Contract=True     
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:29: trailing whitespace.
++N05   True Error stale sin progreso           Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=STALLED_ERROR; Contract=True    
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:30: trailing whitespace.
++N06   True Paused                             Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=PAUSED; Contract=True          
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:31: trailing whitespace.
++N07   True Paused + Error                     Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=PAUSED; Contract=True           
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:32: trailing whitespace.
++N08   True Deleting precedence                Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=TRANSITIONING; Contract=True    
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:34: trailing whitespace.
++N10   True Retained complete                  Origin=PREEXISTING; Age=AGING; Health=NORMAL; Progress=COMPLETE; Summary=COMPLETE; Contract=True           
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:35: trailing whitespace.
++N11   True SubmittedTime null                 Origin=UNKNOWN; Age=UNKNOWN; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True  
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:37: trailing whitespace.
++N13   True TotalPages cero                    Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=UNKNOWN; Summary=ACTIVE_OR_QUEUED; Contract=True    
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:38: trailing whitespace.
++N14   True PagesPrinted null                  Origin=PREEXISTING; Age=FRESH; Health=NORMAL; Progress=UNKNOWN; Summary=ACTIVE_OR_QUEUED; Contract=True    
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:40: trailing whitespace.
++N16   True Error + Printing fresh             Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=NO_PROGRESS; Summary=ERROR_ACTIVE; Contract=True     
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:41: trailing whitespace.
++N17   True Error + Printing stale             Origin=PREEXISTING; Age=STALE; Health=ERROR; Progress=NO_PROGRESS; Summary=STALLED_ERROR; Contract=True    
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:42: trailing whitespace.
++N18   True New job                            Origin=NEW; Age=FRESH; Health=NORMAL; Progress=NO_PROGRESS; Summary=ACTIVE_OR_QUEUED; Contract=True        
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:47: trailing whitespace.
++N23   True Complete + Error precedence        Origin=PREEXISTING; Age=FRESH; Health=ERROR; Progress=COMPLETE; Summary=ERROR_ACTIVE; Contract=True        
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:50: trailing whitespace.
++P01   True Fresh threshold negativo rechazado FreshThresholdMinutes no puede ser negativo.                                                               
+docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt:51: trailing whitespace.
++P02   True Thresholds invertidos rechazados   StaleThresholdMinutes debe ser mayor que FreshThresholdMinutes.                                            
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:23: trailing whitespace.
++Caption               : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:24: trailing whitespace.
++Description           : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:25: trailing whitespace.
++ElementName           : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:26: trailing whitespace.
++InstanceID            : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:27: trailing whitespace.
++CommunicationStatus   : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:28: trailing whitespace.
++DetailedStatus        : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:29: trailing whitespace.
++HealthState           : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:30: trailing whitespace.
++InstallDate           : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:31: trailing whitespace.
++Name                  : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:32: trailing whitespace.
++OperatingStatus       : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:33: trailing whitespace.
++OperationalStatus     : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:34: trailing whitespace.
++PrimaryStatus         : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:35: trailing whitespace.
++Status                : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:36: trailing whitespace.
++StatusDescriptions    : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:37: trailing whitespace.
++ComputerName          : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:50: trailing whitespace.
++PSComputerName        : 
+docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt:220: new blank line at EOF.
+
+===== 6. GIT STATUS =====
+A  docs/evidence/P7-B2-C1-PreCommitAudit-20260908-233655.txt
+A  docs/evidence/P7-B2-C2-Staging-20260908-233934.txt
+A  docs/evidence/P7-B2-I1-QueueJobClassifier-20260908-211848.txt
+A  docs/evidence/P7-B2-I2-I1-R2-QueueWatcherClassifierIntegration-20260908-220635.txt
+A  docs/evidence/P7-B2-I2-I2-R4-R1-PrinterContextLineSafe-20260908-233159.txt
+A  docs/evidence/P7-B2-I2-R0-QueueWatcherIntegrationMap-20260908-215155.txt
+A  docs/evidence/P7-B2-I2-T2-E2EReal-20260908-233318.txt
+A  docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+A  docs/evidence/P7-B2-R2-NormalizedJobModel-20260908-211009.txt
+A  docs/evidence/P7-B2-R3-QueueJobContextContract-20260908-211320.txt
+A  docs/evidence/P7-B2-T1-QueueJobClassifier-Matrix-20260908-214425.txt
+A  docs/evidence/P7-B2-T2-RealJobClassifier-20260908-214850.txt
+A  src/QueueJobClassifier.ps1
+M  src/QueueWatcher.ps1
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C2-Staging-20260908-205321.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/P7-B1-R1-PreexistingJob-20260908-210209.txt
+?? docs/evidence/P7-B2-I2-F1-LoggerLevelFix-20260908-230018.txt
+?? docs/evidence/P7-B2-I2-I1-R2-Integracion-Segura.ps1
+?? docs/evidence/P7-B2-I2-I2-R0-PrinterContext-20260908-231134.txt
+?? docs/evidence/P7-B2-I2-I2-R2-PrinterNameOutputAudit-20260908-231514.txt
+?? docs/evidence/P7-B2-I2-T1-IntegratedQueueWatcher-20260908-221850.txt
+?? docs/evidence/P7-B2-I2-T1-R1-BaselineAudit-20260908-225416.txt
+?? docs/evidence/P7-B2-I2-T1-R2-WorkerDiagnostic-20260908-225712.txt
+?? docs/evidence/P7-B2-I2-T1-R3-LoggerLevelAudit-20260908-225906.txt
+?? docs/evidence/P7-B2-I2-T1-R4-E2EQueueJobContext-20260908-230252.txt
+?? docs/evidence/P7-B2-I2-T1-R5-ClassifierRealInput-20260908-230808.txt
+?? docs/evidence/P7-B2-I2-T1-R6-PrintJobContractComparison-20260908-230941.txt
+?? docs/evidence/runtime-test/
+
+============================================================
+FIN P7-B2-C2-R1
+============================================================

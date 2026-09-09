@@ -1,0 +1,188 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-R1 - TAXONOMIA CANDIDATA DE JOBS
+Fecha: 2026-09-08 21:06:44
+Printer: L365 Series(Red)
+TargetJobId: 13
+============================================================
+
+===== 1. REGLAS PROVISIONALES =====
+AgeBucket:
+  FRESH : <= 2 minutos
+  AGING : > 2 y <= 15 minutos
+  STALE : > 15 minutos
+
+Estas reglas SOLO clasifican.
+No implican borrar, reintentar ni hacer recovery.
+
+===== 2. SNAPSHOT COLA =====
+Jobs encontrados: 1
+
+
+ID DocumentName               SubmittedTime                     JobStatus PagesPrinted TotalPages Size
+-- ------------               -------------                     --------- ------------ ---------- ----
+13 *Sin título: Bloc de notas 8/9/2026 18:46:48 Error, Printing, Retained            0          1  136
+
+
+
+
+===== 3. FUNCION DE CLASIFICACION EXPERIMENTAL =====
+PASS - clasificador experimental definido
+
+===== 4. CLASIFICACION DE TODOS LOS JOBS =====
+
+
+JobId          : 13
+DocumentName   : *Sin título: Bloc de notas
+RawJobStatus   : Error, Printing, Retained
+TemporalOrigin : PREEXISTING_TO_OBSERVATION
+AgeMinutes     : 139,9
+AgeBucket      : STALE
+PagesPrinted   : 0
+TotalPages     : 1
+ProgressState  : NO_PROGRESS
+HasError       : True
+IsPrinting     : True
+IsRetained     : True
+IsPaused       : False
+IsDeleting     : False
+IsOffline      : False
+Classification : STALE_ERROR_RETAINED_NO_PROGRESS
+
+
+
+
+
+===== 5. TARGET JOB =====
+TARGET JOB 13
+
+
+
+JobId          : 13
+DocumentName   : *Sin título: Bloc de notas
+RawJobStatus   : Error, Printing, Retained
+TemporalOrigin : PREEXISTING_TO_OBSERVATION
+AgeMinutes     : 139,9
+AgeBucket      : STALE
+PagesPrinted   : 0
+TotalPages     : 1
+ProgressState  : NO_PROGRESS
+HasError       : True
+IsPrinting     : True
+IsRetained     : True
+IsPaused       : False
+IsDeleting     : False
+IsOffline      : False
+Classification : STALE_ERROR_RETAINED_NO_PROGRESS
+
+
+
+
+----- INTERPRETACION -----
+Origen temporal  : PREEXISTING_TO_OBSERVATION
+Antiguedad       : STALE / 139,9 min
+Progreso         : NO_PROGRESS (0/1)
+Flags            : Error=True; Printing=True; Retained=True; Paused=False
+Clasificacion    : STALE_ERROR_RETAINED_NO_PROGRESS
+
+===== 6. CORROBORACION WIN32_PRINTJOB =====
+
+
+JobId         : 13
+Status        : Error
+JobStatus     : Error | Imprimiendo
+StatusMask    : 8210
+PagesPrinted  : 0
+TotalPages    : 1
+TimeSubmitted : 8/9/2026 18:46:48
+
+
+
+
+
+===== 7. PRINTER CONTEXT =====
+
+
+Name            : L365 Series(Red)
+PrinterStatus   : Error
+JobCount        : 1
+KeepPrintedJobs : False
+PortName        : EPE2EB06:L365 SERIES
+
+
+
+
+
+===== 8. PRINCIPIOS PROPUESTOS B2 =====
+P1 - JobStatus es multi-senal, no estado exclusivo.
+P2 - Printing no prueba progreso.
+P3 - Error no determina por si solo accion.
+P4 - Retained no equivale automaticamente a job muerto.
+P5 - PagesPrinted/TotalPages aporta evidencia de progreso.
+P6 - SubmittedTime permite introducir contexto temporal.
+P7 - Preexistente/nuevo debe mantenerse separado del estado.
+P8 - Clasificacion y politica deben ser capas distintas.
+
+===== 9. CLASES CANDIDATAS =====
+UNCLASSIFIED_ACTIVE_OR_QUEUED
+PRINTING_NO_CONFIRMED_PROGRESS
+ACTIVE_PROGRESSING
+PAUSED
+PAUSED_WITH_ERROR
+ERROR
+ERROR_PRINTING_AMBIGUOUS
+RETAINED
+ERROR_RETAINED
+COMPLETED_RETAINED
+STALE_NO_PROGRESS
+STALE_ERROR_RETAINED_NO_PROGRESS
+DELETION_IN_PROGRESS
+
+===== 10. NO ACTION POLICY =====
+Esta etapa NO autoriza:
+- Remove-PrintJob
+- Resume-PrintJob
+- Restart-Service Spooler
+- cambio Wi-Fi
+- recovery
+- reimpresion
+
+Solo observacion y clasificacion.
+
+===== 11. PARSER =====
+PASS - todos los PS1 parsean
+
+===== 12. GIT =====
+9f3ad8e (HEAD -> main, origin/main) P7 A5.3.5 A2: controller consumes monitoring events
+?? docs/evidence/B3-Orchestrator-ConfigPath.txt
+?? docs/evidence/B4-ConnectivityAnalyzer-ConfigDependency.txt
+?? docs/evidence/B5-ConnectivityAnalyzer-Consumers.txt
+?? docs/evidence/B6-ConnectivityAnalyzer-Contract.txt
+?? docs/evidence/B7-ConnectivityAnalyzer-Source.txt
+?? docs/evidence/D1_documentation_inventory.txt
+?? docs/evidence/P7-A1-Core-Contracts.txt
+?? docs/evidence/P7-A3-Core-Exports.txt
+?? docs/evidence/P7-A4-QueueWatcher-Lifecycle.txt
+?? docs/evidence/P7-A5.3.4B-Orchestrator-Boundary.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-R1-StagingClean-20260908-190246.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-185717.txt
+?? docs/evidence/P7-A5.3.5-A1-C2-Staging-20260908-190241.txt
+?? docs/evidence/P7-A5.3.5-A2-C1-PreCommit-20260908-204830.txt
+?? docs/evidence/P7-A5.3.5-A2-C2-Staging-20260908-205321.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-Header.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R1-EventConsumer-20260908-201046.txt
+?? docs/evidence/P7-A5.3.5-A2-I1-R2-UTF8Safe-20260908-201233.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-203714.txt
+?? docs/evidence/P7-A5.3.5-A2-I2-R1-Verification-20260908-204020.txt
+?? docs/evidence/P7-A5.3.5-A2-R0-EventConsumptionMap-20260908-190538.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-ConsumerFunctional-20260908-201520.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R0-EventWriterSignature.txt
+?? docs/evidence/P7-A5.3.5-A2-T1-R1-ConsumerFunctional-20260908-201808.txt
+?? docs/evidence/P7-A5.3.5-ApplicationController-EventBuffer-Map.txt
+?? docs/evidence/P7-B1-R1-PreexistingJob-20260908-210209.txt
+?? docs/evidence/P7-B2-R1-JobTaxonomy-20260908-210644.txt
+?? docs/evidence/runtime-test/
+
+============================================================
+FIN P7-B2-R1
+============================================================

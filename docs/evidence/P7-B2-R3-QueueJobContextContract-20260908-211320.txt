@@ -1,0 +1,243 @@
+﻿============================================================
+PrintSwitch-Windows
+P7-B2-R3 - CONTRATO FORMAL QUEUEJOBCONTEXT V1
+Fecha: 2026-09-08 21:13:20
+Printer: L365 Series(Red)
+TargetJobId: 13
+============================================================
+
+===== 1. IDENTIDAD DEL CONTRATO =====
+ContractName    : QueueJobContext
+SchemaVersion   : 1
+Layer           : Observation / Normalization
+SideEffects     : NONE
+PolicyAuthority : NONE
+
+===== 2. ENUMS FORMALES =====
+Origin:
+  PREEXISTING
+  NEW
+  UNKNOWN
+
+Age.Bucket:
+  FRESH
+  AGING
+  STALE
+  UNKNOWN
+
+Health:
+  NORMAL
+  ERROR
+  UNKNOWN
+
+Progress:
+  NO_PROGRESS
+  PARTIAL_PROGRESS
+  COMPLETE
+  UNKNOWN
+
+SummaryClassification:
+  ACTIVE_OR_QUEUED
+  PRINTING_UNCONFIRMED
+  PROGRESSING
+  PAUSED
+  TRANSITIONING
+  ERROR_ACTIVE
+  STALLED_ERROR
+  STALLED_NO_ERROR
+  COMPLETE
+
+===== 3. CAMPOS Y TIPOS =====
+
+Path                  Type       Required Nullable Description                                    
+----                  ----       -------- -------- -----------                                    
+SchemaVersion         int            True    False Version del contrato QueueJobContext.          
+JobId                 uint32/int     True    False Identificador del trabajo dentro de la cola.   
+PrinterName           string         True    False Nombre exacto de la cola Windows.              
+DocumentName          string         True     True Nombre observado del documento.                
+SubmittedTime         datetime       True     True Fecha/hora observada de envio del trabajo.     
+Raw                   object         True    False Evidencia original preservada.                 
+Raw.JobStatus         string         True     True JobStatus original entregado por Windows.      
+Raw.PagesPrinted      int            True     True Paginas impresas observadas.                   
+Raw.TotalPages        int            True     True Paginas totales observadas.                    
+Raw.SizeBytes         int            True     True Tamano observado del spool/job.                
+Origin                enum           True    False Relacion temporal con el inicio de observacion.
+Age                   object         True    False Contexto temporal normalizado.                 
+Age.Bucket            enum           True    False Bucket temporal normalizado.                   
+Age.Minutes           double         True     True Antiguedad calculada en minutos.               
+Health                enum           True    False Estado de salud normalizado.                   
+Progress              enum           True    False Progreso normalizado.                          
+Flags                 object         True    False Flags de lifecycle independientes.             
+Flags.Printing        bool           True    False Windows reporta Printing/Imprimiendo.          
+Flags.Retained        bool           True    False Windows reporta Retained.                      
+Flags.Paused          bool           True    False Windows reporta Paused.                        
+Flags.Deleting        bool           True    False Windows reporta Deleting/Eliminando.           
+Flags.Offline         bool           True    False Windows reporta Offline.                       
+Flags.Error           bool           True    False Windows reporta Error.                         
+SummaryClassification enum           True    False Resumen dominante, no reemplaza dimensiones.   
+
+
+
+
+===== 4. SEMANTICA DE UNKNOWN =====
+UNKNOWN significa:
+- evidencia insuficiente
+- propiedad ausente
+- dato no interpretable de forma segura
+
+UNKNOWN NO significa:
+- error del programa
+- estado fallido
+- autorizacion para recovery
+- autorizacion para borrar el job
+
+===== 5. REGLAS DE NORMALIZACION V1 =====
+Origin:
+  SubmittedTime < ObservationStartedAt -> PREEXISTING
+  SubmittedTime >= ObservationStartedAt -> NEW
+  SubmittedTime null -> UNKNOWN
+
+Age:
+  <= 2 min  -> FRESH
+  >2 <=15   -> AGING
+  >15       -> STALE
+  no SubmittedTime -> UNKNOWN
+
+NOTA: thresholds son de contrato v1 provisional.
+B3 puede externalizarlos a policy/config.
+
+Health:
+  Flag Error true -> ERROR
+  JobStatus conocido sin Error -> NORMAL
+  JobStatus ausente/vacio -> UNKNOWN
+
+Progress:
+  TotalPages null/<=0 -> UNKNOWN
+  PagesPrinted null -> UNKNOWN
+  PagesPrinted <=0 -> NO_PROGRESS
+  0 < PagesPrinted < TotalPages -> PARTIAL_PROGRESS
+  PagesPrinted >= TotalPages -> COMPLETE
+
+===== 6. PRECEDENCIA SUMMARYCLASSIFICATION =====
+Orden de precedencia V1:
+1. Flags.Deleting -> TRANSITIONING
+2. Flags.Paused -> PAUSED
+3. Health=ERROR + Age=STALE + Progress=NO_PROGRESS -> STALLED_ERROR
+4. Health=ERROR -> ERROR_ACTIVE
+5. Progress=PARTIAL_PROGRESS -> PROGRESSING
+6. Flags.Printing + Progress=NO_PROGRESS -> PRINTING_UNCONFIRMED
+7. Age=STALE + Progress=NO_PROGRESS -> STALLED_NO_ERROR
+8. Progress=COMPLETE -> COMPLETE
+9. otherwise -> ACTIVE_OR_QUEUED
+
+SummaryClassification NO debe derivar policy directamente.
+
+===== 7. INVARIANTES FORMALES =====
+QJC-I01 SchemaVersion debe ser 1.
+QJC-I02 JobId debe existir.
+QJC-I03 PrinterName no puede ser null/vacio.
+QJC-I04 Raw debe preservar JobStatus original.
+QJC-I05 Origin no puede inferirse desde Health.
+QJC-I06 Age no puede inferirse desde Error.
+QJC-I07 Progress no puede inferirse desde Printing.
+QJC-I08 Lifecycle flags pueden coexistir.
+QJC-I09 Retained no implica COMPLETE ni STALLED.
+QJC-I10 Error no implica automaticamente STALLED_ERROR.
+QJC-I11 STALLED_ERROR requiere Error + STALE + NO_PROGRESS.
+QJC-I12 SummaryClassification no elimina informacion dimensional.
+QJC-I13 UNKNOWN es resultado valido.
+QJC-I14 Clasificacion no ejecuta efectos laterales.
+QJC-I15 QueueJobContext no autoriza cambios de red.
+QJC-I16 QueueJobContext no autoriza mutaciones de cola.
+
+===== 8. CONSTRUIR CONTEXTO REAL JOB 13 =====
+
+
+SchemaVersion         : 1
+JobId                 : 13
+PrinterName           : L365 Series(Red)
+DocumentName          : *Sin título: Bloc de notas
+SubmittedTime         : 8/9/2026 18:46:48
+Raw                   : @{JobStatus=Error, Printing, Retained; PagesPrinted=0; TotalPages=1; SizeBytes=136}
+Origin                : PREEXISTING
+Age                   : @{Bucket=STALE; Minutes=146,5}
+Health                : ERROR
+Progress              : NO_PROGRESS
+Flags                 : @{Printing=True; Retained=True; Paused=False; Deleting=False; Offline=False; Error=True}
+SummaryClassification : STALLED_ERROR
+
+
+
+
+Nested Raw:
+
+
+JobStatus    : Error, Printing, Retained
+PagesPrinted : 0
+TotalPages   : 1
+SizeBytes    : 136
+
+
+
+
+Nested Age:
+
+
+Bucket  : STALE
+Minutes : 146,5
+
+
+
+
+Nested Flags:
+
+
+Printing : True
+Retained : True
+Paused   : False
+Deleting : False
+Offline  : False
+Error    : True
+
+
+
+
+
+===== 9. VALIDACION CONTRACTUAL JOB 13 =====
+ValidationErrorCount: 0
+PASS - QueueJobContext real cumple contrato v1
+
+===== 10. EXPECTED JOB 13 =====
+PASS - Job 13 mantiene semantica esperada
+
+===== 11. OUT OF SCOPE / POLICY BOUNDARY =====
+QueueJobContext NO decide:
+- Remove-PrintJob
+- Resume-PrintJob
+- cancelar job
+- reimprimir
+- reiniciar Spooler
+- habilitar Recovery
+- cambiar Wi-Fi
+
+Toda accion pertenece a B3 Policy.
+
+===== 12. IMPLEMENTACION PROPUESTA DESPUES DE R3 =====
+Modulo candidato:
+  src/QueueJobClassifier.ps1
+
+Funciones candidatas:
+  ConvertTo-PrintSwitchQueueJobContext
+  Test-PrintSwitchQueueJobContextContract
+
+Responsabilidad:
+  input Windows print job -> QueueJobContext v1
+  sin side effects
+
+===== 13. PARSER / GIT =====
+PASS - todos los PS1 parsean
+9f3ad8e (HEAD -> main, origin/main) P7 A5.3.5 A2: controller consumes monitoring events
+
+============================================================
+FIN P7-B2-R3
+============================================================
