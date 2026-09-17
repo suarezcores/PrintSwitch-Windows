@@ -61,6 +61,26 @@ $script:QueueWatcherPath =
         $PSScriptRoot `
         "QueueWatcher.ps1"
 
+$script:QueuePolicyPath =
+    Join-Path `
+        $PSScriptRoot `
+        "QueuePolicy.ps1"
+
+$script:RecoveryAuthorizationPath =
+    Join-Path `
+        $PSScriptRoot `
+        "RecoveryAuthorization.ps1"
+
+$script:TargetNetworkContextPath =
+    Join-Path `
+        $PSScriptRoot `
+        "TargetNetworkContext.ps1"
+
+$script:RecoveryExecutionAdapterPath =
+    Join-Path `
+        $PSScriptRoot `
+        "RecoveryExecutionAdapter.ps1"
+
 $script:EventWriterPath =
     Join-Path `
         $PSScriptRoot `
@@ -80,6 +100,10 @@ foreach (
         $script:PrinterEndpointResolverPath,
         $script:PrinterEndpointReachabilityPath,
         $script:PrinterServiceProbePath,
+        $script:QueuePolicyPath,
+        $script:RecoveryAuthorizationPath,
+        $script:TargetNetworkContextPath,
+        $script:RecoveryExecutionAdapterPath,
         $script:EventWriterPath,
         $script:LoggerPath
     )
@@ -135,6 +159,21 @@ $script:ControllerState =
 
 
         LastPrintJob =
+            $null
+
+        LastQueuePolicyResult =
+            $null
+
+        LastRecoveryEvaluation =
+            $null
+
+        LastTargetNetworkContext =
+            $null
+
+        LastRecoveryAuthorization =
+            $null
+
+        LastRecoveryExecution =
             $null
 
         CurrentEndpoint =
@@ -244,6 +283,140 @@ function Sync-PrintSwitchMonitoringEvents {
 
                 $script:ControllerState.LastPrintJob =
                     $Event.Data
+
+                $QueueJobContext =
+                    $null
+
+                if (
+                    $null -ne $Event.Data -and
+                    $Event.Data.PSObject.Properties.Name -contains
+                        "QueueJobContext"
+                ) {
+
+                    $QueueJobContext =
+                        $Event.Data.QueueJobContext
+                }
+
+                try {
+
+                    $QueuePolicyResult =
+                        Get-PrintSwitchQueuePolicy `
+                            -QueueJobContext $QueueJobContext
+
+                    $QueuePolicyValidation =
+                        Test-PrintSwitchQueuePolicyResult `
+                            -Result $QueuePolicyResult
+
+                    if (-not $QueuePolicyValidation.Valid) {
+
+                        $QueuePolicyResult =
+                            New-PrintSwitchQueuePolicyResult `
+                                -Decision "INSUFFICIENT_CONTEXT" `
+                                -Actionable $false `
+                                -AllowRecoveryEvaluation $false `
+                                -ReasonCode "QUEUE_POLICY_RESULT_INVALID" `
+                                -Reason "QueuePolicy returned an invalid result contract." `
+                                -SourceContext $QueueJobContext
+                    }
+                }
+                catch {
+
+                    $QueuePolicyResult =
+                        New-PrintSwitchQueuePolicyResult `
+                            -Decision "INSUFFICIENT_CONTEXT" `
+                            -Actionable $false `
+                            -AllowRecoveryEvaluation $false `
+                            -ReasonCode "QUEUE_POLICY_EVALUATION_FAILED" `
+                            -Reason $_.Exception.Message `
+                            -SourceContext $QueueJobContext
+                }
+
+                $script:ControllerState.LastQueuePolicyResult =
+                    $QueuePolicyResult
+
+                $script:ControllerState.LastRecoveryEvaluation =
+                    $null
+
+                $script:ControllerState.LastRecoveryAuthorization =
+                    $null
+
+                $script:ControllerState.LastRecoveryExecution =
+                    $null
+
+                if (
+                    $null -ne $QueuePolicyResult -and
+                    $QueuePolicyResult.Decision -eq "EVALUATE_RECOVERY" -and
+                    [bool]$QueuePolicyResult.AllowRecoveryEvaluation
+                ) {
+
+                    $EvaluationPrinterName = $null
+                    $EvaluationJobId = $null
+
+                    if ($null -ne $QueueJobContext) {
+                        if ($QueueJobContext.PSObject.Properties.Name -contains "PrinterName") {
+                            $EvaluationPrinterName = [string]$QueueJobContext.PrinterName
+                        }
+                        if ($QueueJobContext.PSObject.Properties.Name -contains "JobId") {
+                            $EvaluationJobId = $QueueJobContext.JobId
+                        }
+                    }
+
+                    if (-not [string]::IsNullOrWhiteSpace($EvaluationPrinterName)) {
+                        $script:ControllerState.LastRecoveryEvaluation =
+                            Invoke-PrintSwitchRecoveryEvaluation -QueuePolicyResult $QueuePolicyResult -PrinterName $EvaluationPrinterName -JobId $EvaluationJobId
+
+                        $script:ControllerState.LastRecoveryAuthorization =
+                            $null
+
+                        if ($null -ne $script:ControllerState.LastRecoveryEvaluation) {
+
+                            $AuthorizationCurrentSSID =
+                                Get-PrintSwitchCurrentSSID
+
+                            $script:ControllerState.LastTargetNetworkContext =
+                                Get-PrintSwitchTargetNetworkContext `
+                                    -PrinterName $EvaluationPrinterName
+
+                            $AuthorizationTargetSSID =
+                                $null
+
+                            if (
+                                $null -ne $script:ControllerState.LastTargetNetworkContext -and
+                                [bool]$script:ControllerState.LastTargetNetworkContext.Resolved
+                            ) {
+                                $AuthorizationTargetSSID =
+                                    [string]$script:ControllerState.LastTargetNetworkContext.TargetSSID
+                            }
+
+                            $script:ControllerState.LastRecoveryAuthorization =
+                                Get-PrintSwitchRecoveryAuthorization -RecoveryEvaluationResult $script:ControllerState.LastRecoveryEvaluation -RecoveryEnabled ([bool]$script:ControllerState.RecoveryEnabled) -CurrentSSID $AuthorizationCurrentSSID -TargetSSID $AuthorizationTargetSSID -PrinterName $EvaluationPrinterName
+
+                            $RecoveryExecutionCorrelationId =
+                                "CONTROLLER-JOB-{0}-{1}" -f @(
+                                    [string]$EvaluationJobId,
+                                    [guid]::NewGuid().ToString("N")
+                                )
+
+                            $script:ControllerState.LastRecoveryExecution =
+                                Get-PrintSwitchRecoveryExecutionRequest `
+                                    -RecoveryAuthorization $script:ControllerState.LastRecoveryAuthorization `
+                                    -ExpectedPrinterName $EvaluationPrinterName `
+                                    -ExpectedTargetSSID $AuthorizationTargetSSID `
+                                    -ExpectedJobId $EvaluationJobId `
+                                    -CorrelationId $RecoveryExecutionCorrelationId
+
+if (
+    $null -ne $script:ControllerState.LastRecoveryExecution -and
+    $script:ControllerState.LastRecoveryExecution.ExecutionAuthorized -eq $true -and
+    $script:ControllerState.LastRecoveryExecution.SwitchAuthorized -eq $true
+) {
+    $script:ControllerState.LastRecoveryExecution =
+        Invoke-PrintSwitchRecoveryExecutionDryRun `
+            -ExecutionRequest $script:ControllerState.LastRecoveryExecution
+}
+                        }
+                    }
+                }
             }
 
             "DecisionProduced" {
@@ -562,6 +735,21 @@ function Get-PrintSwitchStatus {
 
                 LastPrintJob =
                     $script:ControllerState.LastPrintJob
+
+                LastQueuePolicyResult =
+                    $script:ControllerState.LastQueuePolicyResult
+
+                LastRecoveryEvaluation =
+                    $script:ControllerState.LastRecoveryEvaluation
+
+                LastTargetNetworkContext =
+                    $script:ControllerState.LastTargetNetworkContext
+
+                LastRecoveryAuthorization =
+                    $script:ControllerState.LastRecoveryAuthorization
+
+                LastRecoveryExecution =
+                    $script:ControllerState.LastRecoveryExecution
 
                 CurrentEndpoint =
                     $script:ControllerState.CurrentEndpoint
@@ -1198,10 +1386,6 @@ function Start-PrintSwitchMonitoring {
         $WatcherPath =
             $script:QueueWatcherPath
 
-        $RecoveryAllowed =
-            [bool]$script:ControllerState.RecoveryEnabled
-
-
         # Reset monitoring event consumption for new session.
         $script:ControllerState.ProcessedMonitoringEventIds =
             @{}
@@ -1209,19 +1393,26 @@ function Start-PrintSwitchMonitoring {
         $script:ControllerState.LastPrintJob =
             $null
 
+        $script:ControllerState.LastQueuePolicyResult =
+            $null
+
+        $script:ControllerState.LastRecoveryEvaluation =
+            $null
+
+        $script:ControllerState.LastTargetNetworkContext =
+            $null
+
+        $script:ControllerState.LastRecoveryAuthorization =
+            $null
+
+        $script:ControllerState.LastRecoveryExecution =
+            $null
+
         $script:ControllerState.LastDecision =
             $null
 
         $script:ControllerState.LastRecovery =
             $null
-        # --------------------------------------------------------
-        # IMPORTANTE:
-        #
-        # QueueWatcher sin -EnableRecovery = DRY-RUN.
-        #
-        # QueueWatcher con -EnableRecovery = recovery autorizado.
-        # --------------------------------------------------------
-
         $Job =
         $MonitoringEventDirectory =
             Join-Path `
@@ -1261,29 +1452,17 @@ function Start-PrintSwitchMonitoring {
                     param (
                         [string]$QueueWatcherPath,
                         [string]$SelectedPrinter,
-                        [bool]$RecoveryEnabled,
                         [string]$ApplicationEventPath
                     )
 
-                    if ($RecoveryEnabled) {
-
-                        & $QueueWatcherPath `
-                            -PrinterName $SelectedPrinter `
-                            -EnableRecovery `
-                            -EventPath $ApplicationEventPath
-                    }
-                    else {
-
-                        & $QueueWatcherPath `
-                            -PrinterName $SelectedPrinter `
-                            -EventPath $ApplicationEventPath
-                    }
+                    & $QueueWatcherPath `
+                        -PrinterName $SelectedPrinter `
+                        -EventPath $ApplicationEventPath
 
                 } `
                 -ArgumentList `
                     $WatcherPath,
                     $PrinterName,
-                    $RecoveryAllowed,
                     $MonitoringEventPath
 
         if ($null -eq $Job) {
@@ -1375,8 +1554,8 @@ function Start-PrintSwitchMonitoring {
                         $script:ControllerState.MonitoringState
 
                     RecoveryEnabled =
-                        $RecoveryAllowed
 
+                        [bool]$script:ControllerState.RecoveryEnabled
                     StartedAt =
                         $script:ControllerState.MonitoringStartedAt
                 }
@@ -1598,5 +1777,361 @@ function Get-PrintSwitchControllerInfo {
 
         LoadedAt =
             Get-Date
+    }
+}
+
+function Invoke-PrintSwitchRecoveryEvaluation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$QueuePolicyResult,
+
+        [Parameter(Mandatory = $true)]
+        [string]$PrinterName,
+
+        [Parameter(Mandatory = $false)]
+        [object]$JobId
+    )
+
+    $result = [ordered]@{
+        SchemaVersion           = 1
+        EvaluationRequested     = $false
+        EvaluationPerformed     = $false
+        PrinterName             = $PrinterName
+        JobId                   = $JobId
+        QueuePolicyDecision     = $null
+        EndpointResolved        = $false
+        Endpoint                = $null
+        ReachabilityState       = "NOT_EVALUATED"
+        RecoveryRelevant        = $false
+        ReasonCode              = "QUEUE_POLICY_DID_NOT_REQUEST_EVALUATION"
+        Reason                  = "QueuePolicy did not request recovery evaluation."
+        SourceQueuePolicyResult = $QueuePolicyResult
+    }
+
+    try {
+
+        if ($null -eq $QueuePolicyResult) {
+
+            $result.ReasonCode =
+                "INVALID_QUEUE_POLICY_RESULT"
+
+            $result.Reason =
+                "QueuePolicyResult is null."
+
+            return [PSCustomObject]$result
+        }
+
+        $decisionProperty =
+            $QueuePolicyResult.PSObject.Properties["Decision"]
+
+        $allowProperty =
+            $QueuePolicyResult.PSObject.Properties["AllowRecoveryEvaluation"]
+
+        if (
+            $null -eq $decisionProperty -or
+            $null -eq $allowProperty
+        ) {
+
+            $result.ReasonCode =
+                "INVALID_QUEUE_POLICY_RESULT"
+
+            $result.Reason =
+                "QueuePolicyResult does not expose the required evaluation contract."
+
+            return [PSCustomObject]$result
+        }
+
+        $result.QueuePolicyDecision =
+            [string]$QueuePolicyResult.Decision
+
+        if (
+            $result.QueuePolicyDecision -ne "EVALUATE_RECOVERY" -or
+            -not [bool]$QueuePolicyResult.AllowRecoveryEvaluation
+        ) {
+
+            return [PSCustomObject]$result
+        }
+
+        $result.EvaluationRequested =
+            $true
+
+        $result.EvaluationPerformed =
+            $true
+
+        $reachability =
+            Get-PrintSwitchReachability `
+                -PrinterName $PrinterName
+
+        if (
+            $null -eq $reachability -or
+            -not $reachability.Success -or
+            $null -eq $reachability.Data
+        ) {
+
+            $result.ReachabilityState =
+                "UNKNOWN"
+
+            $result.ReasonCode =
+                "CONNECTIVITY_EVALUATION_FAILED"
+
+            $result.Reason =
+                "Read-only reachability evaluation did not return a valid result."
+
+            return [PSCustomObject]$result
+        }
+
+        $data =
+            $reachability.Data
+
+        # --------------------------------------------------------
+        # REAL CONTRACT:
+        # Data is PrinterEndpointReachability v0.3 directly.
+        #
+        # Expected fields include:
+        # QueueName
+        # TransportType
+        # ReachabilityStrategy
+        # ConfiguredDestination
+        # ResolvedDestination
+        # TcpPort
+        # Reachable
+        # ReachabilityState
+        # ProbeResult
+        # --------------------------------------------------------
+
+        $stateProperty =
+            $data.PSObject.Properties["ReachabilityState"]
+
+        $reachableProperty =
+            $data.PSObject.Properties["Reachable"]
+
+        $resolvedProperty =
+            $data.PSObject.Properties["ResolvedDestination"]
+
+        $configuredProperty =
+            $data.PSObject.Properties["ConfiguredDestination"]
+
+        if ($null -eq $stateProperty) {
+
+            $result.ReachabilityState =
+                "UNKNOWN"
+
+            $result.ReasonCode =
+                "REACHABILITY_UNKNOWN_FAIL_CLOSED"
+
+            $result.Reason =
+                "Reachability result does not expose ReachabilityState."
+
+            return [PSCustomObject]$result
+        }
+
+        $realState =
+            [string]$data.ReachabilityState
+
+        if ([string]::IsNullOrWhiteSpace($realState)) {
+
+            $result.ReachabilityState =
+                "UNKNOWN"
+
+            $result.ReasonCode =
+                "REACHABILITY_UNKNOWN_FAIL_CLOSED"
+
+            $result.Reason =
+                "ReachabilityState is empty."
+
+            return [PSCustomObject]$result
+        }
+
+        $resolvedDestination =
+            $null
+
+        if (
+            $null -ne $resolvedProperty -and
+            -not [string]::IsNullOrWhiteSpace(
+                [string]$data.ResolvedDestination
+            )
+        ) {
+
+            $resolvedDestination =
+                [string]$data.ResolvedDestination
+        }
+        elseif (
+            $null -ne $configuredProperty -and
+            -not [string]::IsNullOrWhiteSpace(
+                [string]$data.ConfiguredDestination
+            )
+        ) {
+
+            $resolvedDestination =
+                [string]$data.ConfiguredDestination
+        }
+
+        if ([string]::IsNullOrWhiteSpace($resolvedDestination)) {
+
+            $result.ReachabilityState =
+                "UNKNOWN"
+
+            $result.ReasonCode =
+                "ENDPOINT_UNRESOLVED"
+
+            $result.Reason =
+                "No operational printer destination could be resolved."
+
+            return [PSCustomObject]$result
+        }
+
+        $result.EndpointResolved =
+            $true
+
+        $result.Endpoint =
+            [PSCustomObject]@{
+                QueueName =
+                    $(if ($data.PSObject.Properties["QueueName"]) {
+                        $data.QueueName
+                    }
+                    else {
+                        $PrinterName
+                    })
+
+                TransportType =
+                    $(if ($data.PSObject.Properties["TransportType"]) {
+                        $data.TransportType
+                    }
+                    else {
+                        $null
+                    })
+
+                ReachabilityStrategy =
+                    $(if ($data.PSObject.Properties["ReachabilityStrategy"]) {
+                        $data.ReachabilityStrategy
+                    }
+                    else {
+                        $null
+                    })
+
+                ConfiguredDestination =
+                    $(if ($data.PSObject.Properties["ConfiguredDestination"]) {
+                        $data.ConfiguredDestination
+                    }
+                    else {
+                        $null
+                    })
+
+                ResolvedDestination =
+                    $resolvedDestination
+
+                TcpPort =
+                    $(if ($data.PSObject.Properties["TcpPort"]) {
+                        $data.TcpPort
+                    }
+                    else {
+                        $null
+                    })
+
+                ProbeResult =
+                    $(if ($data.PSObject.Properties["ProbeResult"]) {
+                        $data.ProbeResult
+                    }
+                    else {
+                        $null
+                    })
+            }
+
+        $result.ReachabilityState =
+            $realState
+
+        switch ($realState) {
+
+            "REACHABLE" {
+
+                $result.RecoveryRelevant =
+                    $false
+
+                $result.ReasonCode =
+                    "ENDPOINT_REACHABLE_NO_CONNECTIVITY_RECOVERY"
+
+                $result.Reason =
+                    "Printer endpoint is reachable; connectivity recovery is not relevant."
+
+                return [PSCustomObject]$result
+            }
+
+            "UNREACHABLE" {
+
+                if (
+                    $null -eq $reachableProperty -or
+                    [bool]$data.Reachable
+                ) {
+
+                    $result.ReachabilityState =
+                        "UNKNOWN"
+
+                    $result.RecoveryRelevant =
+                        $false
+
+                    $result.ReasonCode =
+                        "REACHABILITY_CONTRACT_INCONSISTENT"
+
+                    $result.Reason =
+                        "Reachability contract is internally inconsistent."
+
+                    return [PSCustomObject]$result
+                }
+
+                $result.RecoveryRelevant =
+                    $true
+
+                $result.ReasonCode =
+                    "ENDPOINT_UNREACHABLE_RECOVERY_RELEVANT"
+
+                $result.Reason =
+                    "Printer endpoint is unreachable; connectivity recovery remains relevant."
+
+                return [PSCustomObject]$result
+            }
+
+            default {
+
+                $result.ReachabilityState =
+                    "UNKNOWN"
+
+                $result.RecoveryRelevant =
+                    $false
+
+                $result.ReasonCode =
+                    "REACHABILITY_UNKNOWN_FAIL_CLOSED"
+
+                $result.Reason =
+                    "Printer endpoint reachability is not sufficiently determined."
+
+                return [PSCustomObject]$result
+            }
+        }
+    }
+    catch {
+
+        $result.EvaluationPerformed =
+            $false
+
+        $result.EndpointResolved =
+            $false
+
+        $result.Endpoint =
+            $null
+
+        $result.ReachabilityState =
+            "UNKNOWN"
+
+        $result.RecoveryRelevant =
+            $false
+
+        $result.ReasonCode =
+            "CONNECTIVITY_EVALUATION_FAILED"
+
+        $result.Reason =
+            $_.Exception.Message
+
+        return [PSCustomObject]$result
     }
 }

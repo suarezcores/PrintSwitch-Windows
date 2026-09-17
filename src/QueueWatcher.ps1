@@ -1,6 +1,4 @@
 param (
-    [switch]$EnableRecovery,
-
     [string]$PrinterName,
 
     [string]$EventPath = $null
@@ -99,9 +97,6 @@ $PrinterDiscoveryPath = Join-Path `
     $PSScriptRoot `
     "PrinterDiscovery.ps1"
 
-$PrintRecoveryOrchestratorPath = Join-Path `
-    $PSScriptRoot `
-    "PrintRecoveryOrchestrator.ps1"
 $KnownJobs = @{}
 
 # ============================================================
@@ -151,7 +146,7 @@ Write-PrintSwitchLog `
     -Event "PRINTSWITCH_STARTED" `
     -Level "INFO" `
     -Data @{
-        RecoveryEnabled = [bool]$EnableRecovery
+        RecoveryEnabled = $false
         RequestedPrinter = $PrinterName
     } |
     Out-Null
@@ -379,27 +374,6 @@ Write-Host "========================================"
 Write-Host "3. PRINTSWITCH READY"
 Write-Host "========================================"
 
-if ($EnableRecovery) {
-
-    Write-Host `
-        "Modo: RECOVERY AUTOMATICO HABILITADO" `
-        -ForegroundColor Yellow
-
-    Write-Host `
-        "Cambios de Wi-Fi permitidos." `
-        -ForegroundColor Yellow
-}
-else {
-
-    Write-Host `
-        "Modo: DRY-RUN" `
-        -ForegroundColor Green
-
-    Write-Host `
-        "No se modificara ninguna red Wi-Fi." `
-        -ForegroundColor Green
-}
-
 Write-Host "Fuente de colas      : Windows / PrinterDiscovery"
 Write-Host "Impresora observada  : $PrinterName"
 Write-Host "DiscoveryStatus      : $($SelectedQueueContext.DiscoveryStatus)"
@@ -414,7 +388,7 @@ Write-PrintSwitchLog `
     -Level "INFO" `
     -Data @{
         Printer         = $PrinterName
-        RecoveryEnabled = [bool]$EnableRecovery
+        RecoveryEnabled = $false
     } |
     Out-Null
 
@@ -455,29 +429,6 @@ function Get-PrintJobs {
 # ============================================================
 # VALIDAR PRINT RECOVERY ORCHESTRATOR
 # ============================================================
-
-if (-not (Test-Path $PrintRecoveryOrchestratorPath)) {
-
-    Write-Host ""
-    Write-Host `
-        "ERROR: PrintRecoveryOrchestrator no encontrado." `
-        -ForegroundColor Red
-
-    Write-Host `
-        "Ruta esperada: $PrintRecoveryOrchestratorPath"
-
-    Write-PrintSwitchLog `
-        -Component "QueueWatcher" `
-        -Event "RECOVERY_ORCHESTRATOR_NOT_FOUND" `
-        -Level "ERROR" `
-        -Data @{
-            Path = $PrintRecoveryOrchestratorPath
-        } |
-        Out-Null
-
-    return
-}
-
 
 # ============================================================
 # LOOP PRINCIPAL
@@ -676,252 +627,7 @@ while ($true) {
             Write-Host "Documento   : $($Event.Document)"
             Write-Host "Propietario : $($Event.Owner)"
             Write-Host "Estado      : $($Event.JobStatus)"
-            # =================================================
-# NUEVO ORQUESTADOR - DRY RUN
-# =================================================
 
-Write-Host ""
-Write-Host "========================================"
-Write-Host "PRINT RECOVERY ORCHESTRATOR"
-Write-Host "========================================"
-
-try {
-
-   $OrchestratorParameters = @{
-    PrinterName = $PrinterName
-}
-
-if ($EnableRecovery) {
-
-    $OrchestratorParameters.Execute = $true
-}
-
-$OrchestratorResult = & $PrintRecoveryOrchestratorPath `
-    @OrchestratorParameters
-}
-catch {
-
-    Write-PrintSwitchLog `
-        -Component "QueueWatcher" `
-        -Event "RECOVERY_ORCHESTRATOR_ERROR" `
-        -Level "ERROR" `
-        -Data @{
-            Printer = $PrinterName
-            JobId   = $Event.JobId
-            Message = $_.Exception.Message
-        } |
-        Out-Null
-
-    Write-Host ""
-    Write-Host `
-        "ERROR ejecutando PrintRecoveryOrchestrator." `
-        -ForegroundColor Red
-
-    continue
-}
-
-if ($null -eq $OrchestratorResult) {
-
-    Write-PrintSwitchLog `
-        -Component "QueueWatcher" `
-        -Event "RECOVERY_ORCHESTRATOR_NO_RESULT" `
-        -Level "ERROR" `
-        -Data @{
-            Printer = $PrinterName
-            JobId   = $Event.JobId
-        } |
-        Out-Null
-
-    continue
-}
-
-Write-Host ""
-Write-Host "Resultado del orquestador:"
-Write-Host "FinalClassification : $($OrchestratorResult.FinalClassification)"
-Write-Host "SwitchDecision      : $($OrchestratorResult.SwitchDecision)"
-Write-Host "SwitchAuthorized    : $($OrchestratorResult.SwitchAuthorized)"
-Write-Host "SwitchExecuted      : $($OrchestratorResult.SwitchExecuted)"
-
-# ============================================================
-# APPLICATION EVENTS - ORCHESTRATOR RESULT
-# ============================================================
-
-if ($EventWriterEnabled) {
-
-    try {
-
-        $GetOrchestratorValue = {
-
-            param (
-                [string]$Name
-            )
-
-            if (
-                $null -ne $OrchestratorResult -and
-                $OrchestratorResult.PSObject.Properties.Name -contains $Name
-            ) {
-
-                return $OrchestratorResult.$Name
-            }
-
-            return $null
-        }
-
-        # ----------------------------------------------------
-        # DecisionProduced
-        # ----------------------------------------------------
-
-        $EventSequence++
-
-        $DecisionEvent =
-            New-PrintSwitchEvent `
-                -EventType "DecisionProduced" `
-                -Source "PrintRecoveryOrchestrator" `
-                -PrinterName $PrinterName `
-                -CorrelationId $CorrelationId `
-                -SequenceNumber $EventSequence `
-                -Severity "INFO" `
-                -Data (
-                    [PSCustomObject]@{
-
-                        JobId =
-                            $Event.JobId
-
-                        PolicyDecision =
-                            & $GetOrchestratorValue "PolicyDecision"
-
-                        RouteClassification =
-                            & $GetOrchestratorValue "InitialRouteClassification"
-
-                        WiFiClassification =
-                            & $GetOrchestratorValue "WiFiClassification"
-
-                        SwitchDecision =
-                            & $GetOrchestratorValue "SwitchDecision"
-
-                        SwitchAuthorized =
-                            & $GetOrchestratorValue "SwitchAuthorized"
-
-                        ShouldExecuteSwitch =
-                            & $GetOrchestratorValue "ShouldExecuteSwitch"
-
-                        PreserveEthernet =
-                            & $GetOrchestratorValue "PreserveEthernet"
-
-                        CurrentSSID =
-                            & $GetOrchestratorValue "CurrentSSID"
-
-                        TargetSSID =
-                            & $GetOrchestratorValue "TargetSSID"
-                    }
-                )
-
-        Write-PrintSwitchEvent `
-            -Event $DecisionEvent `
-            -Path $EventPath |
-            Out-Null
-
-        # ----------------------------------------------------
-        # RecoveryCompleted
-        # ----------------------------------------------------
-
-        $EventSequence++
-
-        $RecoveryEvent =
-            New-PrintSwitchEvent `
-                -EventType "RecoveryCompleted" `
-                -Source "PrintRecoveryOrchestrator" `
-                -PrinterName $PrinterName `
-                -CorrelationId $CorrelationId `
-                -SequenceNumber $EventSequence `
-                -Severity "INFO" `
-                -Data (
-                    [PSCustomObject]@{
-
-                        JobId =
-                            $Event.JobId
-
-                        FinalClassification =
-                            & $GetOrchestratorValue "FinalClassification"
-
-                        SwitchDecision =
-                            & $GetOrchestratorValue "SwitchDecision"
-
-                        SwitchAuthorized =
-                            & $GetOrchestratorValue "SwitchAuthorized"
-
-                        SwitchExecuted =
-                            & $GetOrchestratorValue "SwitchExecuted"
-
-                        RecoverySucceeded =
-                            & $GetOrchestratorValue "RecoverySucceeded"
-
-                        PreserveEthernet =
-                            & $GetOrchestratorValue "PreserveEthernet"
-
-                        TargetSSID =
-                            & $GetOrchestratorValue "TargetSSID"
-
-                        ConnectivityAfter =
-                            & $GetOrchestratorValue "ConnectivityAfter"
-
-                        RouteAfter =
-                            & $GetOrchestratorValue "RouteAfter"
-
-                        RecoveryValidationClassification =
-                            & $GetOrchestratorValue "RecoveryValidationClassification"
-
-                        RecoveryValidationConfirmed =
-                            & $GetOrchestratorValue "RecoveryValidationConfirmed"
-
-                        CompletedAt =
-                            Get-Date
-                    }
-                )
-
-        Write-PrintSwitchEvent `
-            -Event $RecoveryEvent `
-            -Path $EventPath |
-            Out-Null
-    }
-    catch {
-
-        Write-PrintSwitchLog `
-            -Component "QueueWatcher" `
-            -Event "APPLICATION_EVENT_WRITE_FAILED" `
-            -Level "WARN" `
-            -Data @{
-                Printer =
-                    $PrinterName
-
-                JobId =
-                    $Event.JobId
-
-                Stage =
-                    "ORCHESTRATOR_RESULT"
-
-                Message =
-                    $_.Exception.Message
-            } |
-            Out-Null
-    }
-}
-
-Write-PrintSwitchLog `
-    -Component "QueueWatcher" `
-    -Event "RECOVERY_ORCHESTRATOR_RESULT" `
-    -Level "INFO" `
-    -Data @{
-        Printer            = $PrinterName
-        JobId              = $Event.JobId
-        FinalClassification =
-            $OrchestratorResult.FinalClassification
-        SwitchDecision =
-            $OrchestratorResult.SwitchDecision
-        SwitchExecuted =
-            $OrchestratorResult.SwitchExecuted
-    } |
-    Out-Null
 
 
         }
