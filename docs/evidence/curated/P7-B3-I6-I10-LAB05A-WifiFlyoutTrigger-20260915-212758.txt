@@ -1,0 +1,97 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-LAB05A-WifiFlyoutTrigger-20260915-212758
+OriginalSHA256=6E3AC34CBF688F7CCC76505A5E0EBD90FF2496CC6CDF3C5D924E96A02CC55950
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.5448627-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+===== PRINTSWITCH NATIVE WI-FI LAB — LAB-05A =====
+Purpose=Determine whether opening the Windows Wi-Fi flyout triggers an automatic network transition
+StartedAt=2026-09-15T21:27:58.8838365-03:00
+ObservationStartedAt=2026-09-15T21:28:37.3270245-03:00
+ObservationFinishedAt=2026-09-15T21:31:37.6991745-03:00
+
+===== SAFETY / EXPERIMENT CONTRACT =====
+ExpectedSourceSSID=<PRIMARY_INTERNET_SSID>
+TargetSSID=<PRINTER_NETWORK_SSID>
+ObservationSeconds=180
+FlyoutCueSeconds=60
+SampleIntervalMs=500
+WlanConnectInvoked=False
+WlanDisconnectInvoked=False
+WlanScanInvoked=False
+NetshConnectionMutation=False
+ProfileMutation=False
+CredentialReadAttempt=False
+ProductionSourceMutation=False
+ExternalTargetVisibilityConfirmed=SI
+WifiFlyoutIsOnlyPermittedUserAction=True
+UserMustNotSelectAnyNetwork=True
+FlyoutActionConfirmed=True
+
+===== PRE-FLIGHT =====
+NetshSSIDBefore=<PRIMARY_INTERNET_SSID>
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+InterfaceCount=1
+InterfaceGuid=<INTERFACE_GUID_01>
+InterfaceDescription=Realtek 8852BE Wireless LAN WiFi 6 PCI-E NIC
+NativeBeforeState=CONNECTED
+NativeBeforeSSID=<PRIMARY_INTERNET_SSID>
+NativeBeforeProfile=<PRIMARY_INTERNET_SSID>
+ProfileListResult=0
+Profiles=<ESP32_AP_SSID> | <PRIMARY_INTERNET_SSID> | <PRINTER_NETWORK_SSID> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_5G_SSID>
+SourceProfileExists=True
+TargetProfileExists=True
+AlternativeProfiles=<ESP32_AP_SSID> | <PRINTER_NETWORK_SSID> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_5G_SSID>
+NativeError=
+PreflightPass=True
+
+===== OBSERVER =====
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+RegisterNotificationResult=0
+PreviousNotificationSource=0
+CueIssued=True
+CueElapsedMs=60146
+ObserverError=
+
+===== ACM EVENT TIMELINE =====
+Event[0].ElapsedMs=46669; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[1].ElapsedMs=72346; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[2].ElapsedMs=72346; Code=26; Name=wlan_notification_acm_scan_list_refresh; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[3].ElapsedMs=128865; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+
+===== NATIVE STATE-CHANGE TIMELINE =====
+StateChange.ElapsedMs=0; InterfaceState=CONNECTED[1]; CurrentConnectionResult=0; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; BSSID=<MAC_OR_BSSID_02>; SignalQuality=100
+
+===== INTERPRETATION =====
+CueElapsedMs=60146
+TargetBeforeCueObserved=False
+TargetAfterCueObserved=False
+UnexpectedBeforeCueObserved=False
+UnexpectedAfterCueObserved=False
+ConnectionStartBeforeCue=False
+ConnectionStartAfterCue=False
+
+===== FINAL STATE =====
+NativeFinalState=CONNECTED
+NativeFinalProfile=<PRIMARY_INTERNET_SSID>
+NativeFinalSSID=<PRIMARY_INTERNET_SSID>
+NativeFinalBSSID=<MAC_OR_BSSID_02>
+NetshSSIDAfter=<PRIMARY_INTERNET_SSID>
+FinalSourcePreserved=True
+FinalTargetConnected=False
+
+===== LAB RESULT =====
+Result=PASS_UI_OPENED_CONNECTION_PRESERVED
+EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB05A-WifiFlyoutTrigger-20260915-212758.txt

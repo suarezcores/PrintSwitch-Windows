@@ -1,0 +1,185 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I3-T2-R1-RealEpsonRecoveryEvaluation-20260909-200128
+OriginalSHA256=5AF8178198E27E4779D2799CB3E1E59835C426E50445384504BBFAC6FFB4B4F8
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.2913345-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-I3-T2-R1 - REAL EPSON RECOVERY EVALUATION
+Fecha: 2026-09-09 20:01:31
+============================================================
+
+===== PHYSICAL CONTEXT =====
+Printer       = L365 Series(Red)
+SSID Before   = <PRIMARY_INTERNET_SSID>
+SSID After    = <PRIMARY_INTERNET_SSID>
+EthernetUp    = 0
+USB           = disconnected by test precondition
+Recovery      = False
+ExpectedJob   = 13
+
+===== REAL PRINT JOB =====
+
+
+JobStatus             : Error, Printing, Retained
+Caption               :
+Description           :
+ElementName           :
+InstanceID            :
+CommunicationStatus   :
+DetailedStatus        :
+HealthState           :
+InstallDate           :
+Name                  :
+OperatingStatus       :
+OperationalStatus     :
+PrimaryStatus         :
+Status                :
+StatusDescriptions    :
+ComputerName          :
+Datatype              : NT EMF 1.008
+DocumentName          : *Sin título: Bloc de notas
+Id                    : 13
+JobTime               : 285484625
+PagesPrinted          : 0
+Position              : 1
+PrinterName           : L365 Series(Red)
+Priority              : 1
+Size                  : 136
+SubmittedTime         : 8/9/2026 18:46:48
+TotalPages            : 1
+UserName              : <ALTERNATE_INTERNET_SSID>
+PSComputerName        :
+CimClass              : ROOT/StandardCimv2:MSFT_PrintJob
+CimInstanceProperties : {Caption, Description, ElementName, InstanceID...}
+CimSystemProperties   : Microsoft.Management.Infrastructure.CimSystemProperties
+
+
+
+
+
+===== OBSERVATION START =====
+
+miércoles, 9 de septiembre de 2026 20:01:28
+
+===== REAL QUEUE JOB CONTEXT =====
+
+
+SchemaVersion         : 1
+JobId                 : 13
+PrinterName           : L365 Series(Red)
+DocumentName          : *Sin título: Bloc de notas
+SubmittedTime         : 8/9/2026 18:46:48
+Raw                   : @{JobStatus=Error, Printing, Retained; PagesPrinted=0; TotalPages=1; SizeBytes=136}
+Origin                : PREEXISTING
+Age                   : @{Bucket=STALE; Minutes=1514,67}
+Health                : ERROR
+Progress              : NO_PROGRESS
+Flags                 : @{Printing=True; Retained=True; Paused=False; Deleting=False; Offline=False; Error=True}
+SummaryClassification : STALLED_ERROR
+
+
+
+
+
+===== REAL QUEUE POLICY =====
+
+
+SchemaVersion           : 1
+Decision                : EVALUATE_RECOVERY
+Actionable              : True
+AllowRecoveryEvaluation : True
+ReasonCode              : JOB_STALLED_ERROR
+Reason                  : The print job is stale, has no progress, and reports an error.
+SourceContext           : @{SchemaVersion=1; JobId=13; PrinterName=L365 Series(Red); DocumentName=*Sin título: Bloc de notas; SubmittedTime=8/9/2026
+                          18:46:48; Raw=; Origin=PREEXISTING; Age=; Health=ERROR; Progress=NO_PROGRESS; Flags=; SummaryClassification=STALLED_ERROR}
+
+
+
+
+
+===== REAL RECOVERY EVALUATION =====
+
+
+SchemaVersion           : 1
+EvaluationRequested     : True
+EvaluationPerformed     : True
+PrinterName             : L365 Series(Red)
+JobId                   : 13
+QueuePolicyDecision     : EVALUATE_RECOVERY
+EndpointResolved        : True
+Endpoint                : @{QueueName=L365 Series(Red); TransportType=NETWORK; ReachabilityStrategy=LPR_TCP; ConfiguredDestination=<PRIVATE_IPV4_01>;
+                          ResolvedDestination=<PRIVATE_IPV4_01>; TcpPort=515; ProbeResult=TCP_CONNECTION_TIMEOUT}
+ReachabilityState       : UNREACHABLE
+RecoveryRelevant        : True
+ReasonCode              : ENDPOINT_UNREACHABLE_RECOVERY_RELEVANT
+Reason                  : Printer endpoint is unreachable; connectivity recovery remains relevant.
+SourceQueuePolicyResult : @{SchemaVersion=1; Decision=EVALUATE_RECOVERY; Actionable=True; AllowRecoveryEvaluation=True; ReasonCode=JOB_STALLED_ERROR;
+                          Reason=The print job is stale, has no progress, and reports an error.; SourceContext=}
+
+
+
+
+
+===== OBSERVED PIPELINE =====
+JobId                = 13
+SummaryClassification= STALLED_ERROR
+QueuePolicyDecision   = EVALUATE_RECOVERY
+Actionable            = True
+AllowRecoveryEval     = True
+EvaluationRequested   = True
+EvaluationPerformed   = True
+EndpointResolved      = True
+ResolvedDestination   = <PRIVATE_IPV4_01>
+TcpPort               = 515
+ProbeResult           = TCP_CONNECTION_TIMEOUT
+ReachabilityState     = UNREACHABLE
+RecoveryRelevant      = True
+ReasonCode            = ENDPOINT_UNREACHABLE_RECOVERY_RELEVANT
+
+===== SAFETY =====
+RecoveryEnabled      = False
+Orchestrator invoked = False
+NetworkManager       = False
+Wi-Fi switching      = False
+Queue mutation       = False
+Job 13 remains       = True
+
+===== PIPELINE PROVEN =====
+REAL Windows Print Job 13
+ -> QueueJobClassifier
+ -> STALLED_ERROR
+ -> QueuePolicy
+ -> EVALUATE_RECOVERY
+ -> Invoke-PrintSwitchRecoveryEvaluation
+ -> Get-PrintSwitchReachability
+ -> PrinterEndpointReachability v0.3
+ -> <PRIVATE_IPV4_01>:515
+ -> UNREACHABLE
+ -> RecoveryRelevant=True
+ -> STOP
+
+===== RESULTADO =====
+RESULTADO: PASS
+REAL JOB 13 CLASSIFIED AS STALLED_ERROR
+REAL QUEUE POLICY = EVALUATE_RECOVERY
+REAL EPSON ENDPOINT = <PRIVATE_IPV4_01>:515
+REAL REACHABILITY = UNREACHABLE
+RECOVERYRELEVANT = TRUE
+RECOVERY EXECUTION NOT CONNECTED
+NETWORK UNCHANGED
+JOB 13 UNTOUCHED
+READY FOR AUTOMATIC CONTROLLER INTEGRATION
+
+============================================================
+FIN P7-B3-I3-T2-R1
+============================================================

@@ -1,0 +1,96 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-LAB04B-PrinterNetworkOutage-AutoTransition-20260915-211124
+OriginalSHA256=7B50A63CF8C14D0040EC366A8CD2C4025412E3501F1F65924EE641C77B0BDEEF
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.5288604-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+===== PRINTSWITCH NATIVE WI-FI LAB — LAB-04B =====
+Purpose=Observe Windows behavior when the currently connected <PRINTER_NETWORK_SSID> AP disappears externally
+StartedAt=2026-09-15T21:11:24.9714573-03:00
+ObservationStartedAt=2026-09-15T21:11:51.6473896-03:00
+ObservationFinishedAt=2026-09-15T21:14:51.9061891-03:00
+
+===== SAFETY / EXPERIMENT CONTRACT =====
+ExpectedSourceSSID=<PRINTER_NETWORK_SSID>
+ObservationSeconds=180
+CutCueSeconds=10
+RequestedPowerOffSeconds=10
+SampleIntervalMs=500
+WlanConnectInvoked=False
+WlanDisconnectInvoked=False
+WlanScanInvoked=False
+NetshConnectionMutation=False
+ProfileMutation=False
+CredentialReadAttempt=False
+ProductionSourceMutation=False
+UserMustNotTouchWindowsWifiDuringObservation=True
+
+===== PRE-FLIGHT =====
+NetshSSIDBefore=<PRINTER_NETWORK_SSID>
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+InterfaceCount=1
+InterfaceGuid=<INTERFACE_GUID_01>
+InterfaceDescription=Realtek 8852BE Wireless LAN WiFi 6 PCI-E NIC
+NativeBeforeState=CONNECTED
+NativeBeforeSSID=<PRINTER_NETWORK_SSID>
+NativeBeforeProfile=<PRINTER_NETWORK_SSID>
+ProfileListResult=0
+Profiles=<ESP32_AP_SSID> | <PRINTER_NETWORK_SSID> | <PRIMARY_INTERNET_SSID> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_5G_SSID>
+SourceProfileExists=True
+AlternativeProfiles=<ESP32_AP_SSID> | <PRIMARY_INTERNET_SSID> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_5G_SSID>
+NativeError=
+PreflightPass=True
+
+===== OBSERVER =====
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+RegisterNotificationResult=0
+PreviousNotificationSource=0
+CueIssued=True
+CueElapsedMs=10125
+ObserverError=
+
+===== ACM EVENT TIMELINE =====
+Event[0].ElapsedMs=18201; Code=21; Name=wlan_notification_acm_disconnected; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; ReasonCode=0; DataSize=572
+Event[1].ElapsedMs=18372; Code=9; Name=wlan_notification_acm_connection_start; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[2].ElapsedMs=18391; Code=8; Name=wlan_notification_acm_scan_fail; Profile=; SSID=; ReasonCode=0; DataSize=4
+Event[3].ElapsedMs=18782; Code=10; Name=wlan_notification_acm_connection_complete; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[4].ElapsedMs=78178; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[5].ElapsedMs=138171; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+
+===== NATIVE STATE-CHANGE TIMELINE =====
+StateChange.ElapsedMs=0; InterfaceState=CONNECTED[1]; CurrentConnectionResult=0; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; BSSID=<MAC_OR_BSSID_01>; SignalQuality=100
+StateChange.ElapsedMs=18225; InterfaceState=DISCONNECTED[4]; CurrentConnectionResult=5023; Profile=; SSID=; BSSID=; SignalQuality=0
+StateChange.ElapsedMs=18773; InterfaceState=CONNECTED[1]; CurrentConnectionResult=0; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; BSSID=<MAC_OR_BSSID_02>; SignalQuality=100
+
+===== INTERPRETATION =====
+SourceLossObserved=True
+WindowsAttemptedAnyConnection=True
+ConnectionStartToSourceObserved=False
+ConnectionStartToAlternativeObserved=True
+AlternateSsidObserved=True
+ReconnectedToSource=False
+
+===== FINAL STATE =====
+NativeFinalState=CONNECTED
+NativeFinalProfile=<PRIMARY_INTERNET_SSID>
+NativeFinalSSID=<PRIMARY_INTERNET_SSID>
+NativeFinalBSSID=<MAC_OR_BSSID_02>
+NetshSSIDAfter=<PRIMARY_INTERNET_SSID>
+FinalSourceRestored=False
+FinalAlternativeConnected=True
+
+===== LAB RESULT =====
+Result=PASS_OUTAGE_AND_WINDOWS_ALTERNATIVE_NETWORK_TRANSITION_OBSERVED
+EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB04B-<PRINTER_NETWORK_SSID>Outage-AutoTransition-20260915-211124.txt

@@ -1,4 +1,4 @@
-﻿# PrintSwitch — Arquitectura observada
+# PrintSwitch — Arquitectura observada
 
 **Documento:** ARC-001
 **Versión:** 0.1
@@ -35,14 +35,14 @@ El escenario principal observado fue:
                        Wi-Fi actual
                              │
                     ┌────────▼────────┐
-                    │    Claro640     │
+                    │    PRIMARY_INTERNET_SSID     │
                     └─────────────────┘
 
                        SIN ACCESO
                             X
                             │
                     ┌───────▼─────────┐
-                    │   suarezcores   │
+                    │   PRINTER_NETWORK_SSID   │
                     │     Router      │
                     └───────┬─────────┘
                             │
@@ -50,7 +50,7 @@ El escenario principal observado fue:
                             ▼
                     ┌─────────────────┐
                     │   Epson L365    │
-                    │ 192.168.1.108   │
+                    │ PRIVATE_IPV4_2   │
                     └─────────────────┘
 ```
 
@@ -93,14 +93,14 @@ El trabajo permanece disponible en la cola.
 
 ## 4. Recuperación observada
 
-Cuando la computadora cambia posteriormente a la red `suarezcores`:
+Cuando la computadora cambia posteriormente a la red `PRINTER_NETWORK_SSID`:
 
 ```text
 PC
  │
  │ cambio de Wi-Fi
  ▼
-suarezcores
+PRINTER_NETWORK_SSID
  │
  │ conectividad LAN
  ▼
@@ -1061,8 +1061,8 @@ La impresora Alpha de referencia es:
 
 ```text
 L365 Series(Red)
-IP: 192.168.1.108
-SSID objetivo: suarezcores
+IP: PRIVATE_IPV4_2
+SSID objetivo: PRINTER_NETWORK_SSID
 ```
 
 ---
@@ -1114,10 +1114,10 @@ Existe exactamente un camino validado hacia el servicio de impresión.
 Ejemplo:
 
 ```text
-Ethernet 192.168.1.109
+Ethernet PRIVATE_IPV4_3
         |
         v
-Epson 192.168.1.108:9100
+Epson PRIVATE_IPV4_2:9100
 ```
 
 ### MULTIPLE_REACHABLE_PATHS
@@ -1127,11 +1127,11 @@ Más de una interfaz puede alcanzar la impresora.
 Ejemplo validado:
 
 ```text
-Ethernet 192.168.1.109
-Wi-Fi   192.168.1.224
+Ethernet PRIVATE_IPV4_3
+Wi-Fi   PRIVATE_IPV4_4
 
 ambas:
-192.168.1.0/24
+PRIVATE_IPV4_1/24
 ```
 
 ### CANDIDATE_PATHS_UNREACHABLE
@@ -1142,7 +1142,7 @@ responde.
 Ejemplo:
 
 ```text
-Ethernet en 192.168.1.0/24
+Ethernet en PRIVATE_IPV4_1/24
 Epson apagada
 TCP 9100 no responde
 ```
@@ -1154,13 +1154,13 @@ TCP 9100 no responde
 Se validó un escenario donde Ethernet y Wi-Fi pertenecían simultáneamente a:
 
 ```text
-192.168.1.0/24
+PRIVATE_IPV4_1/24
 ```
 
 y ambos podían alcanzar:
 
 ```text
-192.168.1.108:9100
+PRIVATE_IPV4_2:9100
 ```
 
 El resultado fue:
@@ -1468,9 +1468,9 @@ Se validó el escenario:
 
 ```text
 Ethernet activo
-Wi-Fi = Claro640
+Wi-Fi = PRIMARY_INTERNET_SSID
 Epson apagada
-SSID suarezcores visible
+SSID PRINTER_NETWORK_SSID visible
 RecoveryEnabled = True
 ```
 
@@ -1490,7 +1490,7 @@ SwitchExecuted   = False
 El Wi-Fi permaneció en:
 
 ```text
-Claro640
+PRIMARY_INTERNET_SSID
 ```
 
 Esto evita interpretar una impresora apagada como un problema de selección de
@@ -1508,7 +1508,7 @@ Contexto:
 ```text
 Jabber activo
 Ethernet disponible
-Wi-Fi = Claro640
+Wi-Fi = PRIMARY_INTERNET_SSID
 Epson apagada
 RecoveryEnabled = True
 ```
@@ -1542,8 +1542,8 @@ Estado inicial:
 ```text
 Epson encendida
 Ethernet desconectado
-Wi-Fi = Claro640
-SSID objetivo = suarezcores
+Wi-Fi = PRIMARY_INTERNET_SSID
+SSID objetivo = PRINTER_NETWORK_SSID
 ```
 
 Se ejecutó:
@@ -1581,7 +1581,7 @@ SWITCH_WIFI_FOR_PRINTER
 NetworkManager
     |
     v
-Claro640 -> suarezcores
+PRIMARY_INTERNET_SSID -> PRINTER_NETWORK_SSID
     |
     v
 NETWORK_SWITCH_VERIFIED
@@ -1635,7 +1635,7 @@ Después del End-to-End se probó:
 ```text
 Epson encendida
 Ethernet desconectado
-Wi-Fi ya conectado a suarezcores
+Wi-Fi ya conectado a PRINTER_NETWORK_SSID
 RecoveryEnabled = True
 ```
 
@@ -1775,8 +1775,8 @@ La arquitectura actual fue validada principalmente con:
 Windows
 Epson L365
 TCP 9100
-SSID suarezcores
-redes Claro640 / suarezcores
+SSID PRINTER_NETWORK_SSID
+redes PRIMARY_INTERNET_SSID / PRINTER_NETWORK_SSID
 ```
 
 Todavía no puede considerarse validado:
@@ -2009,7 +2009,7 @@ utiliza operacionalmente:
 ```text
 Transport       = NETWORK
 Protocol        = LPR
-Destination     = 192.168.1.108
+Destination     = PRIVATE_IPV4_2
 TcpPort         = 515
 QueueName       = ENPQueue
 Reachability    = LPR_TCP
@@ -2084,7 +2084,7 @@ puerto operacional
 Por ejemplo:
 
 ```text
-192.168.1.108:515
+PRIVATE_IPV4_2:515
 ```
 
 para la Epson L365 configurada mediante LPR.
@@ -2233,7 +2233,7 @@ Describe intención del usuario o autorización de comportamiento.
 Ejemplo:
 
 ```text
-la cola Epson puede utilizar suarezcores
+la cola Epson puede utilizar PRINTER_NETWORK_SSID
 como red de recuperación Wi-Fi
 ```
 
@@ -2434,10 +2434,10 @@ Condiciones iniciales:
 
 ```text
 Ethernet desconectado
-Wi-Fi = Claro640
+Wi-Fi = PRIMARY_INTERNET_SSID
 Epson L365 encendida
-suarezcores conocido y visible
-Endpoint = 192.168.1.108:515
+PRINTER_NETWORK_SSID conocido y visible
+Endpoint = PRIVATE_IPV4_2:515
 ```
 
 Estado inicial:
@@ -2465,13 +2465,13 @@ SWITCH_WIFI_FOR_PRINTER
 NetworkManager
         |
         v
-Claro640 -> suarezcores
+PRIMARY_INTERNET_SSID -> PRINTER_NETWORK_SSID
         |
         v
 RecoveryValidator
         |
         v
-192.168.1.108:515 alcanzable
+PRIVATE_IPV4_2:515 alcanzable
 ```
 
 Resultado:
@@ -2494,10 +2494,10 @@ Utiliza el endpoint operacional descubierto para la cola.
 También se validó el caso:
 
 ```text
-Ethernet = 192.168.1.109
-Wi-Fi = Claro640
+Ethernet = PRIVATE_IPV4_3
+Wi-Fi = PRIMARY_INTERNET_SSID
 Epson = encendida
-Endpoint = 192.168.1.108:515
+Endpoint = PRIVATE_IPV4_2:515
 ```
 
 El endpoint era alcanzable mediante Ethernet.
@@ -2621,7 +2621,7 @@ A la fecha de este checkpoint se consideran alcanzados:
 [OK] OperationalTargetIP / OperationalTcpPort
 [OK] semántica Ethernet PRESERVED / FAILED / NOT_APPLICABLE
 [OK] ConnectivityAnalyzer convertido en diagnóstico opcional
-[OK] recovery Epson real Claro640 -> suarezcores mediante LPR / 515
+[OK] recovery Epson real PRIMARY_INTERNET_SSID -> PRINTER_NETWORK_SSID mediante LPR / 515
 [OK] regresión de no intervención cuando Ethernet ya alcanza la Epson
 ```
 
@@ -2769,7 +2769,7 @@ En la red donde la impresora estaba disponible, Windows resolvió:
 BRWC48E8F7B140F
         |
         v
-192.168.100.12
+PRIVATE_IPV4_6
 ```
 
 El endpoint operacional respondió correctamente mediante:
@@ -2983,7 +2983,7 @@ Posteriormente, al regresar al contexto donde Windows podía resolver el
 hostname, el mismo endpoint volvió a producir:
 
 ```text
-ResolvedDestination = 192.168.100.12
+ResolvedDestination = PRIVATE_IPV4_6
 ReachabilityState   = REACHABLE
 ProbeResult         = TCP_CONNECTION_SUCCEEDED
 ```
@@ -3251,7 +3251,7 @@ mientras:
 
 ```text
 si necesita recuperación Wi-Fi
-puede utilizar suarezcores
+puede utilizar PRINTER_NETWORK_SSID
         |
         v
 POLICY
@@ -3379,11 +3379,11 @@ sobre el resultado de la recuperación.
 Se validó físicamente:
 
 ```text
-Wi-Fi inicial = Claro640
+Wi-Fi inicial = PRIMARY_INTERNET_SSID
 Ethernet      = desconectado
 Epson L365    = encendida
-SSID objetivo = suarezcores
-Endpoint      = 192.168.1.108:515
+SSID objetivo = PRINTER_NETWORK_SSID
+Endpoint      = PRIVATE_IPV4_2:515
 Recovery      = habilitado
 ```
 
@@ -3401,7 +3401,7 @@ QueueWatcher detectó el trabajo y delegó la recuperación al Orchestrator.
 Inicialmente:
 
 ```text
-192.168.1.108:515
+PRIVATE_IPV4_2:515
         |
         v
 UNREACHABLE
@@ -3426,24 +3426,24 @@ SWITCH_WIFI_FOR_PRINTER
 `NetworkManager` ejecutó:
 
 ```text
-Claro640
+PRIMARY_INTERNET_SSID
    |
    v
-suarezcores
+PRINTER_NETWORK_SSID
 ```
 
 y verificó:
 
 ```text
-InitialSSID    = Claro640
-FinalSSID      = suarezcores
+InitialSSID    = PRIMARY_INTERNET_SSID
+FinalSSID      = PRINTER_NETWORK_SSID
 SwitchVerified = True
 ```
 
 Posteriormente `RecoveryValidator` confirmó nuevamente el endpoint operacional:
 
 ```text
-192.168.1.108:515
+PRIVATE_IPV4_2:515
 ```
 
 El resultado final incluyó:
@@ -3468,7 +3468,7 @@ TcpTestSucceeded = True
 La PC quedó conectada a:
 
 ```text
-suarezcores
+PRINTER_NETWORK_SSID
 ```
 
 Este escenario demuestra la integración real:
@@ -3504,10 +3504,10 @@ sin intervención manual entre etapas.
 Se ejecutó también la contraprueba:
 
 ```text
-Wi-Fi inicial = suarezcores
+Wi-Fi inicial = PRINTER_NETWORK_SSID
 Ethernet      = desconectado
 Epson L365    = encendida
-Endpoint      = 192.168.1.108:515
+Endpoint      = PRIVATE_IPV4_2:515
 Recovery      = habilitado
 ```
 
@@ -3807,7 +3807,7 @@ El Resolver produjo:
 QueueName             = L365 Series(Red)
 TransportType         = NETWORK
 Protocol              = LPR
-ConfiguredDestination = 192.168.1.108
+ConfiguredDestination = PRIVATE_IPV4_2
 TcpPort               = 515
 ReachabilityStrategy  = LPR_TCP
 ```
@@ -3815,7 +3815,7 @@ ReachabilityStrategy  = LPR_TCP
 `ConnectivityAnalyzer v0.6` recibió:
 
 ```text
-TargetIP = 192.168.1.108
+TargetIP = PRIVATE_IPV4_2
 TcpPort  = 515
 ```
 
@@ -3844,13 +3844,13 @@ ServiceQueue          = BINARY_P1
 La resolución del hostname produjo:
 
 ```text
-192.168.100.12
+PRIVATE_IPV4_6
 ```
 
 `ConnectivityAnalyzer v0.6` recibió:
 
 ```text
-TargetIP = 192.168.100.12
+TargetIP = PRIVATE_IPV4_6
 TcpPort  = 515
 ```
 
@@ -4522,7 +4522,7 @@ El nombre puede continuar resolviendo:
 BRWC48E8F7B140F
     |
     v
-192.168.100.12
+PRIVATE_IPV4_6
 ```
 
 aunque la impresora esté apagada.
@@ -4566,7 +4566,7 @@ Brother PhysicalState = ON
 desde:
 
 ```text
-Wi-Fi    = Claro640
+Wi-Fi    = PRIMARY_INTERNET_SSID
 Ethernet = desconectado
 ```
 
@@ -4599,7 +4599,7 @@ P6-02 volvió a mostrar un escenario donde Windows disponía de una ruta:
 
 ```text
 0.0.0.0/0
-via 192.168.100.1
+via PRIVATE_IPV4_5
 ```
 
 hacia el destino Epson, pero:
@@ -4658,7 +4658,7 @@ P6-01 y P6-02 validaron ambas ramas de decisión.
 Ethernet
     |
     v
-Epson 192.168.1.108:515
+Epson PRIVATE_IPV4_2:515
 ```
 
 Resultado:
@@ -4673,7 +4673,7 @@ SwitchExecuted   = False
 ### Camino inexistente
 
 ```text
-Wi-Fi = Claro640
+Wi-Fi = PRIMARY_INTERNET_SSID
 Ethernet = desconectado
 Endpoint Epson = UNREACHABLE
 ```
@@ -5067,7 +5067,7 @@ los principios del Core ya validados.
 La infraestructura experimental queda conceptualmente:
 
 ```text
-Claro640
+PRIMARY_INTERNET_SSID
     |
     +--> router Claro independiente
          administración restringida
@@ -5078,7 +5078,7 @@ Suarez
          administración disponible
          posibilidad Ethernet
 
-suarezcores
+PRINTER_NETWORK_SSID
     |
     +--> TP-Link
          entorno asociado a Epson
@@ -5088,7 +5088,7 @@ suarezcores
 Importante:
 
 ```text
-Suarez != suarezcores
+Suarez != PRINTER_NETWORK_SSID
 ```
 
 No existe relación topológica implícita entre ambas.
@@ -5269,3 +5269,584 @@ que se reservan para Beta 2.
 
 El Core endpoint-aware queda suficientemente estable para avanzar al siguiente
 punto del Roadmap.
+
+---
+
+## 107. Actualización 2026-09-16 — Arquitectura observada vigente después del laboratorio Native Wi‑Fi
+
+### 107.1. Alcance de esta actualización
+
+Esta sección se agrega después de completar la serie experimental LAB‑01–LAB‑05D.
+
+No elimina ni modifica las observaciones arquitectónicas anteriores.
+
+Las secciones previas documentan correctamente:
+
+- el conocimiento disponible en cada etapa;
+- las limitaciones conocidas en ese momento;
+- las hipótesis que justificaron nuevos experimentos;
+- la evolución progresiva de PrintSwitch;
+- las decisiones tomadas antes de disponer de evidencia Native Wi‑Fi completa.
+
+Cuando una conclusión anterior quedó limitada, ampliada o parcialmente desactualizada, debe conservarse como antecedente histórico y leerse junto con las aclaraciones de esta actualización.
+
+El contrato completo derivado de los laboratorios se encuentra en:
+
+[Contrato de comportamiento Native Wi‑Fi para Beta 1](Native_WiFi_Beta1_Contract.md)
+
+---
+
+### 107.2. Estado de las secciones anteriores relacionadas con Wi‑Fi
+
+Las secciones anteriores no tienen todas el mismo estado después de LAB‑05D.
+
+| Sección anterior | Estado actual | Aclaración |
+| --- | --- | --- |
+| `100. La evidencia insuficiente degrada capacidad de acción` | Vigente | Los laboratorios confirman que los estados desconocidos, pendientes o inconclusos deben preservarse y no convertirse en decisiones binarias. |
+| `101. El discovery Wi‑Fi presenta una frontera temporal con Windows` | Vigente y ampliada | La frontera no consiste solamente en esperar una lista actualizada. Un escaneo también puede habilitar decisiones posteriores de Windows AutoConfig. |
+| `102. Beta 2 incorpora una capa de hardening de plataforma` | Parcialmente actualizada | El hardening general continúa en Beta 2, pero Native Wi‑Fi deja de ser sólo una optimización futura y pasa a formar parte de Beta 1. |
+| `103. El laboratorio de red futuro queda explícitamente separado` | Cumplida | El laboratorio separado fue realizado mediante LAB‑01–LAB‑05D y produjo un contrato suficiente para Beta 1. |
+| `104. La arquitectura futura deberá evaluar topología, no nombres de red` | Vigente | Native Wi‑Fi no reemplaza el análisis de ruta, interfaz, endpoint y topología. |
+| `105. Arquitectura observada consolidada` | Vigente como cierre del Punto 6 | Describe correctamente la arquitectura alcanzada hasta ese corte, pero no incluye todavía el contrato Native Wi‑Fi posterior. |
+| `106. Estado arquitectónico después del Punto 6` | Vigente como corte histórico | Debe complementarse con esta actualización para conocer el estado actual del Punto 7. |
+
+Por lo tanto, las secciones anteriores no deben borrarse ni reescribirse.
+
+La lectura vigente se obtiene al combinar el corte histórico del Punto 6 con esta actualización posterior.
+
+---
+
+## 108. Native Wi‑Fi deja de ser solamente hardening futuro
+
+Antes de estos laboratorios, la adopción de Native Wi‑Fi podía considerarse una optimización o un endurecimiento posterior del discovery basado en herramientas de línea de comandos.
+
+La nueva evidencia modifica ese alcance.
+
+Native Wi‑Fi se adopta en Beta 1 porque permite representar correctamente:
+
+- operaciones asíncronas;
+- notificaciones de cambio;
+- códigos de resultado;
+- eventos terminales;
+- correlación temporal;
+- estado de interfaz;
+- perfil conectado;
+- SSID conectado;
+- transiciones iniciadas por Windows;
+- verificación posterior a una operación.
+
+La decisión vigente es:
+
+```text
+Native Wi‑Fi API = mecanismo productivo de Beta 1
+netsh wlan        = diagnóstico, contraste y soporte
+```
+
+Esto no invalida los diagnósticos anteriores realizados con `netsh`.
+
+Esos diagnósticos continúan siendo evidencia histórica válida.
+
+Lo que cambia es su papel dentro de la arquitectura productiva.
+
+---
+
+## 109. El escaneo no es una lectura pasiva garantizada
+
+LAB‑01 y LAB‑02 demostraron que un `WlanScan` explícito podía:
+
+- completar correctamente;
+- actualizar la lista de redes;
+- descubrir un SSID antes no observado;
+- preservar la conexión activa en ese contexto;
+- tardar aproximadamente entre 3 y 4 segundos.
+
+Esas observaciones permanecen válidas.
+
+Sin embargo, LAB‑05B y LAB‑05C demostraron que no pueden generalizarse como una garantía universal.
+
+Después de una caída de `PRINTER_NETWORK_SSID`, Windows se conectó automáticamente a `PRIMARY_INTERNET_SSID`.
+
+Cuando `PRINTER_NETWORK_SSID` volvió a estar disponible, la actualización de la lista de redes fue seguida por un retorno automático a la red recuperada.
+
+Ese comportamiento se observó:
+
+- después de un refresco asociado al flyout de Windows;
+- después de un `WlanScan` explícito;
+- sin que el usuario seleccionara manualmente `PRINTER_NETWORK_SSID`;
+- sin que el laboratorio invocara `WlanConnect` hacia `PRINTER_NETWORK_SSID`.
+
+La arquitectura vigente debe considerar:
+
+> `WlanScan` solicita una actualización de información, pero esa información puede ser utilizada por Windows AutoConfig para iniciar una transición.
+
+Por lo tanto, un escaneo tiene dos planos diferentes:
+
+| Plano | Responsabilidad |
+| --- | --- |
+| Efecto directo | Solicitar a Windows una actualización de redes disponibles. |
+| Efecto indirecto posible | Permitir que Windows AutoConfig reevalúe y cambie la conexión. |
+
+El adaptador Native no debe afirmar que el escaneo causó directamente una conexión.
+
+Debe registrar que la transición ocurrió después del escaneo y atribuirla a Windows cuando no exista una orden `WlanConnect` de PrintSwitch.
+
+---
+
+## 110. Windows conserva contexto que no está expuesto como una propiedad única
+
+LAB‑05C y LAB‑05D produjeron resultados diferentes aun cuando ambos finalizaron un escaneo con `PRINTER_NETWORK_SSID` visible.
+
+### Contexto posterior a failover
+
+En LAB‑05C:
+
+1. la conexión inicial era `PRINTER_NETWORK_SSID`;
+2. se produjo una caída de esa red;
+3. Windows seleccionó automáticamente `PRIMARY_INTERNET_SSID`;
+4. `PRINTER_NETWORK_SSID` volvió a estar disponible;
+5. se ejecutó `WlanScan`;
+6. Windows regresó automáticamente a `PRINTER_NETWORK_SSID`.
+
+### Contexto posterior a conexión explícita
+
+En LAB‑05D:
+
+1. la conexión inicial era `PRINTER_NETWORK_SSID`;
+2. LAB‑03B ejecutó un `WlanConnect` explícito hacia `PRIMARY_INTERNET_SSID`;
+3. la transición fue completada y verificada;
+4. se mantuvo una fase pasiva de 90 segundos;
+5. se ejecutó `WlanScan`;
+6. `PRINTER_NETWORK_SSID` estaba visible;
+7. Windows preservó `PRIMARY_INTERNET_SSID` durante los 120 segundos posteriores.
+
+Resultado:
+
+```text
+PASS_PROGRAMMATIC_ROLLBACK_PRESERVED_AFTER_SCAN
+```
+
+La diferencia observada indica que Windows conserva o utiliza contexto sobre la forma en que se alcanzó la conexión actual.
+
+La arquitectura de PrintSwitch no necesita reproducir internamente toda la lógica de Windows.
+
+Sí necesita conservar suficiente contexto propio para no tratar ambos casos como equivalentes.
+
+---
+
+## 111. El origen causal pasa a formar parte del estado de red
+
+El estado de red ya no puede describirse únicamente mediante:
+
+```text
+Connected=True
+SSID=PRIMARY_INTERNET_SSID
+```
+
+Dos estados con el mismo SSID pueden requerir decisiones diferentes si fueron alcanzados por actores o secuencias distintas.
+
+Se incorpora el concepto:
+
+```text
+ConnectionOrigin
+```
+
+Con los siguientes valores mínimos:
+
+```text
+USER_EXPLICIT
+PRINTSWITCH_EXPLICIT
+WINDOWS_FAILOVER
+WINDOWS_AUTORESTORE
+UNKNOWN
+```
+
+### `USER_EXPLICIT`
+
+La transición fue iniciada explícitamente por el usuario fuera de PrintSwitch.
+
+### `PRINTSWITCH_EXPLICIT`
+
+La transición fue solicitada por PrintSwitch y confirmada mediante notificaciones y verificación final.
+
+### `WINDOWS_FAILOVER`
+
+Windows seleccionó una red alternativa después de perder la conexión previa.
+
+### `WINDOWS_AUTORESTORE`
+
+Windows regresó automáticamente a una red que había desaparecido y posteriormente volvió a estar disponible.
+
+### `UNKNOWN`
+
+La evidencia disponible no permite atribuir la transición con seguridad.
+
+`ConnectionOrigin` es una inferencia de PrintSwitch.
+
+No debe presentarse como un dato nativo entregado directamente por Windows.
+
+Su determinación debe utilizar:
+
+- estado anterior;
+- operación activa;
+- actor conocido;
+- destino solicitado;
+- eventos ACM;
+- marcas temporales;
+- estado final;
+- ausencia o presencia de una llamada propia a `WlanConnect`.
+
+---
+
+## 112. La observación de estado y la observación de causalidad son responsabilidades diferentes
+
+La consulta del estado actual responde preguntas como:
+
+- ¿la interfaz está conectada?;
+- ¿cuál es el SSID actual?;
+- ¿qué perfil está activo?;
+- ¿cuál es el BSSID?;
+- ¿qué calidad de señal informa Windows?
+
+La atribución causal responde otras preguntas:
+
+- ¿quién inició la transición?;
+- ¿existía una operación activa de PrintSwitch?;
+- ¿el destino coincide con el solicitado?;
+- ¿Windows estaba recuperándose de una caída?;
+- ¿el usuario pudo intervenir?;
+- ¿la transición ocurrió después de un escaneo?;
+- ¿corresponde mantener o cancelar un rollback?
+
+Estas responsabilidades no deben mezclarse.
+
+Una instantánea del estado actual no alcanza para reconstruir por sí sola la causa de la conexión.
+
+La arquitectura requiere:
+
+```text
+CurrentConnectionState
++
+ActiveOperationContext
++
+NotificationTimeline
++
+ConnectionOrigin
+```
+
+---
+
+## 113. Arquitectura asíncrona de conexión
+
+LAB‑03A, LAB‑03B y LAB‑05D confirman que `WlanConnect` debe modelarse como una operación asíncrona.
+
+La secuencia observada incluye eventos equivalentes a:
+
+```text
+disconnecting
+    ↓
+disconnected
+    ↓
+connection_start
+    ↓
+connection_complete
+```
+
+Un resultado inmediato:
+
+```text
+WlanConnectResult=0
+```
+
+sólo indica que Windows aceptó la solicitud.
+
+No confirma por sí mismo:
+
+- desconexión correcta de la red anterior;
+- autenticación exitosa;
+- llegada al perfil solicitado;
+- llegada al SSID solicitado;
+- conectividad IP;
+- ruta hacia la impresora;
+- disponibilidad del endpoint.
+
+La arquitectura debe separar:
+
+```text
+REQUEST_ACCEPTED
+OPERATION_STARTED
+TERMINAL_EVENT_RECEIVED
+FINAL_STATE_VERIFIED
+```
+
+Una operación sólo puede considerarse exitosa cuando el evento terminal y la consulta final resulten coherentes con el destino solicitado.
+
+---
+
+## 114. Arquitectura del escaneo
+
+`WlanScan` también debe modelarse como una operación asíncrona.
+
+La secuencia mínima es:
+
+```text
+CapturePreScanState
+    ↓
+InvokeWlanScan
+    ↓
+WaitForScanCompleteOrFailure
+    ↓
+ReadAvailableNetworks
+    ↓
+RequeryCurrentConnection
+    ↓
+ObserveSubsequentTransitions
+    ↓
+Reevaluate
+```
+
+La finalización del escaneo no habilita automáticamente una conexión.
+
+El escaneo produce evidencia para una decisión posterior.
+
+Si Windows cambia la conexión antes de que PrintSwitch tome esa decisión, el orquestador debe abandonar cualquier orden redundante y continuar desde el nuevo estado real.
+
+---
+
+## 115. Arquitectura del rollback
+
+El rollback deja de ser una asignación simple a una red preferida.
+
+Pasa a ser una transición explícita, atribuible y verificable.
+
+PrintSwitch sólo puede ejecutar rollback automático cuando:
+
+1. capturó la conexión inicial;
+2. inició la transición de salida;
+3. verificó la llegada al destino;
+4. conserva la operación activa;
+5. no existe una intervención posterior que haya invalidado la atribución.
+
+La red de retorno no debe deducirse de:
+
+- una lista global de preferencias;
+- el orden de perfiles;
+- un nombre de SSID fijo;
+- la última red que reapareció.
+
+Debe provenir del contexto inicial de la operación.
+
+El rollback utiliza nuevamente:
+
+```text
+WlanConnect
++
+TerminalNotification
++
+FinalStateVerification
+```
+
+Después de un rollback verificado:
+
+```text
+ConnectionOrigin=PRINTSWITCH_EXPLICIT
+```
+
+Ese valor describe la última transición conocida.
+
+No concede a PrintSwitch control permanente sobre la conexión.
+
+---
+
+## 116. Frontera de `NativeWifiAdapter`
+
+El próximo componente debe encapsular la interacción técnica con Native Wi‑Fi.
+
+Responsabilidades del adaptador:
+
+- abrir y cerrar el cliente Native Wi‑Fi;
+- enumerar interfaces;
+- seleccionar una interfaz de forma inequívoca;
+- enumerar perfiles;
+- consultar estado, SSID, perfil y BSSID;
+- registrar notificaciones;
+- liberar notificaciones;
+- iniciar escaneos;
+- esperar resultados terminales;
+- iniciar conexiones;
+- conservar códigos Native y códigos de razón;
+- producir eventos y resultados estructurados;
+- liberar memoria y recursos.
+
+El adaptador no debe decidir:
+
+- si corresponde conmutar;
+- qué red conviene utilizar;
+- si el usuario autorizó una operación;
+- si corresponde rollback;
+- qué hacer con la cola de impresión;
+- si la impresora está disponible;
+- si existe un camino alternativo;
+- si un trabajo debe liberarse o cancelarse.
+
+La frontera arquitectónica será:
+
+```text
+Policy / Orchestrator
+        ↓
+NetworkManager
+        ↓
+NativeWifiAdapter
+        ↓
+Windows Native Wi‑Fi API
+```
+
+`NativeWifiAdapter` entrega hechos técnicos.
+
+Las capas superiores interpretan esos hechos según contexto y política.
+
+---
+
+## 117. Native Wi‑Fi no sustituye la evaluación de topología
+
+La adopción de Native Wi‑Fi no modifica una conclusión anterior fundamental:
+
+> PrintSwitch debe evaluar caminos hacia la impresora y no limitarse a comparar nombres de red.
+
+Conocer el SSID actual no responde por sí solo:
+
+- si la impresora es alcanzable por Ethernet;
+- si existe una ruta simultánea;
+- si el endpoint LPR está disponible;
+- si Windows seleccionó otra interfaz;
+- si la IP reservada de la Epson L365 responde;
+- si la red conectada dispone de Internet;
+- si es necesario cambiar de Wi‑Fi.
+
+La arquitectura mantiene separadas las siguientes dimensiones:
+
+| Dimensión | Evidencia requerida |
+| --- | --- |
+| Perfil | Configuración Wi‑Fi guardada. |
+| Discovery | Visibilidad reciente del SSID. |
+| Conexión | Estado final de interfaz, SSID y perfil. |
+| Ruta | Camino IP hacia la impresora. |
+| Endpoint | Respuesta del servicio de impresión. |
+| Causalidad | Actor y contexto de la transición. |
+| Recovery | Derecho y necesidad de ejecutar rollback. |
+
+---
+
+## 118. Estados grises preservados
+
+La evidencia Native Wi‑Fi no elimina la necesidad de estados intermedios.
+
+La arquitectura debe continuar representando estados equivalentes a:
+
+```text
+UNKNOWN
+STALE
+PENDING
+INCONCLUSIVE
+FAILED
+TIMED_OUT
+```
+
+Ejemplos:
+
+- una red no observada antes de completar un escaneo no está confirmada como ausente;
+- un `WlanScanResult=0` no confirma que el escaneo haya terminado;
+- un `WlanConnectResult=0` no confirma conexión;
+- un perfil existente no confirma credenciales válidas;
+- un SSID conectado no confirma endpoint disponible;
+- la falta de atribución no autoriza rollback;
+- una notificación terminal sin estado final coincidente no confirma éxito.
+
+La evidencia insuficiente debe reducir la capacidad de acción del sistema.
+
+No debe ser rellenada mediante suposiciones optimistas.
+
+---
+
+## 119. Arquitectura observada consolidada después de LAB‑05D
+
+La arquitectura vigente puede resumirse de la siguiente manera:
+
+```text
+QueueWatcher
+    ↓
+Controller
+    ↓
+Evidence & Context Model
+    ↓
+Policy / Authorization
+    ↓
+Discovery contextual
+    ↓
+NetworkManager
+    ↓
+NativeWifiAdapter
+    ↓
+Windows Native Wi‑Fi API
+```
+
+Las verificaciones de ruta y endpoint permanecen separadas del estado Wi‑Fi:
+
+```text
+Wi‑Fi State
+    +
+Route Evidence
+    +
+Printer Endpoint Evidence
+    =
+Operational Decision Context
+```
+
+Las transiciones se interpretan mediante:
+
+```text
+PreviousState
+    +
+RequestedOperation
+    +
+NotificationTimeline
+    +
+FinalState
+    +
+ConnectionOrigin
+```
+
+---
+
+## 120. Estado arquitectónico vigente
+
+```text
+POINTS_1_TO_6=COMPLETED
+POINT_7=IN_PROGRESS
+NATIVE_WIFI_LAB_SERIES=CLOSED
+NATIVE_WIFI_BETA1=APPROVED
+NETSH_ROLE=DIAGNOSTIC_ONLY
+NEXT_COMPONENT=NativeWifiAdapter
+CURRENT_INTEGRATION_MODE=ISOLATED
+CONNECTION_ORIGIN_MODEL=REQUIRED
+CONTEXTUAL_SCAN_POLICY=REQUIRED
+EXPLICIT_VERIFIED_ROLLBACK=REQUIRED
+QUEUEWATCHER_INTEGRATION=NOT_YET
+CONTROLLER_INTEGRATION=NOT_YET
+BETA2_PLATFORM_HARDENING=DEFERRED
+```
+
+La arquitectura previa permanece documentada como historia del proyecto.
+
+A partir de esta actualización, cualquier sección anterior que describa Native Wi‑Fi únicamente como optimización futura, laboratorio pendiente o hardening exclusivo de Beta 2 debe interpretarse como un estado histórico superado por la evidencia de LAB‑01–LAB‑05D.
+
+El siguiente paso arquitectónico es diseñar e implementar `NativeWifiAdapter` de forma aislada antes de integrarlo con las capas productivas superiores.
+---
+
+<!-- P7-DOC-PRECOMMIT-R9-PRIVACY-NORMALIZATION -->
+
+**Aclaración editorial de privacidad — 2026-09-16.**
+Los nombres reales de redes locales, las direcciones IPv4 privadas y las
+direcciones MAC/BSSID presentes en esta documentación fueron sustituidos por
+identificadores semánticos o seudónimos estables. Esta normalización no cambia
+la cronología, los resultados experimentales, las decisiones arquitectónicas
+ni las conclusiones históricas del proyecto.

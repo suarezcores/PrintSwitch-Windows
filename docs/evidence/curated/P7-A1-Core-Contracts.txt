@@ -1,0 +1,1343 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-A1-Core-Contracts
+OriginalSHA256=5466E89B18240AA4D5F3DD8F20E0A919B149643E0DE86B38DD91E431385C6897
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.1887881-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PRINTSWITCH - P7-A1 CORE CONTRACT INVENTORY
+============================================================
+
+Generated : 2026-09-06 19:51:14.423
+HEAD      : 3e557d2
+Branch    : main
+
+Purpose:
+Inventory the real PowerShell boundary before building
+ApplicationController / UI.
+
+This report is read-only.
+No core files are modified.
+
+============================================================
+1. SUMMARY
+============================================================
+
+src/*.ps1     : 19
+scripts/*.ps1 : 7
+Total         : 26
+
+
+============================================================
+FILE 1 / 26
+============================================================
+
+Path : .\src\ConfigValidator.ps1
+Name : ConfigValidator.ps1
+Size : 8234 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+ConfigPath | Type=String | Default=(
+        Join-Path `
+            (Split-Path $PSScriptRoot -Parent) `
+            "config\printers.json"
+    )
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 0
+Write-Output count    : 0
+Write-Host count      : 57
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : True
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 2 / 26
+============================================================
+
+Path : .\src\ConnectivityAnalyzer.ps1
+Name : ConnectivityAnalyzer.ps1
+Size : 11048 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+PrinterName | Type=String | Default=
+TargetIP | Type=String | Default=
+TcpPort | Type=Int32 | Default=
+FastTcpTimeoutMs | Type=Int32 | Default=1200
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 3
+Write-Output count    : 0
+Write-Host count      : 73
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : True
+GetPrinter               : True
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 3 / 26
+============================================================
+
+Path : .\src\ConnectivityPolicy.ps1
+Name : ConnectivityPolicy.ps1
+Size : 8751 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+RouteResult | Type=Object | Default=
+TargetSSID | Type=String | Default=
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 2
+Write-Output count    : 0
+Write-Host count      : 46
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 4 / 26
+============================================================
+
+Path : .\src\ContextualRecoveryTest.ps1
+Name : ContextualRecoveryTest.ps1
+Size : 24504 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+PrinterName | Type=String | Default=
+ConfigPath | Type=String | Default=(
+        Join-Path `
+            (Split-Path $PSScriptRoot -Parent) `
+            "config\printers.json"
+    )
+Execute | Type=SwitchParameter | Default=
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 17
+Write-Output count    : 0
+Write-Host count      : 167
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : ConnectivityAnalyzer.ps1
+ReferencedPS1 : ConnectivityPolicy.ps1
+ReferencedPS1 : InterfacePathAnalyzer.ps1
+ReferencedPS1 : NetworkManager.ps1
+ReferencedPS1 : PrinterEndpointResolver.ps1
+ReferencedPS1 : RecoveryValidator.ps1
+ReferencedPS1 : RouteAnalyzer.ps1
+ReferencedPS1 : SwitchDecision.ps1
+ReferencedPS1 : WiFiCandidateEvaluator.ps1
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : True
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : True
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 5 / 26
+============================================================
+
+Path : .\src\InterfacePathAnalyzer.ps1
+Name : InterfacePathAnalyzer.ps1
+Size : 18643 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+TargetIP | Type=String | Default=
+TcpPort | Type=Int32 | Default=9100
+TcpTimeoutMs | Type=Int32 | Default=1200
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 7
+Write-Output count    : 0
+Write-Host count      : 79
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : True
+GetNetRoute              : False
+FindNetRoute             : True
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 6 / 26
+============================================================
+
+Path : .\src\Logger.ps1
+Name : Logger.ps1
+Size : 3029 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+LogDirectory | Type=String | Default=(
+        Join-Path `
+            (Split-Path $PSScriptRoot -Parent) `
+            "logs"
+    )
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 2
+Write-Output count    : 0
+Write-Host count      : 0
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : True
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : DIRECT STRUCTURED CONSUMPTION CANDIDATE
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 7 / 26
+============================================================
+
+Path : .\src\NetworkManager.ps1
+Name : NetworkManager.ps1
+Size : 10071 bytes
+Parser : PASS
+PreliminaryClassification : MUTATOR
+
+---------------- PARAMETERS ----------------
+TargetSSID | Type=String | Default=
+AutoExecute | Type=SwitchParameter | Default=
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 3
+Write-Output count    : 0
+Write-Host count      : 59
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : True
+NetshWlanShow            : True
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : True
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : CALL THROUGH CONTROLLER ONLY
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 8 / 26
+============================================================
+
+Path : .\src\PerformanceAnalyzer.ps1
+Name : PerformanceAnalyzer.ps1
+Size : 10136 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+PrinterName | Type=String | Default=
+FastTcpTimeoutMs | Type=Int32 | Default=1200
+ConfigPath | Type=String | Default=(
+        Join-Path `
+            (Split-Path $PSScriptRoot -Parent) `
+            "config\printers.json"
+    )
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 10
+Write-Output count    : 0
+Write-Host count      : 64
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : True
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : True
+StartSleep               : False
+ReadsJson                : True
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 9 / 26
+============================================================
+
+Path : .\src\PrinterDiscovery.ps1
+Name : PrinterDiscovery.ps1
+Size : 15224 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+IncludeVirtual | Type=SwitchParameter | Default=
+OutputPath | Type=String | Default=
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 10
+Write-Output count    : 0
+Write-Host count      : 64
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : PrinterEndpointResolver.ps1
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : True
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : True
+WritesFiles              : True
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 10 / 26
+============================================================
+
+Path : .\src\PrinterEndpointReachability.ps1
+Name : PrinterEndpointReachability.ps1
+Size : 17513 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 17
+Write-Output count    : 0
+Write-Host count      : 0
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : DIRECT STRUCTURED CONSUMPTION CANDIDATE
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 11 / 26
+============================================================
+
+Path : .\src\PrinterEndpointResolver.ps1
+Name : PrinterEndpointResolver.ps1
+Size : 22184 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 11
+Write-Output count    : 0
+Write-Host count      : 0
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : True
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : DIRECT STRUCTURED CONSUMPTION CANDIDATE
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 12 / 26
+============================================================
+
+Path : .\src\PrinterServiceProbe.ps1
+Name : PrinterServiceProbe.ps1
+Size : 8249 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 5
+Write-Output count    : 0
+Write-Host count      : 0
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : DIRECT STRUCTURED CONSUMPTION CANDIDATE
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 13 / 26
+============================================================
+
+Path : .\src\PrintRecoveryOrchestrator.ps1
+Name : PrintRecoveryOrchestrator.ps1
+Size : 37933 bytes
+Parser : PASS
+PreliminaryClassification : ORCHESTRATOR
+
+---------------- PARAMETERS ----------------
+PrinterName | Type=String | Default=
+TargetIP | Type=String | Default=
+TargetSSID | Type=String | Default=
+PolicyPath | Type=String | Default=(
+        Join-Path `
+            $PSScriptRoot `
+            "..\config\policy.json"
+    )
+Execute | Type=SwitchParameter | Default=
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 19
+Write-Output count    : 0
+Write-Host count      : 213
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : ConnectivityAnalyzer.ps1
+ReferencedPS1 : ConnectivityPolicy.ps1
+ReferencedPS1 : InterfacePathAnalyzer.ps1
+ReferencedPS1 : NetworkManager.ps1
+ReferencedPS1 : PrinterEndpointReachability.ps1
+ReferencedPS1 : PrinterEndpointResolver.ps1
+ReferencedPS1 : RecoveryValidator.ps1
+ReferencedPS1 : RouteAnalyzer.ps1
+ReferencedPS1 : SwitchDecision.ps1
+ReferencedPS1 : WiFiCandidateEvaluator.ps1
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : True
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : True
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : CONTROLLER / LIFECYCLE CANDIDATE
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 14 / 26
+============================================================
+
+Path : .\src\ProfileAnalyzer.ps1
+Name : ProfileAnalyzer.ps1
+Size : 8259 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+ConfigPath | Type=String | Default=".\config\printers.json"
+DiscoveryPath | Type=String | Default=".\src\PrinterDiscovery.ps1"
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 5
+Write-Output count    : 0
+Write-Host count      : 54
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : PrinterDiscovery.ps1
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : True
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 15 / 26
+============================================================
+
+Path : .\src\QueueWatcher.ps1
+Name : QueueWatcher.ps1
+Size : 15469 bytes
+Parser : PASS
+PreliminaryClassification : ORCHESTRATOR
+
+---------------- PARAMETERS ----------------
+EnableRecovery | Type=SwitchParameter | Default=
+PrinterName | Type=String | Default=
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 8
+Write-Output count    : 0
+Write-Host count      : 89
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : Logger.ps1
+ReferencedPS1 : PrinterDiscovery.ps1
+ReferencedPS1 : PrintRecoveryOrchestrator.ps1
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : True
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : CONTROLLER / LIFECYCLE CANDIDATE
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 16 / 26
+============================================================
+
+Path : .\src\RecoveryValidator.ps1
+Name : RecoveryValidator.ps1
+Size : 8049 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+TargetIP | Type=String | Default=
+TcpPort | Type=Int32 | Default=9100
+FastWindowMs | Type=Int32 | Default=3000
+StabilizationWindowMs | Type=Int32 | Default=7000
+ExtendedWindowMs | Type=Int32 | Default=15000
+ProbeIntervalMs | Type=Int32 | Default=250
+TcpProbeTimeoutMs | Type=Int32 | Default=500
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 7
+Write-Output count    : 0
+Write-Host count      : 35
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : True
+TestNetConnection        : False
+StartSleep               : True
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 17 / 26
+============================================================
+
+Path : .\src\RouteAnalyzer.ps1
+Name : RouteAnalyzer.ps1
+Size : 14556 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+TargetIP | Type=String | Default="<PRIVATE_IPV4_01>"
+TcpPort | Type=Int32 | Default=9100
+TcpTimeoutMs | Type=Int32 | Default=1200
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 3
+Write-Output count    : 0
+Write-Host count      : 79
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : True
+GetNetRoute              : True
+FindNetRoute             : True
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 18 / 26
+============================================================
+
+Path : .\src\SwitchDecision.ps1
+Name : SwitchDecision.ps1
+Size : 9297 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+PolicyResult | Type=Object | Default=
+WiFiCandidateResult | Type=Object | Default=
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 2
+Write-Output count    : 0
+Write-Host count      : 52
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 19 / 26
+============================================================
+
+Path : .\src\WiFiCandidateEvaluator.ps1
+Name : WiFiCandidateEvaluator.ps1
+Size : 9694 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+TargetSSID | Type=String | Default=
+WiFiInterfaceName | Type=String | Default="Wi-Fi"
+VisibilityAttempts | Type=Int32 | Default=3
+VisibilityDelayMs | Type=Int32 | Default=1000
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 0
+Write-Output count    : 0
+Write-Host count      : 63
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : True
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : True
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : True
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 20 / 26
+============================================================
+
+Path : .\scripts\Inspect-Printer.ps1
+Name : Inspect-Printer.ps1
+Size : 7217 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 0
+Write-Output count    : 0
+Write-Host count      : 7
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : True
+GetPrinter               : True
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : True
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : True
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 21 / 26
+============================================================
+
+Path : .\scripts\Test-EndpointIntegration.ps1
+Name : Test-EndpointIntegration.ps1
+Size : 10087 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+PrinterName | Type=String | Default=
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 3
+Write-Output count    : 0
+Write-Host count      : 48
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : InterfacePathAnalyzer.ps1
+ReferencedPS1 : PrinterEndpointReachability.ps1
+ReferencedPS1 : PrinterEndpointResolver.ps1
+ReferencedPS1 : RouteAnalyzer.ps1
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 22 / 26
+============================================================
+
+Path : .\scripts\Test-Environment.ps1
+Name : Test-Environment.ps1
+Size : 4860 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : False
+ExplicitReturnCount   : 0
+Write-Output count    : 0
+Write-Host count      : 7
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : True
+GetPrinter               : True
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : True
+GetNetRoute              : True
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : True
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : REVIEW REQUIRED
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 23 / 26
+============================================================
+
+Path : .\scripts\Test-EthernetPreservation.ps1
+Name : Test-EthernetPreservation.ps1
+Size : 4323 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 1
+Write-Output count    : 0
+Write-Host count      : 23
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 24 / 26
+============================================================
+
+Path : .\scripts\Test-InterfacePathOverlap.ps1
+Name : Test-InterfacePathOverlap.ps1
+Size : 7651 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 3
+Write-Output count    : 0
+Write-Host count      : 23
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 25 / 26
+============================================================
+
+Path : .\scripts\Test-InterfacePathSelection.ps1
+Name : Test-InterfacePathSelection.ps1
+Size : 7860 bytes
+Parser : PASS
+PreliminaryClassification : ANALYZER / VALIDATOR
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 1
+Write-Output count    : 0
+Write-Host count      : 23
+Uses exit             : False
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : False
+GetPrinter               : False
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : False
+ReadsJson                : False
+WritesJson               : False
+WritesFiles              : False
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+FILE 26 / 26
+============================================================
+
+Path : .\scripts\Watch-PrintQueue.ps1
+Name : Watch-PrintQueue.ps1
+Size : 5011 bytes
+Parser : PASS
+PreliminaryClassification : READ / TRANSFORM / SUPPORT
+
+---------------- PARAMETERS ----------------
+None
+
+---------------- STRUCTURED OUTPUT ----------------
+PSCustomObjectDetected : True
+ExplicitReturnCount   : 0
+Write-Output count    : 0
+Write-Host count      : 20
+Uses exit             : True
+
+---------------- SCRIPT DEPENDENCIES ----------------
+DotSource : None
+ReferencedPS1 : None
+
+---------------- SIDE EFFECT SIGNALS ----------------
+NetshWlanConnect         : False
+NetshWlanShow            : True
+GetPrinter               : True
+GetPrintJob              : False
+RemovePrintJob           : False
+GetNetAdapter            : False
+GetNetRoute              : False
+FindNetRoute             : False
+TestNetConnection        : False
+StartSleep               : True
+ReadsJson                : False
+WritesJson               : True
+WritesFiles              : True
+
+---------------- UI BOUNDARY HEURISTIC ----------------
+CandidateBoundary : STRUCTURED BUT NEEDS OUTPUT ADAPTER
+
+---------------- PARSER ERRORS ----------------
+None
+
+============================================================
+2. CROSS-COMPONENT SUMMARY
+============================================================
+
+
+File                            Classification             PSCustomObject WriteHost NetshConnect PrinterRead
+----                            --------------             -------------- --------- ------------ -----------
+ConfigValidator.ps1             ANALYZER / VALIDATOR                 True        57        False       False
+ConnectivityAnalyzer.ps1        ANALYZER / VALIDATOR                 True        73        False        True
+ConnectivityPolicy.ps1          READ / TRANSFORM / SUPPORT           True        46        False       False
+ContextualRecoveryTest.ps1      ANALYZER / VALIDATOR                 True       167        False       False
+InterfacePathAnalyzer.ps1       ANALYZER / VALIDATOR                 True        79        False       False
+Logger.ps1                      READ / TRANSFORM / SUPPORT           True         0        False       False
+NetworkManager.ps1              MUTATOR                              True        59         True       False
+PerformanceAnalyzer.ps1         ANALYZER / VALIDATOR                 True        64        False       False
+PrinterDiscovery.ps1            READ / TRANSFORM / SUPPORT           True        64        False        True
+PrinterEndpointReachability.ps1 READ / TRANSFORM / SUPPORT           True         0        False       False
+PrinterEndpointResolver.ps1     READ / TRANSFORM / SUPPORT           True         0        False        True
+PrinterServiceProbe.ps1         READ / TRANSFORM / SUPPORT           True         0        False       False
+PrintRecoveryOrchestrator.ps1   ORCHESTRATOR                         True       213        False       False
+ProfileAnalyzer.ps1             ANALYZER / VALIDATOR                 True        54        False       False
+QueueWatcher.ps1                ORCHESTRATOR                         True        89        False       False
+RecoveryValidator.ps1           ANALYZER / VALIDATOR                 True        35        False       False
+RouteAnalyzer.ps1               ANALYZER / VALIDATOR                 True        79        False       False
+SwitchDecision.ps1              READ / TRANSFORM / SUPPORT           True        52        False       False
+WiFiCandidateEvaluator.ps1      READ / TRANSFORM / SUPPORT           True        63        False       False
+Inspect-Printer.ps1             ANALYZER / VALIDATOR                 True         7        False        True
+Test-EndpointIntegration.ps1    ANALYZER / VALIDATOR                 True        48        False       False
+Test-Environment.ps1            ANALYZER / VALIDATOR                False         7        False        True
+Test-EthernetPreservation.ps1   ANALYZER / VALIDATOR                 True        23        False       False
+Test-InterfacePathOverlap.ps1   ANALYZER / VALIDATOR                 True        23        False       False
+Test-InterfacePathSelection.ps1 ANALYZER / VALIDATOR                 True        23        False       False
+Watch-PrintQueue.ps1            READ / TRANSFORM / SUPPORT           True        20        False        True
+
+============================================================
+3. IMPORTANT COMPONENTS
+============================================================
+
+[FOUND]   QueueWatcher.ps1
+[FOUND]   PrinterDiscovery.ps1
+[FOUND]   PrinterEndpointResolver.ps1
+[FOUND]   PrinterEndpointReachability.ps1
+[FOUND]   PrinterServiceProbe.ps1
+[FOUND]   PrintRecoveryOrchestrator.ps1
+[FOUND]   InterfacePathAnalyzer.ps1
+[FOUND]   RouteAnalyzer.ps1
+[FOUND]   ConnectivityPolicy.ps1
+[FOUND]   WiFiCandidateEvaluator.ps1
+[FOUND]   SwitchDecision.ps1
+[FOUND]   NetworkManager.ps1
+[FOUND]   RecoveryValidator.ps1
+[FOUND]   ConnectivityAnalyzer.ps1
+
+============================================================
+4. GIT STATE
+============================================================
+
+?? docs/evidence/
+?? src/ConnectivityAnalyzer.ps1.bak
+
+============================================================
+END P7-A1 INVENTORY
+============================================================

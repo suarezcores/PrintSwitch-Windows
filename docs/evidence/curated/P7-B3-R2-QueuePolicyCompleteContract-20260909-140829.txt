@@ -1,0 +1,104 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-R2-QueuePolicyCompleteContract-20260909-140829
+OriginalSHA256=2101F633C6D7307765E1E3086DAF2BFE4DB40FFC6AF2AB882A94593FAEA15408
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.2661225-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-R2 - QUEUE POLICY COMPLETE CONTRACT
+Fecha: 2026-09-09 14:08:30
+============================================================
+
+===== 1. PURPOSE =====
+Close QueuePolicy v1 semantics before implementation.
+All valid QueueJobContext v1 SummaryClassification values
+must map explicitly to exactly one QueuePolicy decision.
+
+===== 2. COMPLETE MATRIX =====
+
+Summary              Decision          Actionable AllowRecoveryEvaluation ReasonCode
+-------              --------          ---------- ----------------------- ----------
+ACTIVE_OR_QUEUED     EVALUATE_RECOVERY       True                    True JOB_ACTIVE_OR_QUEUED
+PRINTING_UNCONFIRMED WAIT                   False                   False JOB_PRINTING_UNCONFIRMED
+PROGRESSING          NO_ACTION              False                   False JOB_PROGRESSING
+PAUSED               WAIT                   False                   False JOB_PAUSED
+TRANSITIONING        WAIT                   False                   False JOB_TRANSITIONING
+ERROR_ACTIVE         EVALUATE_RECOVERY       True                    True JOB_ERROR_ACTIVE
+STALLED_ERROR        EVALUATE_RECOVERY       True                    True JOB_STALLED_ERROR
+STALLED_NO_ERROR     EVALUATE_RECOVERY       True                    True JOB_STALLED_NO_ERROR
+COMPLETE             NO_ACTION              False                   False JOB_COMPLETE
+
+
+
+
+===== 3. NEWLY RESOLVED CASES =====
+PRINTING_UNCONFIRMED -> WAIT
+Rationale:
+Printing flag exists but progress is not confirmed.
+Do not interfere yet; wait for stronger lifecycle evidence.
+
+PROGRESSING -> NO_ACTION
+Rationale:
+Partial progress is positive evidence that the job is advancing.
+Recovery evaluation would be unnecessary interference.
+
+STALLED_NO_ERROR -> EVALUATE_RECOVERY
+Rationale:
+STALE + NO_PROGRESS is sufficient to justify connectivity evaluation
+even without an explicit spooler error.
+This does NOT authorize a switch.
+
+===== 4. SAFETY INVARIANTS =====
+1. QueuePolicy never authorizes Wi-Fi switching.
+2. QueuePolicy never mutates the print queue.
+3. QueuePolicy never evaluates network reachability.
+4. EVALUATE_RECOVERY only opens the next evaluation gate.
+5. WAIT preserves observation without triggering recovery.
+6. NO_ACTION suppresses recovery evaluation for the current state.
+7. Invalid/missing/out-of-contract context -> INSUFFICIENT_CONTEXT.
+8. INSUFFICIENT_CONTEXT is fail-closed.
+9. Printer vendor has no effect on QueuePolicy.
+10. Every valid B2 SummaryClassification has an explicit mapping.
+
+===== 5. COVERAGE =====
+B2DomainCount = 9
+B3MappedCount = 9
+Missing       = 0
+Extra         = 0
+Duplicates    = 0
+
+===== 6. NEXT IMPLEMENTATION CONTRACT =====
+Proposed file:
+src\QueuePolicy.ps1
+
+Input:
+QueueJobContext v1
+
+Output:
+QueuePolicyResult v1
+
+Implementation requirement:
+Pure deterministic policy.
+No Windows APIs.
+No network APIs.
+No printer mutation.
+No recovery execution.
+No vendor-specific logic.
+
+===== 7. RESULTADO =====
+RESULTADO: PASS
+QUEUE POLICY V1 CONTRACT: CLOSED 9/9
+READY FOR ISOLATED IMPLEMENTATION
+
+============================================================
+FIN P7-B3-R2
+============================================================

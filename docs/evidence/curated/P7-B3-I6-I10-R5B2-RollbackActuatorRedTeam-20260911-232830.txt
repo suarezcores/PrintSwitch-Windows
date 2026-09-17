@@ -1,0 +1,96 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-R5B2-RollbackActuatorRedTeam-20260911-232830
+OriginalSHA256=A499EB20B225B9B8F9B1B24827B3F50A7776ED989A18459A5271CC913BF2E882
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.3925007-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-I6-I10-R5B2 - ROLLBACK ACTUATOR RED TEAM (EMPTY-STRING FIX)
+Fecha: 2026-09-11 23:28:30
+Mode: READ-ONLY / SYNTHETIC NETWORKMANAGER / ADVERSARIAL
+============================================================
+
+===== SOURCE =====
+Policy SHA256 before = 611AFF21EA6E7CD78D824D0BD9FD373AA1FA147B7125D87E1C9D246FC6ECF280
+Policy SHA256 after = 611AFF21EA6E7CD78D824D0BD9FD373AA1FA147B7125D87E1C9D246FC6ECF280
+Executor SHA256 before = 6A730327F8F49A879CF1913390B5873A3162832CDB7AFF6FD805C43A27817182
+Executor SHA256 after = 6A730327F8F49A879CF1913390B5873A3162832CDB7AFF6FD805C43A27817182
+Actuator SHA256 before = 0BFBD8081E3E201C9C4741506B7E554272AEBD92777D98B7056CDB4729896D3A
+Actuator SHA256 after = 0BFBD8081E3E201C9C4741506B7E554272AEBD92777D98B7056CDB4729896D3A
+PolicyParserValid = True
+ExecutorParserValid = True
+ActuatorParserValid = True
+SourcesUnchanged = True
+
+===== BASELINES =====
+Success baseline valid = True
+Success baseline reason = ROLLBACK_EXECUTED_AND_VERIFIED
+Success baseline post = <PRIMARY_INTERNET_SSID>
+Failure baseline valid = True
+Failure baseline reason = ROLLBACK_EXECUTED_NOT_VERIFIED
+Failure baseline post = <PRINTER_NETWORK_SSID>
+
+===== INVOCATION ADVERSARIAL MATRIX =====
+NM_VERIFIED_TRUE_WRONG_FINAL | PASS=True | Reason=ROLLBACK_EXECUTED_NOT_VERIFIED | Performed=True | Verified=False | Post=<ALTERNATE_INTERNET_SSID> | Validator=True | ValidatorReason=VALID
+NM_VERIFIED_TRUE_EMPTY_FINAL | PASS=True | Reason=ROLLBACK_EXECUTED_NOT_VERIFIED | Performed=True | Verified=False | Post=<PRINTER_NETWORK_SSID> | Validator=True | ValidatorReason=VALID
+NM_STRING_BOOLEAN | PASS=True | Reason=ROLLBACK_NETWORK_MANAGER_FAILED | Performed=False | Verified=False | Post=<PRINTER_NETWORK_SSID> | Validator=True | ValidatorReason=VALID
+NM_MISSING_BOOLEAN | PASS=True | Reason=ROLLBACK_NETWORK_MANAGER_FAILED | Performed=False | Verified=False | Post=<PRINTER_NETWORK_SSID> | Validator=True | ValidatorReason=VALID
+NM_NOT_REQUESTED | PASS=True | Reason=ROLLBACK_NETWORK_MANAGER_FAILED | Performed=False | Verified=False | Post=<PRINTER_NETWORK_SSID> | Validator=True | ValidatorReason=VALID
+NM_NOT_AUTHORIZED | PASS=True | Reason=ROLLBACK_NETWORK_MANAGER_FAILED | Performed=False | Verified=False | Post=<PRINTER_NETWORK_SSID> | Validator=True | ValidatorReason=VALID
+NM_THIRD_SSID_FAILURE | PASS=True | Reason=ROLLBACK_EXECUTED_NOT_VERIFIED | Performed=True | Verified=False | Post=<ALTERNATE_INTERNET_SSID> | Validator=True | ValidatorReason=VALID
+NM_EXCEPTION | PASS=True | Reason=ROLLBACK_NETWORK_MANAGER_FAILED | Performed=False | Verified=False | Post=<PRINTER_NETWORK_SSID> | Validator=True | ValidatorReason=VALID
+REQUEST_TARGET_TAMPER | PASS=True | Reason=ROLLBACK_ACTUATOR_REQUEST_INVALID | Performed=False | Verified=False | Post= | Validator=True | ValidatorReason=VALID
+REQUEST_PRE_SSID_TAMPER | PASS=True | Reason=ROLLBACK_ACTUATOR_REQUEST_INVALID | Performed=False | Verified=False | Post= | Validator=True | ValidatorReason=VALID
+REQUEST_REASON_RELABEL | PASS=True | Reason=ROLLBACK_ACTUATOR_REQUEST_INVALID | Performed=False | Verified=False | Post= | Validator=True | ValidatorReason=VALID
+REQUEST_REQUESTED_FALSE | PASS=True | Reason=ROLLBACK_ACTUATOR_REQUEST_INVALID | Performed=False | Verified=False | Post= | Validator=True | ValidatorReason=VALID
+REQUEST_AUTHORIZED_FALSE | PASS=True | Reason=ROLLBACK_ACTUATOR_REQUEST_INVALID | Performed=False | Verified=False | Post= | Validator=True | ValidatorReason=VALID
+Invocation cases = 13
+Invocation passed = 13
+Invocation failed = 0
+InvokeMatrixClean = True
+
+===== RESULT VALIDATOR ADVERSARIAL MATRIX =====
+SUCCESS_PERFORMED_FALSE | Rejected=True | ActualValid=False | Reason=RollbackVerified requires RollbackPerformed=True.
+SUCCESS_VERIFIED_FALSE | Rejected=True | ActualValid=False | Reason=Verified rollback result is inconsistent.
+SUCCESS_POST_TARGET | Rejected=True | ActualValid=False | Reason=Verified rollback SSID context is inconsistent.
+SUCCESS_ROLLBACK_TARGET_TAMPER | Rejected=True | ActualValid=False | Reason=Verified rollback SSID context is inconsistent.
+SUCCESS_SOURCE_EQUALS_RECOVERY_TARGET | Rejected=True | ActualValid=False | Reason=Verified rollback SSID context is inconsistent.
+SUCCESS_PRE_ALREADY_SOURCE | Rejected=True | ActualValid=False | Reason=Verified rollback SSID context is inconsistent.
+SUCCESS_STRING_BOOLEAN | Rejected=True | ActualValid=False | Reason=RollbackVerified must be Boolean.
+COMPONENT_TAMPER | Rejected=True | ActualValid=False | Reason=Invalid Component.
+SCHEMA_TAMPER | Rejected=True | ActualValid=False | Reason=Invalid SchemaVersion.
+UNKNOWN_REASON_CODE | Rejected=True | ActualValid=False | Reason=Unknown ReasonCode.
+UNVERIFIED_BUT_POST_SOURCE | Rejected=True | ActualValid=False | Reason=Unverified rollback SSID context is inconsistent.
+UNVERIFIED_RELABELLED_VERIFIED | Rejected=True | ActualValid=False | Reason=Unverified rollback result is inconsistent.
+Validator adversarial cases = 12
+Rejected invalid results = 12
+Accepted invalid results = 0
+ValidatorMatrixClean = True
+
+===== SAFETY =====
+Production source modified = FALSE
+ApplicationController invoked = FALSE
+PrintRecoveryOrchestrator invoked = FALSE
+Production NetworkManager invoked = FALSE
+Synthetic NetworkManager invokers only = TRUE
+netsh invoked = FALSE
+Wi-Fi mutation = FALSE
+Queue mutation = FALSE
+Service mutation = FALSE
+Physical rollback = FALSE
+Commit = FALSE
+
+===== RESULTADO =====
+RedTeamClean = True
+RESULTADO: PASS
+NEXT = if PASS, close isolated actuator contract and map controlled production NetworkManager integration.
+============================================================

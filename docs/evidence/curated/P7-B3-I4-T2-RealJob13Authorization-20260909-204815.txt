@@ -1,0 +1,126 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I4-T2-RealJob13Authorization-20260909-204815
+OriginalSHA256=FE0B002C6B5040896CBCE3DFD63425CCB36D2AB1FE47E4D7BBC3B1BF3ADC11FF
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.3364977-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-I4-T2 - REAL JOB 13 AUTHORIZATION TEST
+Fecha: 2026-09-09 20:48:24
+============================================================
+
+===== PHYSICAL CONTEXT =====
+SSID Before = <PRIMARY_INTERNET_SSID>
+SSID After  = <PRIMARY_INTERNET_SSID>
+Ethernet    = disconnected
+USB         = disconnected
+Printer     = L365 Series(Red)
+Job         = 13
+Recovery    = False
+TargetSSID  = <PRINTER_NETWORK_SSID>
+
+===== QUEUE POLICY =====
+
+
+SchemaVersion           : 1
+Decision                : EVALUATE_RECOVERY
+Actionable              : True
+AllowRecoveryEvaluation : True
+ReasonCode              : JOB_STALLED_ERROR
+Reason                  : The print job is stale, has no progress, and reports an error.
+SourceContext           : @{SchemaVersion=1; JobId=13; PrinterName=L365 Series(Red); DocumentName=*Sin título: Bloc de notas;
+                          SubmittedTime=2026-09-08T18:46:48.6920000-03:00; Raw=; Origin=PREEXISTING; Age=; Health=ERROR; Progress=NO_PROGRESS; Flags=;
+                          SummaryClassification=STALLED_ERROR}
+
+
+
+
+
+===== RECOVERY EVALUATION =====
+
+
+SchemaVersion           : 1
+EvaluationRequested     : True
+EvaluationPerformed     : True
+PrinterName             : L365 Series(Red)
+JobId                   : 13
+QueuePolicyDecision     : EVALUATE_RECOVERY
+EndpointResolved        : True
+Endpoint                : @{QueueName=L365 Series(Red); TransportType=NETWORK; ReachabilityStrategy=LPR_TCP; ConfiguredDestination=<PRIVATE_IPV4_01>;
+                          ResolvedDestination=<PRIVATE_IPV4_01>; TcpPort=515; ProbeResult=TCP_CONNECTION_TIMEOUT}
+ReachabilityState       : UNREACHABLE
+RecoveryRelevant        : True
+ReasonCode              : ENDPOINT_UNREACHABLE_RECOVERY_RELEVANT
+Reason                  : Printer endpoint is unreachable; connectivity recovery remains relevant.
+SourceQueuePolicyResult : @{SchemaVersion=1; Decision=EVALUATE_RECOVERY; Actionable=True; AllowRecoveryEvaluation=True; ReasonCode=JOB_STALLED_ERROR;
+                          Reason=The print job is stale, has no progress, and reports an error.; SourceContext=}
+
+
+
+
+
+===== RECOVERY AUTHORIZATION =====
+
+
+SchemaVersion            : 1
+AuthorizationRequested   : True
+AuthorizationPerformed   : True
+AuthorizationDecision    : DENIED
+RecoveryRelevant         : True
+RecoveryEnabled          : False
+CurrentSSID              : <PRIMARY_INTERNET_SSID>
+TargetSSID               : <PRINTER_NETWORK_SSID>
+PrinterName              : L365 Series(Red)
+EndpointResolved         : True
+ReasonCode               : RECOVERY_DISABLED
+Reason                   : Recovery execution gate is disabled.
+SourceRecoveryEvaluation : @{SchemaVersion=1; EvaluationRequested=True; EvaluationPerformed=True; PrinterName=L365 Series(Red); JobId=13;
+                           QueuePolicyDecision=EVALUATE_RECOVERY; EndpointResolved=True; Endpoint=; ReachabilityState=UNREACHABLE;
+                           RecoveryRelevant=True; ReasonCode=ENDPOINT_UNREACHABLE_RECOVERY_RELEVANT; Reason=Printer endpoint is unreachable;
+                           connectivity recovery remains relevant.; SourceQueuePolicyResult=}
+
+
+
+
+
+===== REAL PIPELINE =====
+Job 13
+ -> QueuePolicy=EVALUATE_RECOVERY
+ -> Reachability=UNREACHABLE
+ -> RecoveryRelevant=True
+ -> RecoveryEnabled=False
+ -> Authorization=DENIED
+ -> ReasonCode=RECOVERY_DISABLED
+ -> STOP
+
+===== SAFETY =====
+RecoveryEnabled      = False
+Wi-Fi unchanged      = True
+Job 13 remains       = True
+Orchestrator invoked = False
+NetworkManager       = False
+SwitchAuthorized     = NOT PRODUCED
+SwitchExecuted       = NOT PRODUCED
+
+===== RESULTADO =====
+RESULTADO: PASS
+REAL JOB 13 AUTHORIZATION BOUNDARY PROVEN
+RECOVERYRELEVANT = TRUE
+RECOVERYENABLED = FALSE
+AUTHORIZATION = DENIED
+REASONCODE = RECOVERY_DISABLED
+NO EXECUTION BOUNDARY CONNECTED
+READY FOR CONTROLLER AUTHORIZATION INTEGRATION
+
+============================================================
+FIN P7-B3-I4-T2
+============================================================

@@ -1,0 +1,105 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I9-R6-ControllerAuthorizedRealOrchestratorDryRun-20260911-220015
+OriginalSHA256=0570D5F9CC91E1CA667FAE8360C533F7A67464CDA52369D10C6D3D918A0FB600
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.3748867-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-I6-I9-R6 - CONTROLLER AUTHORIZED REAL ORCHESTRATOR DRY-RUN
+Fecha: 2026-09-11 22:00:39
+Mode: REAL CONTROLLER / PUBLIC ENABLE API / REAL ORCHESTRATOR / DRY_RUN ONLY
+============================================================
+
+===== PRECONDITION =====
+ParserValid = True
+Controller SHA256 before = 217D9AD0FE386113AD0E83523FBD142117530A5F66154DE920E7CCD90104D133
+Adapter SHA256 before = 8F9D4ED98292A8CFB3FBF4B30891A88EFF21D2414F2A7A4BDEF0178CC7441E9E
+Orchestrator SHA256 before = 43D586FFDCE1727189321F518EE86F38B60414186394A92B0269B21007261806
+NetworkManager SHA256 before = C20570DCA5E17B89AC5FAC178001DF22BA2DA4E53B71928D4CA0C3ABA8E65FBC
+Controller dry-run bridge refs = 1
+Adapter dry-run function refs = 1
+Controller standalone -Execute refs = 0
+Adapter standalone -Execute refs = 0
+Controller netsh connect refs = 0
+Adapter netsh connect refs = 0
+SSID before = <PRIMARY_INTERNET_SSID>
+Job 13 present before = True
+
+===== RECOVERY CONTROL =====
+Enable operation success = True
+RecoveryEnabled before Start = True
+StartMonitoring RecoveryEnabled = True
+Recovery restored disabled = True
+
+===== CONTROLLER RUN =====
+Started = True
+Stopped = True
+Pipeline observed before timeout = True
+FailureMessage = <none>
+
+===== PIPELINE =====
+Detected JobId = 13
+Classification = STALLED_ERROR
+QueuePolicy Decision = EVALUATE_RECOVERY
+RecoveryEvaluation ReachabilityState = UNREACHABLE
+RecoveryEvaluation RecoveryRelevant = True
+TargetNetworkContext Resolved = True
+TargetNetworkContext TargetSSID = <PRINTER_NETWORK_SSID>
+RecoveryAuthorization Decision = AUTHORIZED
+RecoveryAuthorization Authorized = True
+RecoveryAuthorization ReasonCode = RECOVERY_AUTHORIZED
+
+===== REAL ORCHESTRATOR DRY-RUN =====
+LastRecoveryExecution ReasonCode = ORCHESTRATOR_DRY_RUN_COMPLETED
+ExecutionRequested = True
+ExecutionAuthorized = True
+ExecutionPerformed = False
+SwitchAuthorized final = False
+SwitchExecuted = False
+NetworkSwitchVerified = False
+RecoverySucceeded = False
+DryRunInvoked = True
+DryRunCompleted = True
+OrchestratorExecutionMode = DRY_RUN
+OrchestratorSwitchDecision = SWITCH_NOT_SAFE
+CorrelationId = CONTROLLER-JOB-13-e8ed3f2ea9b04388908c51e6ca8b6114
+
+===== NON-MUTATION =====
+SSID after = <PRIMARY_INTERNET_SSID>
+SSID unchanged = True
+Job 13 present after = True
+Job preserved = True
+Sources unchanged = True
+Controller SHA256 after = 217D9AD0FE386113AD0E83523FBD142117530A5F66154DE920E7CCD90104D133
+Adapter SHA256 after = 8F9D4ED98292A8CFB3FBF4B30891A88EFF21D2414F2A7A4BDEF0178CC7441E9E
+Orchestrator SHA256 after = 43D586FFDCE1727189321F518EE86F38B60414186394A92B0269B21007261806
+NetworkManager SHA256 after = C20570DCA5E17B89AC5FAC178001DF22BA2DA4E53B71928D4CA0C3ABA8E65FBC
+Physical Wi-Fi execution = FALSE
+Queue mutation by harness = FALSE
+Service mutation by harness = FALSE
+Commit = FALSE
+
+===== CHECK MATRIX =====
+Recovery restored disabled = True
+Job detected = True
+Target context correct = True
+Authorization passed = True
+Real Orchestrator dry-run completed = True
+SSID unchanged = True
+Job preserved = True
+Sources unchanged = True
+
+===== RESULTADO =====
+Success = True
+RESULTADO: PASS
+NEXT = if PASS, I9 Controller dry-run integration is validated in both DENIED and AUTHORIZED directions.
+============================================================

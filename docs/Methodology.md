@@ -640,15 +640,15 @@ Toda instrucción de prueba deberá comenzar con una sección equivalente a:
 ```text
 CONFIGURACIÓN INICIAL
 
-Wi-Fi       : Claro640
+Wi-Fi       : PRIMARY_INTERNET_SSID
 Ethernet    : desconectado
 Epson       : encendida
 Brother     : encendida
 USB Brother : desconectado
 Recovery    : habilitado
 SSID visibles:
-    Claro640
-    suarezcores
+    PRIMARY_INTERNET_SSID
+    PRINTER_NETWORK_SSID
     Suarez
 ```
 
@@ -1045,7 +1045,7 @@ Brother USB conectado
 
 Brother USB desconectado
 
-recovery Claro640 -> suarezcores
+recovery PRIMARY_INTERNET_SSID -> PRINTER_NETWORK_SSID
 
 no intervención con camino funcional
 ```
@@ -1430,8 +1430,8 @@ las responsabilidades antes de continuar.
 El entorno dispone de:
 
 ```text
-Claro640
-suarezcores
+PRIMARY_INTERNET_SSID
+PRINTER_NETWORK_SSID
 Suarez
 ```
 
@@ -2292,7 +2292,7 @@ La disponibilidad de las redes:
 
 ```text
 Suarez
-suarezcores
+PRINTER_NETWORK_SSID
 ```
 
 introduce un ejemplo útil.
@@ -2324,7 +2324,7 @@ y nunca inferir relaciones por el SSID.
 
 ## 75. Beta 2 utilizará fault injection controlado
 
-La red `Suarez` queda reservada como recurso para una etapa posterior de
+La red `ALTERNATE_INTERNET_SSID` queda reservada como recurso para una etapa posterior de
 hardening.
 
 Su valor metodológico consiste en permitir controlar variables como:
@@ -2560,3 +2560,809 @@ P6 agrega varias precisiones:
 
 Con estas reglas, la metodología queda preparada para iniciar el Punto 7 y la
 primera beta de PrintSwitch.
+
+---
+
+# 82. Actualización 2026-09-16 — Metodología vigente después de LAB‑01–LAB‑05D
+
+## 82.1. Propósito de esta actualización
+
+Esta sección registra la evolución metodológica producida por la serie experimental Native Wi‑Fi.
+
+No reemplaza los métodos documentados anteriormente.
+
+Las reglas previas permanecen como evidencia de:
+
+- cómo se investigaba el sistema en cada etapa;
+- qué incertidumbres estaban abiertas;
+- qué nivel de instrumentación estaba disponible;
+- qué criterios justificaron nuevas pruebas;
+- cómo evolucionó el estándar de evidencia de PrintSwitch.
+
+Cuando una práctica anterior haya quedado incompleta, debe conservarse como antecedente y complementarse con esta actualización.
+
+El contrato técnico resultante se encuentra en:
+
+[Contrato de comportamiento Native Wi‑Fi para Beta 1](Native_WiFi_Beta1_Contract.md)
+
+---
+
+# 83. Estado de la metodología anterior
+
+| Regla metodológica anterior | Estado actual | Aclaración |
+| --- | --- | --- |
+| Utilizar evidencia positiva antes de autorizar una acción. | Vigente | La evidencia positiva debe corresponder exactamente a la afirmación que se desea sostener. |
+| No observado no equivale a inexistente. | Vigente | Deben registrarse frescura, fuente y alcance de la observación. |
+| Separar Discovery, Policy, NetworkManager y Validator. | Vigente y ampliada | Se incorpora `NativeWifiAdapter` como frontera técnica sin decisiones de negocio. |
+| Conservar estados grises. | Vigente | Se añaden estados asíncronos, atribución causal y timeouts explícitos. |
+| Utilizar pruebas controladas y evidencia TXT. | Vigente | Las pruebas deben incluir contrato experimental, línea temporal y actor de cada acción. |
+| Un resultado `PASS` valida el comportamiento probado. | Vigente con límite | No permite generalizar a condiciones que el laboratorio no controló. |
+| La correlación temporal ayuda a explicar una transición. | Vigente con límite | Correlación temporal no demuestra por sí sola causalidad. |
+| Native Wi‑Fi podía estudiarse posteriormente como hardening. | Superado para Beta 1 | Los laboratorios justificaron su adopción productiva inmediata y aislada. |
+| El laboratorio de red permanecía pendiente. | Cumplido | LAB‑01–LAB‑05D aportaron evidencia suficiente para cerrar la hipótesis arquitectónica. |
+
+Las reglas históricas no deben borrarse.
+
+Cuando exista una diferencia, esta actualización define la metodología vigente.
+
+---
+
+# 84. Congelar integración ante una incertidumbre arquitectónica
+
+La serie Native Wi‑Fi confirmó que resulta válido congelar temporalmente integraciones productivas cuando una incertidumbre puede modificar:
+
+- la frontera entre componentes;
+- el modelo de estado;
+- la atribución de acciones;
+- la política de recovery;
+- las condiciones de rollback;
+- el significado de una operación;
+- los criterios de éxito.
+
+El congelamiento no constituye abandono ni retroceso.
+
+Es una medida metodológica para evitar que una hipótesis no validada se propague por:
+
+- Controller;
+- QueueWatcher;
+- NetworkManager;
+- políticas;
+- recovery;
+- interfaz de usuario;
+- documentación;
+- pruebas de regresión.
+
+El congelamiento debe registrar:
+
+```text
+Reason
+AffectedComponents
+AllowedExperiments
+ForbiddenIntegrations
+ExitCriterion
+```
+
+La integración se descongela únicamente cuando:
+
+1. la incertidumbre queda suficientemente caracterizada;
+2. existe evidencia reproducible;
+3. se documenta el contrato resultante;
+4. se identifican las limitaciones;
+5. se define una secuencia gradual de implementación.
+
+---
+
+# 85. Todo laboratorio debe declarar su contrato experimental
+
+Antes de actuar, un laboratorio debe declarar:
+
+- identificador;
+- objetivo;
+- hipótesis;
+- precondiciones;
+- estado inicial requerido;
+- acciones autorizadas;
+- acciones prohibidas;
+- interacción humana permitida;
+- duración;
+- timeouts;
+- variables observadas;
+- resultado esperado;
+- criterio de `PASS`;
+- criterio de `FAIL`;
+- criterio de `INCONCLUSIVE`;
+- ubicación de la evidencia.
+
+Ejemplo de contrato:
+
+```text
+CanChangeWiFiConnection=True
+CanInvokeWlanScan=True
+CanInvokeWlanConnect=False
+CanModifyProfiles=False
+CanReadCredentials=False
+CanTouchQueue=False
+CanTouchProductionSource=False
+WindowsWifiUiMustRemainClosed=True
+```
+
+El script debe recordar estas condiciones antes de comenzar.
+
+No debe depender únicamente de que el operador recuerde las reglas acordadas en la conversación.
+
+---
+
+# 86. Las precondiciones deben verificarse, no suponerse
+
+Una precondición necesaria debe comprobarse antes de iniciar el estímulo.
+
+Ejemplos:
+
+- SSID inicial;
+- perfil inicial;
+- interfaz seleccionada;
+- perfil objetivo existente;
+- flyout cerrado;
+- red objetivo apagada o encendida;
+- ausencia de interacción del usuario;
+- presencia del actuador requerido;
+- ruta de evidencia disponible.
+
+Si una precondición no se cumple, el laboratorio debe detenerse antes de mutar el sistema.
+
+La ausencia de una dependencia, como ocurrió inicialmente con el actuador LAB‑03B requerido por LAB‑05D, debe producir un error explícito y seguro.
+
+No debe reemplazarse silenciosamente por:
+
+- otro script;
+- una llamada diferente;
+- una simulación;
+- un procedimiento manual;
+- una aproximación no validada.
+
+---
+
+# 87. Una prueba debe modificar una variable principal por vez
+
+Siempre que sea posible, cada laboratorio debe aislar un único estímulo principal.
+
+| Laboratorio | Variable principal |
+| --- | --- |
+| LAB‑05A | Apertura del flyout sin caída previa. |
+| LAB‑05B | Apertura del flyout después de caída y failover. |
+| LAB‑05C | `WlanScan` explícito después de caída y failover. |
+| LAB‑05D | `WlanScan` después de una conexión explícita mediante `WlanConnect`. |
+
+La comparación entre laboratorios permitió distinguir:
+
+- interfaz abierta;
+- actualización de redes;
+- recuperación posterior a caída;
+- conexión explícita;
+- acción del usuario;
+- acción de Windows;
+- acción del laboratorio.
+
+Si se modifican varias condiciones simultáneamente, el resultado puede ser útil como observación exploratoria, pero no como evidencia causal suficiente.
+
+---
+
+# 88. Observación, inferencia, autorización y resultado deben separarse
+
+Toda prueba y toda implementación deben conservar cuatro niveles.
+
+## Observación
+
+Dato obtenido directamente:
+
+```text
+CurrentSSID=PRIMARY_INTERNET_SSID
+ScanCompleted=True
+Notification=connection_complete
+```
+
+## Inferencia
+
+Interpretación construida a partir de varias observaciones:
+
+```text
+ConnectionOrigin=WINDOWS_FAILOVER
+TargetVisibility=OBSERVED
+EvidenceFreshness=FRESH
+```
+
+## Autorización
+
+Decisión de que una acción puede ejecutarse:
+
+```text
+SwitchAuthorized=True
+RollbackAuthorized=False
+```
+
+## Resultado
+
+Estado verificado después de actuar:
+
+```text
+ConnectionVerified=True
+FinalSSID=PRIMARY_INTERNET_SSID
+```
+
+No debe registrarse una inferencia como si fuera una observación nativa.
+
+No debe registrarse una autorización como si fuera un resultado.
+
+No debe registrarse una solicitud aceptada como si fuera una operación completada.
+
+---
+
+# 89. Correlación temporal no equivale automáticamente a causalidad
+
+Cuando una transición ocurre después de un evento, deben registrarse ambas cosas:
+
+```text
+Event A occurred
+Transition B followed
+```
+
+No debe afirmarse automáticamente:
+
+```text
+Event A directly caused Transition B
+```
+
+LAB‑05C demostró que un `WlanScan` fue seguido por una transición automática.
+
+La formulación metodológicamente correcta es:
+
+> El escaneo actualizó la información disponible y Windows AutoConfig inició posteriormente una transición sin una llamada `WlanConnect` del laboratorio.
+
+No debe afirmarse que `WlanScan` conectó directamente la interfaz.
+
+Para atribuir una acción a PrintSwitch deben existir:
+
+- una operación activa;
+- una invocación registrada;
+- un destino concreto;
+- correlación temporal;
+- eventos compatibles;
+- verificación final.
+
+---
+
+# 90. Los resultados aparentemente contradictorios deben preservarse
+
+LAB‑05C y LAB‑05D no deben tratarse como resultados incompatibles.
+
+Deben conservarse juntos porque probaron contextos diferentes:
+
+| Laboratorio | Contexto | Resultado |
+| --- | --- | --- |
+| LAB‑05C | Conexión de failover seleccionada por Windows | El escaneo fue seguido por la restauración de la red perdida. |
+| LAB‑05D | Conexión explícita seleccionada mediante `WlanConnect` | El escaneo preservó la conexión explícita. |
+
+La metodología exige preguntar:
+
+- ¿eran iguales las precondiciones?;
+- ¿el actor inicial era el mismo?;
+- ¿la conexión actual tenía el mismo origen?;
+- ¿existía una caída previa?;
+- ¿el usuario intervino?;
+- ¿se ejecutó `WlanConnect`?;
+- ¿se observó la misma ventana temporal?
+
+Una aparente contradicción puede revelar una variable contextual que todavía no estaba modelada.
+
+En este caso permitió identificar la necesidad de `ConnectionOrigin`.
+
+---
+
+# 91. Un `PASS` valida solamente el contrato probado
+
+Un laboratorio con resultado `PASS` demuestra que se cumplieron sus criterios bajo las condiciones registradas.
+
+No demuestra automáticamente que:
+
+- el comportamiento sea universal;
+- todas las placas Wi‑Fi respondan igual;
+- cualquier versión de Windows responda igual;
+- todas las redes tengan la misma política;
+- no existan condiciones de carrera;
+- no sea necesario verificar el estado final;
+- la operación pueda integrarse sin aislamiento previo.
+
+Ejemplo:
+
+```text
+LAB-05D=PASS
+```
+
+permite concluir:
+
+> En las condiciones de LAB‑05D, la conexión explícita a `PRIMARY_INTERNET_SSID` fue preservada después del escaneo.
+
+No permite concluir:
+
+> Todo escaneo siempre preservará toda conexión explícita en cualquier entorno.
+
+---
+
+# 92. Los estados grises forman parte del resultado
+
+Una prueba no debe forzar todos los resultados a `PASS` o `FAIL`.
+
+Debe permitir estados como:
+
+```text
+UNKNOWN
+PENDING
+STALE
+INCONCLUSIVE
+INCONSISTENT
+DEGRADED
+TIMED_OUT
+ABORTED_PRECONDITION
+```
+
+Ejemplos:
+
+- si no llegó un evento terminal, el resultado puede ser `TIMED_OUT`;
+- si el estado Native y otra fuente no coinciden, puede ser `INCONSISTENT`;
+- si la evidencia es antigua, puede ser `STALE`;
+- si no se controló una variable esencial, puede ser `INCONCLUSIVE`;
+- si falló una precondición antes de actuar, puede ser `ABORTED_PRECONDITION`.
+
+Un estado gris no debe convertirse en éxito por conveniencia.
+
+Tampoco debe convertirse automáticamente en fallo funcional si la evidencia no permite esa afirmación.
+
+---
+
+# 93. Operaciones asíncronas requieren evidencia terminal
+
+Para operaciones Native Wi‑Fi se debe distinguir:
+
+```text
+InvocationResult
+TerminalNotification
+FinalState
+```
+
+## Escaneo
+
+Un escaneo requiere:
+
+1. invocación;
+2. espera de `scan_complete`, `scan_fail` o timeout;
+3. lectura de redes;
+4. nueva consulta de la conexión;
+5. observación de posibles transiciones posteriores.
+
+## Conexión
+
+Una conexión requiere:
+
+1. invocación;
+2. espera de `connection_complete`, `connection_attempt_fail` o timeout;
+3. consulta final;
+4. comparación con el destino esperado.
+
+Regla:
+
+```text
+API_RETURN_ZERO != OPERATION_SUCCESS
+```
+
+El retorno inmediato informa que Windows aceptó la solicitud, no que completó la operación.
+
+---
+
+# 94. Toda acción potencialmente mutante requiere verificación posterior
+
+Una operación puede tener efectos directos o indirectos.
+
+Después de:
+
+- `WlanScan`;
+- `WlanConnect`;
+- apertura del flyout en un laboratorio;
+- caída o recuperación de un punto de acceso;
+- rollback;
+
+se debe consultar nuevamente:
+
+- estado de interfaz;
+- SSID;
+- perfil;
+- eventos;
+- origen causal inferido;
+- coherencia con la operación activa.
+
+La verificación posterior no es opcional aunque la API haya devuelto cero.
+
+---
+
+# 95. La ausencia de una orden propia es evidencia relevante
+
+Cuando ocurre una transición y PrintSwitch no invocó `WlanConnect`, el sistema debe registrar explícitamente:
+
+```text
+PrintSwitchConnectInvocation=False
+```
+
+Esto no identifica automáticamente al actor exacto, pero permite excluir una causa.
+
+Según el contexto, el origen puede clasificarse como:
+
+```text
+USER_EXPLICIT
+WINDOWS_FAILOVER
+WINDOWS_AUTORESTORE
+UNKNOWN
+```
+
+La ausencia de una llamada propia es necesaria para evitar que PrintSwitch se atribuya acciones de Windows.
+
+---
+
+# 96. Rollback requiere propiedad causal de la transición
+
+Antes de ejecutar rollback deben verificarse estas preguntas:
+
+1. ¿PrintSwitch capturó la conexión inicial?
+2. ¿PrintSwitch inició la transición de salida?
+3. ¿La transición se completó y verificó?
+4. ¿La operación sigue activa?
+5. ¿El usuario intervino?
+6. ¿Windows realizó otra transición?
+7. ¿El estado actual sigue siendo coherente con la operación?
+8. ¿La conexión inicial continúa siendo un destino válido?
+
+Si se pierde la atribución, el rollback automático debe suspenderse.
+
+Regla metodológica:
+
+> Sólo se revierte automáticamente una mutación propia, identificada y todavía perteneciente a la operación activa.
+
+---
+
+# 97. La evidencia debe permitir reconstruir una línea temporal
+
+Toda prueba de transición debe registrar tiempos relativos o marcas temporales suficientes para ordenar:
+
+- precondición;
+- inicio del estímulo;
+- invocación;
+- desconexión;
+- inicio de conexión;
+- evento terminal;
+- verificación;
+- scan;
+- refresh;
+- transición posterior;
+- estado final.
+
+Formato conceptual:
+
+```text
+ElapsedMs
+Phase
+Event
+Profile
+SSID
+ReasonCode
+Actor
+```
+
+No es suficiente registrar únicamente:
+
+```text
+BeforeSSID
+AfterSSID
+```
+
+La línea temporal es necesaria para:
+
+- atribución;
+- detección de condiciones de carrera;
+- comparación entre laboratorios;
+- diagnóstico de timeouts;
+- reproducción del comportamiento.
+
+---
+
+# 98. Evidencia principal y evidencia auxiliar
+
+Cada afirmación debe indicar su fuente principal.
+
+Para operaciones Native Wi‑Fi:
+
+- eventos Native y consultas Native constituyen la evidencia principal;
+- `netsh wlan` puede utilizarse como contraste auxiliar;
+- la observación visual puede utilizarse como contexto;
+- la declaración humana puede registrar una acción externa controlada.
+
+Una fuente auxiliar no debe reemplazar silenciosamente la fuente principal.
+
+Si dos fuentes difieren, debe registrarse la inconsistencia.
+
+No debe elegirse automáticamente la fuente que produzca el resultado esperado.
+
+---
+
+# 99. La ficha de laboratorio debe ser reproducible
+
+Cada laboratorio debe documentar como mínimo:
+
+```text
+TestId
+Name
+Purpose
+Hypothesis
+InitialConfiguration
+Preconditions
+AuthorizedActions
+ForbiddenActions
+HumanActions
+ExpectedResult
+ObservedResult
+Timeline
+FinalState
+Limitations
+PassFailCriterion
+Result
+EvidencePath
+```
+
+También debe registrar parámetros relevantes:
+
+- interfaz;
+- perfiles;
+- SSID inicial;
+- SSID objetivo;
+- timeout;
+- intervalo de muestreo;
+- duración pasiva;
+- duración posterior al estímulo.
+
+El script y el archivo de evidencia deben permitir que otra ejecución reproduzca las mismas condiciones sin depender de instrucciones recordadas oralmente.
+
+---
+
+# 100. Criterio de cierre de una hipótesis
+
+Una hipótesis puede cerrarse cuando:
+
+1. la pregunta arquitectónica está definida;
+2. las variables principales fueron aisladas;
+3. existe evidencia reproducible;
+4. los resultados alternativos relevantes fueron comparados;
+5. las limitaciones están documentadas;
+6. puede derivarse una regla implementable;
+7. la regla incluye estados de error e incertidumbre;
+8. nuevas pruebas no cambiarían una decisión inmediata de Beta 1.
+
+LAB‑05D cerró la pregunta:
+
+> ¿Un escaneo posterior a una conexión explícita reproduce necesariamente el retorno automático observado después de un failover?
+
+Resultado:
+
+```text
+ReturnedToSourceAfterScan=False
+FinalSSID=PRIMARY_INTERNET_SSID
+Result=PASS_PROGRAMMATIC_ROLLBACK_PRESERVED_AFTER_SCAN
+```
+
+Esto permitió distinguir conexión explícita de failover y cerrar la decisión arquitectónica necesaria.
+
+No es necesario continuar experimentando sólo para acumular más ejecuciones de una hipótesis ya suficiente para Beta 1.
+
+---
+
+# 101. Criterio para abrir un nuevo laboratorio
+
+Después del cierre de LAB‑05D, un nuevo laboratorio Native Wi‑Fi debe responder una incertidumbre nueva surgida durante la implementación.
+
+No debe abrirse únicamente porque:
+
+- sea posible medir otra variable;
+- se desee repetir indefinidamente un resultado;
+- exista curiosidad sin impacto inmediato;
+- todavía no se haya cubierto toda combinación imaginable.
+
+Debe abrirse cuando una incertidumbre pueda modificar:
+
+- el contrato del adaptador;
+- el modelo de evidencia;
+- una autorización;
+- el rollback;
+- el tratamiento de errores;
+- la separación de responsabilidades;
+- un criterio de aceptación.
+
+---
+
+# 102. Descongelamiento gradual de integración
+
+La integración debe avanzar en el siguiente orden:
+
+```text
+NativeWifiAdapter
+    ↓
+Evidence & Context Model
+    ↓
+Discovery contextual
+    ↓
+NetworkManager
+    ↓
+Transition Orchestrator
+    ↓
+Integración aislada
+    ↓
+Controller + QueueWatcher
+    ↓
+Endpoint + impresión + rollback
+```
+
+Cada capa debe validarse antes de integrar la siguiente.
+
+No se habilita una capa superior si la inferior:
+
+- oculta errores;
+- descarta estados grises;
+- no produce evidencia estructurada;
+- no libera recursos;
+- no verifica estados finales;
+- confunde correlación con causalidad;
+- no permite pruebas aisladas.
+
+---
+
+# 103. Metodología de implementación de `NativeWifiAdapter`
+
+`NativeWifiAdapter` debe desarrollarse inicialmente sin:
+
+- Controller;
+- QueueWatcher;
+- cola real;
+- impresión real;
+- decisiones de Policy;
+- rollback automático;
+- modificación de perfiles;
+- lectura de credenciales.
+
+La primera etapa debe validar:
+
+1. carga de tipos Native;
+2. apertura del cliente;
+3. enumeración de interfaces;
+4. selección inequívoca de interfaz;
+5. lectura del estado actual;
+6. enumeración de perfiles;
+7. registro de notificaciones;
+8. escaneo y terminación;
+9. reconsulta posterior;
+10. conexión y terminación;
+11. verificación final;
+12. liberación de callbacks;
+13. cierre del handle;
+14. conservación de errores y códigos de razón.
+
+Las decisiones de negocio no deben incorporarse al adaptador para facilitar una prueba.
+
+---
+
+# 104. Gates para `NativeWifiAdapter`
+
+## Gate A — Carga y recursos
+
+Debe demostrar:
+
+- carga determinista;
+- apertura correcta;
+- cierre correcto;
+- ausencia de handles abandonados;
+- liberación de memoria Native.
+
+## Gate B — Observación
+
+Debe demostrar:
+
+- interfaz correcta;
+- estado correcto;
+- SSID y perfil;
+- perfiles disponibles;
+- errores explícitos.
+
+## Gate C — Notificaciones
+
+Debe demostrar:
+
+- registro;
+- recepción;
+- orden temporal;
+- liberación;
+- ausencia de callbacks activos después del cierre.
+
+## Gate D — Escaneo
+
+Debe demostrar:
+
+- solicitud;
+- resultado terminal o timeout;
+- redes observadas;
+- reconsulta obligatoria;
+- detección de transición posterior.
+
+## Gate E — Conexión
+
+Debe demostrar:
+
+- solicitud única;
+- evento terminal o timeout;
+- código de razón;
+- verificación del destino;
+- distinción entre aceptación y éxito.
+
+## Gate F — Integración permitida
+
+Sólo después de superar los gates anteriores puede integrarse con `NetworkManager`.
+
+---
+
+# 105. Regla de no parche metodológico
+
+Cuando una prueba descubra una diferencia entre el modelo y Windows, no debe agregarse inmediatamente una condición específica como:
+
+```text
+if SSID == "PRINTER_NETWORK_SSID"
+```
+
+Primero debe determinarse:
+
+- qué dimensión faltaba;
+- si el problema es de evidencia;
+- si el problema es de causalidad;
+- si falta un estado;
+- si la responsabilidad pertenece a otra capa;
+- si el comportamiento puede generalizarse de forma segura.
+
+LAB‑05C y LAB‑05D no justifican una excepción por nombre de red.
+
+Justifican incorporar `ConnectionOrigin` y una política contextual de escaneo.
+
+---
+
+# 106. Estado metodológico vigente
+
+```text
+HISTORICAL_DOCUMENTATION=PRESERVED
+NATIVE_WIFI_LABS=CLOSED
+INTEGRATION_FREEZE=GRADUALLY_RELEASED
+NEXT_IMPLEMENTATION=NativeWifiAdapter
+IMPLEMENTATION_MODE=ISOLATED
+EVIDENCE_TIMELINE=REQUIRED
+TERMINAL_EVENT=REQUIRED
+FINAL_STATE_VERIFICATION=REQUIRED
+POST_SCAN_REQUERY=REQUIRED
+CONNECTION_ORIGIN=REQUIRED
+ROLLBACK_ATTRIBUTION=REQUIRED
+GRAY_STATES=REQUIRED
+NEW_LABS=ONLY_FOR_NEW_UNCERTAINTY
+```
+
+A partir de esta actualización, la implementación de Native Wi‑Fi debe seguir esta metodología.
+
+Las prácticas anteriores permanecen documentadas como historia y deben leerse junto con las aclaraciones y gates establecidos en este bloque.
+---
+
+<!-- P7-DOC-PRECOMMIT-R9-PRIVACY-NORMALIZATION -->
+
+**Aclaración editorial de privacidad — 2026-09-16.**
+Los nombres reales de redes locales, las direcciones IPv4 privadas y las
+direcciones MAC/BSSID presentes en esta documentación fueron sustituidos por
+identificadores semánticos o seudónimos estables. Esta normalización no cambia
+la cronología, los resultados experimentales, las decisiones arquitectónicas
+ni las conclusiones históricas del proyecto.

@@ -1,0 +1,127 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I5-T1-R1-TargetNetworkContextAdversarialMatrix-20260910-153734
+OriginalSHA256=CC94721BE773383DBFEC1B171004B7C63DF1C9E380A15C328408756545FF4595
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.3497098-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-I5-T1-R1 - TARGET NETWORK CONTEXT ADVERSARIAL MATRIX
+Fecha: 2026-09-10 15:37:35
+============================================================
+
+===== PURPOSE =====
+Repair the evidence gap from P7-B3-I5-I1.
+Original matrix executed but evidence table was empty because results were appended inside function scope.
+This test returns each case result explicitly and stores it in a parent-scope List[object].
+
+===== SYNTHETIC MATRIX =====
+
+Case                           ExpectedReason              ActualReason                ExpectedResolved ActualResolved ExpectedPerformed ActualPerformed TargetSSID Validator PASS
+----                           --------------              ------------                ---------------- -------------- ----------------- --------------- ---------- --------- ----
+valid                          TARGET_NETWORK_RESOLVED     TARGET_NETWORK_RESOLVED                 True           True              True            True ssid-a          True True
+valid-trim-ssid                TARGET_NETWORK_RESOLVED     TARGET_NETWORK_RESOLVED                 True           True              True            True ssid-a          True True
+printer-name-null              PRINTER_NAME_MISSING        PRINTER_NAME_MISSING                   False          False             False           False                 True True
+printer-name-whitespace        PRINTER_NAME_MISSING        PRINTER_NAME_MISSING                   False          False             False           False                 True True
+config-path-empty              CONFIG_PATH_MISSING         CONFIG_PATH_MISSING                    False          False             False           False                 True True
+missing-file                   CONFIG_NOT_FOUND            CONFIG_NOT_FOUND                       False          False             False           False                 True True
+invalid-json                   CONFIG_INVALID              CONFIG_INVALID                         False          False              True            True                 True True
+json-null                      PRINTERS_COLLECTION_MISSING PRINTERS_COLLECTION_MISSING            False          False              True            True                 True True
+missing-printers               PRINTERS_COLLECTION_MISSING PRINTERS_COLLECTION_MISSING            False          False              True            True                 True True
+empty-printers                 PRINTERS_COLLECTION_EMPTY   PRINTERS_COLLECTION_EMPTY              False          False              True            True                 True True
+null-printers                  PRINTERS_COLLECTION_EMPTY   PRINTERS_COLLECTION_EMPTY              False          False              True            True                 True True
+profile-not-found              PROFILE_NOT_FOUND           PROFILE_NOT_FOUND                      False          False              True            True                 True True
+profile-null-entry             PROFILE_NOT_FOUND           PROFILE_NOT_FOUND                      False          False              True            True                 True True
+profile-missing-name           PROFILE_NOT_FOUND           PROFILE_NOT_FOUND                      False          False              True            True                 True True
+profile-ambiguous              PROFILE_AMBIGUOUS           PROFILE_AMBIGUOUS                      False          False              True            True                 True True
+required-ssid-property-missing REQUIRED_SSID_MISSING       REQUIRED_SSID_MISSING                  False          False              True            True                 True True
+required-ssid-null             REQUIRED_SSID_MISSING       REQUIRED_SSID_MISSING                  False          False              True            True                 True True
+required-ssid-empty            REQUIRED_SSID_MISSING       REQUIRED_SSID_MISSING                  False          False              True            True                 True True
+required-ssid-whitespace       REQUIRED_SSID_MISSING       REQUIRED_SSID_MISSING                  False          False              True            True                 True True
+valid-among-null-and-other     TARGET_NETWORK_RESOLVED     TARGET_NETWORK_RESOLVED                 True           True              True            True ssid-a          True True
+
+
+
+Synthetic case count = 20
+Synthetic PASS count = 20
+
+===== VALIDATOR ATTACK MATRIX =====
+
+Case                               ExpectedValid ActualValid Threw PASS
+----                               ------------- ----------- ----- ----
+validator-valid-resolved                    True        True False True
+validator-valid-unresolved                  True        True False True
+validator-null                             False       False False True
+validator-empty-object                     False       False False True
+validator-wrong-component                  False       False False True
+validator-wrong-schema                     False       False False True
+validator-empty-reason                     False       False False True
+validator-resolved-missing-printer         False       False False True
+validator-resolved-missing-ssid            False       False False True
+validator-resolved-wrong-reason            False       False False True
+
+
+
+Validator case count = 10
+Validator PASS count = 10
+
+===== REAL CONFIG RESULT =====
+
+
+Component           : TargetNetworkContext
+SchemaVersion       : 1
+ResolutionRequested : True
+ResolutionPerformed : True
+Resolved            : True
+PrinterName         : L365 Series(Red)
+TargetSSID          : <PRINTER_NETWORK_SSID>
+ReasonCode          : TARGET_NETWORK_RESOLVED
+Reason              : Target network context resolved from printer profile.
+Source              : C:\Users\<USER>\Documents\PrintSwitch-Windows\config\printers.json
+
+
+
+
+
+===== INTEGRITY =====
+TargetNetworkContext SHA256 before = FA2329296EFA235A5BF291175EFE4A97CF93CC57C8FEEBECCA1F82B3CB7FBC7F
+TargetNetworkContext SHA256 after  = FA2329296EFA235A5BF291175EFE4A97CF93CC57C8FEEBECCA1F82B3CB7FBC7F
+Source unchanged                    = True
+printers.json SHA256 before         = BC59BC7424DFD947FC4CBFB0C5CB4B4DBB3BD96868AE810CEC6247176C8ED846
+printers.json SHA256 after          = BC59BC7424DFD947FC4CBFB0C5CB4B4DBB3BD96868AE810CEC6247176C8ED846
+Config unchanged                    = True
+
+===== SAFETY =====
+Production code modified = FALSE
+Config modified          = FALSE
+Wi-Fi mutation           = FALSE
+Queue mutation           = FALSE
+Recovery execution       = FALSE
+Execution boundary       = DISCONNECTED
+Commit                   = FALSE
+
+===== RESULTADO =====
+RESULTADO: PASS
+SYNTHETIC MATRIX EVIDENCE GAP CLOSED
+20/20 SYNTHETIC CASES PASS
+10/10 VALIDATOR ATTACKS PASS
+REAL CONFIG L365 -> <PRINTER_NETWORK_SSID> PASS
+SOURCE AND CONFIG BYTE CONTENT UNCHANGED
+NO EXECUTION BOUNDARY CONNECTED
+
+===== NEXT =====
+P7-B3-I5 can be considered adversarially closed if this evidence is PASS.
+Next engineering step: map the boundary between RecoveryAuthorization and existing recovery execution components before connecting anything.
+NO COMMIT YET
+
+============================================================
+FIN P7-B3-I5-T1-R1
+============================================================

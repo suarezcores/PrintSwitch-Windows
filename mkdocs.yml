@@ -10,9 +10,13 @@ theme:
 nav:
   - Inicio: index.md
   - Estado Alpha: Alpha_Checkpoint.md
+  - Contrato de eventos de aplicación: Application_Event_Contract.md
+  - Contrato del Controller: Application_Controller_Contract.md
   - Metodología: Methodology.md
   - Base de conocimiento: Knowledge.md
   - Arquitectura observada: Architecture_Observed.md
+  - Contrato Native Wi-Fi Beta 1: Native_WiFi_Beta1_Contract.md
+  - Evidencias representativas: Evidence_Index.md
   - Pruebas experimentales: Experimental_Tests.md
   - Roadmap: Roadmap.md
   - Arquitectura de impresión Windows: Windows_Printing_Architecture.md

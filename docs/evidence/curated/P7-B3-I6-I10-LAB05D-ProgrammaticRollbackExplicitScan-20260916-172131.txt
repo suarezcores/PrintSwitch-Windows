@@ -1,0 +1,153 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-LAB05D-ProgrammaticRollbackExplicitScan-20260916-172131
+OriginalSHA256=C07606FF5553C49D1ADCBAA5AF57F95028BB8A62198E4222123A6CA2F06F9E23
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.6001406-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+===== PRINTSWITCH NATIVE WI-FI LAB â€” LAB-05D =====
+Purpose=Determine whether WlanScan reverses an explicit Native WlanConnect rollback
+StartedAt=2026-09-16T17:21:31.9570281-03:00
+ExpectedSourceSSID=<PRINTER_NETWORK_SSID>
+RollbackProfile=<PRIMARY_INTERNET_SSID>
+RollbackSSID=<PRIMARY_INTERNET_SSID>
+PassiveSeconds=90
+PostScanSeconds=120
+SampleIntervalMs=500
+
+===== CONTRACT =====
+WlanConnectInvokedByLAB03B=True
+PreConnectValidationScanByLAB03B=True
+PostRollbackExplicitScanInvoked=True
+WindowsWifiUiMustRemainClosed=True
+NoWindowsWifiUiInteractionConfirmed=True
+
+===== CONNECTION PHASE =====
+InitialSSID=<PRINTER_NETWORK_SSID>
+AfterRollbackSSID=<PRIMARY_INTERNET_SSID>
+LAB03EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB03B-ControlledNativeConnection-Return-20260916-172155.txt
+
+===== PASSIVE PHASE =====
+ReturnedToSourceBeforeScan=False
+
+===== EXPLICIT SCAN =====
+ScanStartedAt=2026-09-16T17:23:51.4197161-03:00
+ScanFinishedAt=2026-09-16T17:23:53.3888188-03:00
+WlanScanResult=0
+ScanCompleted=True
+ScanFailed=False
+ScanTimedOut=False
+ScanElapsedMs=1963
+TargetVisibleAfterScan=True
+AvailableSSIDs=<OBSERVED_NETWORK_01> | <PRIMARY_INTERNET_SSID> | <OBSERVED_NETWORK_03> | <OBSERVED_NETWORK_06> | <OBSERVED_NETWORK_04> | <OBSERVED_NETWORK_05> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_SSID> | <PRINTER_NETWORK_5G_SSID>
+
+===== STATE TIMELINE =====
+Phase=AFTER_ROLLBACK; ElapsedMs=0; SSID=<PRIMARY_INTERNET_SSID>
+Phase=POST_SCAN_START; ElapsedMs=0; SSID=<PRIMARY_INTERNET_SSID>
+
+===== FINAL =====
+ReturnedToSourceAfterScan=False
+UnexpectedNetworkAfterScan=False
+FinalSSID=<PRIMARY_INTERNET_SSID>
+
+===== LAB RESULT =====
+Result=PASS_PROGRAMMATIC_ROLLBACK_PRESERVED_AFTER_SCAN
+EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB05D-ProgrammaticRollbackExplicitScan-20260916-172131.txt
+
+===== EMBEDDED LAB-03B CONNECTION EVIDENCE =====
+===== PRINTSWITCH NATIVE WI-FI LAB â€” LAB-03B =====
+Purpose=Controlled single Native Wi-Fi connection attempt with event timeline
+StartedAt=2026-09-16T17:21:56.4118370-03:00
+ExpectedSourceSSID=<PRINTER_NETWORK_SSID>
+TargetProfile=<PRIMARY_INTERNET_SSID>
+TargetSSID=<PRIMARY_INTERNET_SSID>
+ScanTimeoutMs=12000
+ConnectionTimeoutMs=20000
+
+===== SAFETY / EXPERIMENT CONTRACT =====
+ThisLabCanChangeWiFiConnection=True
+AutomaticRollback=False
+AutomaticReturnToSource=False
+CredentialReadAttempt=False
+ProfileMutation=False
+QueueMutation=False
+ServiceMutation=False
+ProductionSourceMutation=False
+OnlyOneWlanConnectCallAfterExplicitHumanConfirmation=True
+
+===== PRE-FLIGHT =====
+NetshSSIDBefore=<PRINTER_NETWORK_SSID>
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+InterfaceCount=1
+InterfaceGuid=<INTERFACE_GUID_01>
+InterfaceDescription=Realtek 8852BE Wireless LAN WiFi 6 PCI-E NIC
+EnumStateRaw=1
+EnumStateName=CONNECTED
+NativeBeforeInterfaceState=CONNECTED
+NativeBeforeProfile=<PRINTER_NETWORK_SSID>
+NativeBeforeSSID=<PRINTER_NETWORK_SSID>
+NativeBeforeBSSID=<MAC_OR_BSSID_01>
+NativeBeforeSignalQuality=100
+ProfileListResult=0
+Profiles=<ESP32_AP_SSID> | <PRINTER_NETWORK_SSID> | <PRIMARY_INTERNET_SSID> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_5G_SSID>
+TargetProfileExists=True
+RegisterNotificationResult=0
+WlanScanResult=0
+ScanCompleted=True
+ScanFailed=False
+ScanTimedOut=False
+ScanElapsedMs=3391
+AvailableNetworkListResult=0
+AvailableSSIDs=<OBSERVED_NETWORK_01> | <PRIMARY_INTERNET_SSID> | <OBSERVED_NETWORK_03> | <OBSERVED_NETWORK_04> | <OBSERVED_NETWORK_05> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_SSID> | <PRINTER_NETWORK_5G_SSID>
+TargetSSIDVisible=True
+NativeError=
+PreflightPass=True
+===== CONNECTION PHASE =====
+HumanConfirmation=ACCEPTED
+RequiredConfirmation=CONNECT <PRIMARY_INTERNET_SSID>
+WlanConnectInvoked=True
+ConnectStartedAt=2026-09-16T17:22:17.5626239-03:00
+ConnectFinishedAt=2026-09-16T17:22:19.4770243-03:00
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+RegisterNotificationResult=0
+PreviousNotificationSource=0
+WlanConnectResult=0
+TerminalNotificationReceived=True
+TerminalNotificationName=wlan_notification_acm_connection_complete
+TerminalReasonCode=0
+ConnectionTimedOut=False
+ConnectionElapsedMs=1340
+NativeError=
+
+===== ACM EVENT TIMELINE =====
+Event[0].ElapsedMs=11; Code=20; Name=wlan_notification_acm_disconnecting; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; ReasonCode=0; DataSize=572
+Event[1].ElapsedMs=811; Code=21; Name=wlan_notification_acm_disconnected; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; ReasonCode=0; DataSize=572
+Event[2].ElapsedMs=849; Code=9; Name=wlan_notification_acm_connection_start; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[3].ElapsedMs=1340; Code=10; Name=wlan_notification_acm_connection_complete; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+
+===== POST-CONNECTION VERIFICATION =====
+NativeAfterInterfaceState=CONNECTED
+NativeAfterProfile=<PRIMARY_INTERNET_SSID>
+NativeAfterSSID=<PRIMARY_INTERNET_SSID>
+NativeAfterBSSID=<MAC_OR_BSSID_02>
+NativeAfterSignalQuality=100
+NetshSSIDAfter=<PRIMARY_INTERNET_SSID>
+ConnectionVerified=True
+
+===== LAB RESULT =====
+Result=PASS_CONNECTED_AND_VERIFIED
+AutomaticRollbackPerformed=False
+AutomaticReturnToSourcePerformed=False
+FinishedAt=2026-09-16T17:22:20.2326182-03:00
+EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB03B-ControlledNativeConnection-Return-20260916-172155.txt

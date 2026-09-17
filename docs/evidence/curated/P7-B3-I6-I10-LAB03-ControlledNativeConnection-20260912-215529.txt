@@ -1,0 +1,103 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-LAB03-ControlledNativeConnection-20260912-215529
+OriginalSHA256=F42C2B37546C4536E716BBE044E87BF93B9AC7097DF7CF289C942324CEF6C0B4
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.5066233-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+===== PRINTSWITCH NATIVE WI-FI LAB — LAB-03 =====
+Purpose=Controlled single Native Wi-Fi connection attempt with event timeline
+StartedAt=2026-09-12T21:55:30.8117105-03:00
+ExpectedSourceSSID=<PRIMARY_INTERNET_SSID>
+TargetProfile=<ALTERNATE_INTERNET_SSID>
+TargetSSID=<ALTERNATE_INTERNET_SSID>
+ScanTimeoutMs=8000
+ConnectionTimeoutMs=20000
+
+===== SAFETY / EXPERIMENT CONTRACT =====
+ThisLabCanChangeWiFiConnection=True
+AutomaticRollback=False
+AutomaticReturnToSource=False
+CredentialReadAttempt=False
+ProfileMutation=False
+QueueMutation=False
+ServiceMutation=False
+ProductionSourceMutation=False
+OnlyOneWlanConnectCallAfterExplicitHumanConfirmation=True
+
+===== PRE-FLIGHT =====
+NetshSSIDBefore=<PRIMARY_INTERNET_SSID>
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+InterfaceCount=1
+InterfaceGuid=<INTERFACE_GUID_01>
+InterfaceDescription=Realtek 8852BE Wireless LAN WiFi 6 PCI-E NIC
+EnumStateRaw=1
+EnumStateName=CONNECTED
+NativeBeforeInterfaceState=CONNECTED
+NativeBeforeProfile=<PRIMARY_INTERNET_SSID>
+NativeBeforeSSID=<PRIMARY_INTERNET_SSID>
+NativeBeforeBSSID=<MAC_OR_BSSID_02>
+NativeBeforeSignalQuality=100
+ProfileListResult=0
+Profiles=<ESP32_AP_SSID> | <PRIMARY_INTERNET_SSID> | <PRINTER_NETWORK_SSID> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_5G_SSID>
+TargetProfileExists=True
+RegisterNotificationResult=0
+WlanScanResult=0
+ScanCompleted=True
+ScanFailed=False
+ScanTimedOut=False
+ScanElapsedMs=3529
+AvailableNetworkListResult=0
+AvailableSSIDs=<OBSERVED_NETWORK_01> | <PRIMARY_INTERNET_SSID> | <OBSERVED_NETWORK_02> | <OBSERVED_NETWORK_03> | <OBSERVED_NETWORK_04> | <OBSERVED_NETWORK_05> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_SSID> | <PRINTER_NETWORK_5G_SSID>
+TargetSSIDVisible=True
+NativeError=
+PreflightPass=True
+===== CONNECTION PHASE =====
+HumanConfirmation=ACCEPTED
+RequiredConfirmation=CONNECT <ALTERNATE_INTERNET_SSID>
+WlanConnectInvoked=True
+ConnectStartedAt=2026-09-12T21:55:57.4215390-03:00
+ConnectFinishedAt=2026-09-12T21:55:58.9209579-03:00
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+RegisterNotificationResult=0
+PreviousNotificationSource=0
+WlanConnectResult=0
+TerminalNotificationReceived=True
+TerminalNotificationName=wlan_notification_acm_connection_complete
+TerminalReasonCode=0
+ConnectionTimedOut=False
+ConnectionElapsedMs=982
+NativeError=
+
+===== ACM EVENT TIMELINE =====
+Event[0].ElapsedMs=16; Code=20; Name=wlan_notification_acm_disconnecting; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[1].ElapsedMs=538; Code=21; Name=wlan_notification_acm_disconnected; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[2].ElapsedMs=540; Code=9; Name=wlan_notification_acm_connection_start; Profile=<ALTERNATE_INTERNET_SSID>; SSID=<ALTERNATE_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[3].ElapsedMs=982; Code=10; Name=wlan_notification_acm_connection_complete; Profile=<ALTERNATE_INTERNET_SSID>; SSID=<ALTERNATE_INTERNET_SSID>; ReasonCode=0; DataSize=572
+
+===== POST-CONNECTION VERIFICATION =====
+NativeAfterInterfaceState=CONNECTED
+NativeAfterProfile=<ALTERNATE_INTERNET_SSID>
+NativeAfterSSID=<ALTERNATE_INTERNET_SSID>
+NativeAfterBSSID=<MAC_OR_BSSID_03>
+NativeAfterSignalQuality=100
+NetshSSIDAfter=<ALTERNATE_INTERNET_SSID>
+ConnectionVerified=True
+
+===== LAB RESULT =====
+Result=PASS_CONNECTED_AND_VERIFIED
+AutomaticRollbackPerformed=False
+AutomaticReturnToSourcePerformed=False
+FinishedAt=2026-09-12T21:55:59.0954628-03:00
+EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB03-ControlledNativeConnection-20260912-215529.txt

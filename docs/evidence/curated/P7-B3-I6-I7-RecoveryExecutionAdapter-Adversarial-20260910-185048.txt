@@ -1,0 +1,92 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I7-RecoveryExecutionAdapter-Adversarial-20260910-185048
+OriginalSHA256=78AFD8A114FA419CD7915C56012E81FD1A066E88DEF9E404E33A7EC504C2919D
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.3628847-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-I6-I7 - RECOVERY EXECUTION ADAPTER / ADVERSARIAL HARDENING
+Fecha: 2026-09-10 18:50:48
+Mode: SYNTHETIC RED-TEAM / NO PHYSICAL EXECUTION
+============================================================
+
+===== COMPONENT =====
+Path = C:\Users\<USER>\Documents\PrintSwitch-Windows\src\RecoveryExecutionAdapter.ps1
+SHA256 before = 2182524D16A131C62108255015902C87B1B85A71796EA910AFB326A799935627
+SHA256 after = 2182524D16A131C62108255015902C87B1B85A71796EA910AFB326A799935627
+SourceUnchanged = True
+ParserValid = True
+
+===== STATIC DISCONNECTED BOUNDARY =====
+netsh wlan connect | Present=False
+NetworkManager.ps1 | Present=False
+PrintRecoveryOrchestrator.ps1 | Present=False
+Remove-PrintJob | Present=False
+Restart-Service | Present=False
+Stop-Service | Present=False
+Start-Service | Present=False
+StaticSafe = True
+
+===== ADVERSARIAL MATRIX =====
+BASELINE_AUTHORIZED | Expected=EXECUTION_BOUNDARY_DISCONNECTED/True | Actual=EXECUTION_BOUNDARY_DISCONNECTED/True | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+MISSING_AUTHORIZATION_REQUESTED | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+AUTHORIZATION_REQUESTED_FALSE | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+MISSING_AUTHORIZATION_PERFORMED | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+AUTHORIZATION_PERFORMED_FALSE | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+STRING_TRUE_AUTHORIZED | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+STRING_TRUE_RECOVERYRELEVANT | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+STRING_TRUE_RECOVERYENABLED | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+STRING_TRUE_ENDPOINTRESOLVED | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+AUTHORIZED_WITH_DENIED_REASON | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+AUTHORIZED_REASONCODE_EMPTY | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+EXPECTED_PRINTER_CONTEXT_MISSING | Expected=EXPECTED_PRINTER_CONTEXT_MISSING/False | Actual=EXPECTED_PRINTER_CONTEXT_MISSING/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+EXPECTED_TARGET_CONTEXT_MISSING | Expected=EXPECTED_TARGET_CONTEXT_MISSING/False | Actual=EXPECTED_TARGET_CONTEXT_MISSING/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+EXPECTED_JOB_CONTEXT_MISSING | Expected=EXPECTED_JOB_CONTEXT_MISSING/False | Actual=EXPECTED_JOB_CONTEXT_MISSING/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+CORRELATION_ID_MISSING | Expected=CORRELATION_ID_MISSING/False | Actual=CORRELATION_ID_MISSING/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+CORRELATION_ID_WHITESPACE | Expected=CORRELATION_ID_MISSING/False | Actual=CORRELATION_ID_MISSING/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+TARGET_SSID_WHITESPACE_MISMATCH | Expected=TARGET_SSID_CONTEXT_MISMATCH/False | Actual=TARGET_SSID_CONTEXT_MISMATCH/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+PRINTER_WHITESPACE_MISMATCH | Expected=PRINTER_CONTEXT_MISMATCH/False | Actual=PRINTER_CONTEXT_MISMATCH/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+SOURCE_EVALUATION_MISSING | Expected=JOB_CONTEXT_MISMATCH/False | Actual=JOB_CONTEXT_MISMATCH/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+SOURCE_JOBID_MISSING | Expected=JOB_CONTEXT_MISMATCH/False | Actual=JOB_CONTEXT_MISMATCH/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+UNSUPPORTED_SCHEMA | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+MALFORMED_SCHEMA | Expected=AUTHORIZATION_CONTRACT_INVALID/False | Actual=AUTHORIZATION_CONTRACT_INVALID/False | Performed=False | SwitchExecuted=False | Threw=False | ValidContract=True | PASS=True
+
+===== VALIDATOR ATTACKS =====
+NULL | Threw=False | Actual=False | PASS=True
+EMPTY | Threw=False | Actual=False | PASS=True
+STRING | Threw=False | Actual=False | PASS=True
+NUMBER | Threw=False | Actual=False | PASS=True
+CLAIMS_EXECUTION | Threw=False | Actual=False | PASS=True
+
+===== SAFETY =====
+Production code modified by test = FALSE
+ApplicationController modified = FALSE
+QueueWatcher modified = FALSE
+RecoveryExecutionAdapter modified = FALSE
+Config modified = FALSE
+Wi-Fi mutation = FALSE
+Queue mutation = FALSE
+Service mutation = FALSE
+Recovery execution = FALSE
+Operational scripts run = FALSE
+Execution boundary = DISCONNECTED
+Commit = FALSE
+
+===== RESULTADO =====
+StaticSafe = True
+AdversarialCasesPass = True
+ValidatorCasesPass = True
+SourceUnchanged = True
+RESULTADO: PASS
+NOTE: FAIL is an expected hardening signal if the current isolated adapter accepts malformed or incomplete authorization context.
+NO PRODUCTION CHANGES ARE MADE BY THIS TEST.
+============================================================

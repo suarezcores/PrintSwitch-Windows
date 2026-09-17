@@ -1,0 +1,97 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-R6D2-NetworkManagerDifferentTargetDryRun-20260911-235205
+OriginalSHA256=C987FA7DB1C77431935304207C89A76A6F7C744A1698650CD22ABB6A90977046
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.4185967-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-I6-I10-R6D2 - NETWORKMANAGER DIFFERENT-TARGET DRY-RUN
+Fecha: 2026-09-11 23:52:08
+Mode: CONTROLLED RUNTIME / DIFFERENT TARGET / NO AUTOEXECUTE
+============================================================
+
+===== SOURCE =====
+NetworkManager SHA256 before = C20570DCA5E17B89AC5FAC178001DF22BA2DA4E53B71928D4CA0C3ABA8E65FBC
+NetworkManager SHA256 after = C20570DCA5E17B89AC5FAC178001DF22BA2DA4E53B71928D4CA0C3ABA8E65FBC
+NetworkManagerParserValid = True
+SourceUnchanged = True
+
+===== PRECONDITION =====
+SSID before = <PRIMARY_INTERNET_SSID>
+TargetSSID = <PRINTER_NETWORK_SSID>
+TargetDiffersFromCurrent = True
+TargetProfileExists = True
+TargetVisiblePreflight = False
+AutoExecute supplied = FALSE
+
+===== RUNTIME RESULT =====
+ResultObjectCount = 1
+Classification = TARGET_NETWORK_NOT_VISIBLE
+ClassificationType = System.String
+SwitchRequested = False
+SwitchRequestedType = System.Boolean
+SwitchAuthorized = False
+SwitchAuthorizedType = System.Boolean
+SwitchVerified = False
+SwitchVerifiedType = System.Boolean
+FinalSSID = <PRIMARY_INTERNET_SSID>
+FinalSSIDType = System.String
+HasAutoExecuteProperty = True
+AutoExecute = False
+
+===== CONTRACT CHECKS =====
+Allowed classifications = NETWORK_SWITCH_AVAILABLE, TARGET_NETWORK_NOT_VISIBLE
+ClassificationTypeValid = True
+ClassificationAllowed = True
+SwitchRequestedTypeValid = True
+SwitchAuthorizedTypeValid = True
+SwitchVerifiedTypeValid = True
+FinalSSIDTypeValid = True
+AutoExecuteTypeValid = True
+AutoExecuteFalse = True
+SwitchRequestedValid = True
+SwitchAuthorizedValid = True
+SwitchVerifiedValid = True
+FinalSSIDValid = True
+RuntimeContractValid = True
+
+===== POST-CONDITION =====
+SSID after = <PRIMARY_INTERNET_SSID>
+SSIDUnchanged = True
+StillNotOnTarget = True
+SourceUnchanged = True
+
+===== INTERPRETATION =====
+PASS accepts either NETWORK_SWITCH_AVAILABLE or TARGET_NETWORK_NOT_VISIBLE.
+Both are legitimate no-execution outcomes for a different saved target when -AutoExecute is absent.
+Visibility is intentionally not a hard expectation because netsh scans may change between observations.
+Regardless of classification, PASS requires no request, no authorization, no verification, and unchanged SSID.
+
+===== SAFETY =====
+ApplicationController invoked = FALSE
+PrintRecoveryOrchestrator invoked = FALSE
+RecoveryRollbackActuator invoked = FALSE
+NetworkManager invoked = TRUE
+NetworkManager -AutoExecute = FALSE
+Read-only netsh inspection invoked by harness = TRUE
+Physical netsh wlan connect authorized by harness = FALSE
+Expected Wi-Fi mutation = FALSE
+Queue mutation = FALSE
+Service mutation = FALSE
+Physical rollback = FALSE
+Commit = FALSE
+
+===== RESULTADO =====
+AuditPassed = True
+RESULTADO: PASS
+NEXT = if PASS, perform read-only physical-test preflight before first authorized Wi-Fi mutation.
+============================================================

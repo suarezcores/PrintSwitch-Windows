@@ -1,0 +1,148 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-T2-R1-RealJobPolicyRobust-20260909-142139
+OriginalSHA256=010C40896A6CB19FEEC2374E775E4538F9DE3A2625BB69DDDE6459C0933C6C02
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.2781231-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-T2-R1 - REAL JOB POLICY PIPELINE ROBUST
+Fecha: 2026-09-09 14:21:39
+============================================================
+
+===== 1. REAL JOB =====
+
+
+JobStatus             : Error, Printing, Retained
+Caption               :
+Description           :
+ElementName           :
+InstanceID            :
+CommunicationStatus   :
+DetailedStatus        :
+HealthState           :
+InstallDate           :
+Name                  :
+OperatingStatus       :
+OperationalStatus     :
+PrimaryStatus         :
+Status                :
+StatusDescriptions    :
+ComputerName          :
+Datatype              : NT EMF 1.008
+DocumentName          : *Sin título: Bloc de notas
+Id                    : 13
+JobTime               : 285484625
+PagesPrinted          : 0
+Position              : 1
+PrinterName           : L365 Series(Red)
+Priority              : 1
+Size                  : 136
+SubmittedTime         : 8/9/2026 18:46:48
+TotalPages            : 1
+UserName              : <ALTERNATE_INTERNET_SSID>
+PSComputerName        :
+CimClass              : root/StandardCimv2:MSFT_PrintJob
+CimInstanceProperties : {Caption, Description, ElementName, InstanceID...}
+CimSystemProperties   : Microsoft.Management.Infrastructure.CimSystemProperties
+
+
+
+
+
+===== 2. RESOLVED PRINTER =====
+PrinterName = L365 Series(Red)
+
+===== 3. QUEUE JOB CONTEXT =====
+
+
+SchemaVersion         : 1
+JobId                 : 13
+PrinterName           : L365 Series(Red)
+DocumentName          : *Sin título: Bloc de notas
+SubmittedTime         : 8/9/2026 18:46:48
+Raw                   : @{JobStatus=Error, Printing, Retained; PagesPrinted=0; TotalPages=1; SizeBytes=136}
+Origin                : PREEXISTING
+Age                   : @{Bucket=STALE; Minutes=1174,85}
+Health                : ERROR
+Progress              : NO_PROGRESS
+Flags                 : @{Printing=True; Retained=True; Paused=False; Deleting=False; Offline=False; Error=True}
+SummaryClassification : STALLED_ERROR
+
+
+
+
+
+===== 4. QUEUE CONTEXT CONTRACT =====
+
+
+Valid      : True
+ErrorCount : 0
+Errors     : {}
+
+
+
+
+
+===== 5. QUEUE POLICY RESULT =====
+
+
+SchemaVersion           : 1
+Decision                : EVALUATE_RECOVERY
+Actionable              : True
+AllowRecoveryEvaluation : True
+ReasonCode              : JOB_STALLED_ERROR
+Reason                  : The print job is stale, has no progress, and reports an error.
+SourceContext           : @{SchemaVersion=1; JobId=13; PrinterName=L365 Series(Red); DocumentName=*Sin título: Bloc de notas; SubmittedTime=8/9/2026
+                          18:46:48; Raw=; Origin=PREEXISTING; Age=; Health=ERROR; Progress=NO_PROGRESS; Flags=; SummaryClassification=STALLED_ERROR}
+
+
+
+
+
+===== 6. QUEUE POLICY CONTRACT =====
+
+
+Valid      : True
+ErrorCount : 0
+Errors     : {}
+
+
+
+
+
+===== 7. PIPELINE =====
+MSFT_PrintJob
+ -> QueueJobClassifier
+ -> QueueJobContext v1
+ -> QueuePolicy
+ -> QueuePolicyResult v1
+ -> STOP
+
+===== 8. SAFETY =====
+Controller invoked   : False
+Orchestrator invoked : False
+Recovery executed    : False
+Wi-Fi changed        : False
+Queue mutated        : False
+
+===== 9. RESULTADO =====
+SummaryClassification = STALLED_ERROR
+PolicyDecision        = EVALUATE_RECOVERY
+Actionable            = True
+AllowRecoveryEval     = True
+ReasonCode            = JOB_STALLED_ERROR
+
+RESULTADO: PASS
+
+============================================================
+FIN P7-B3-T2-R1
+============================================================

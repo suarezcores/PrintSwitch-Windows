@@ -1,0 +1,123 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-LAB05C-OutageRecoveryExplicitNativeScan-20260915-220247
+OriginalSHA256=0D20FA049BD0789319D33EF08F8486D28F1FC6E0181EB4D2A58F47038C350FC3
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.5820316-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+===== PRINTSWITCH NATIVE WI-FI LAB — LAB-05C =====
+Purpose=Determine whether one explicit Native WlanScan triggers return to the recovered source after an outage
+StartedAt=2026-09-15T22:02:48.1158335-03:00
+ObservationStartedAt=2026-09-15T22:03:11.3996949-03:00
+ObservationFinishedAt=2026-09-15T22:08:11.8482649-03:00
+
+===== SAFETY / EXPERIMENT CONTRACT =====
+ExpectedSourceSSID=<PRINTER_NETWORK_SSID>
+ExpectedAlternativeSSID=<PRIMARY_INTERNET_SSID>
+ObservationSeconds=300
+PowerCutCueSeconds=10
+ExternalCheckCueSeconds=150
+ExplicitScanCueSeconds=180
+RequestedPowerOffSeconds=10
+SampleIntervalMs=500
+WlanConnectInvoked=False
+WlanDisconnectInvoked=False
+WlanScanInvoked=True
+WlanScanResult=0
+NetshConnectionMutation=False
+ProfileMutation=False
+CredentialReadAttempt=False
+ProductionSourceMutation=False
+WindowsWifiUiMustRemainClosed=True
+UserMustNotTouchWindowsWifi=True
+PowerCycleConfirmed=True
+ExternalSourceReturnConfirmed=True
+NoWindowsWifiUiInteractionConfirmed=True
+
+===== PRE-FLIGHT =====
+NetshSSIDBefore=<PRINTER_NETWORK_SSID>
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+InterfaceCount=1
+InterfaceGuid=<INTERFACE_GUID_01>
+InterfaceDescription=Realtek 8852BE Wireless LAN WiFi 6 PCI-E NIC
+NativeBeforeState=CONNECTED
+NativeBeforeSSID=<PRINTER_NETWORK_SSID>
+NativeBeforeProfile=<PRINTER_NETWORK_SSID>
+ProfileListResult=0
+Profiles=<ESP32_AP_SSID> | <PRINTER_NETWORK_SSID> | <PRIMARY_INTERNET_SSID> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_5G_SSID>
+SourceProfileExists=True
+AlternativeProfileExists=True
+AlternativeProfiles=<ESP32_AP_SSID> | <PRIMARY_INTERNET_SSID> | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_5G_SSID>
+NativeError=
+PreflightPass=True
+
+===== OBSERVER =====
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+RegisterNotificationResult=0
+PreviousNotificationSource=0
+PowerCueIssued=True
+PowerCueElapsedMs=10091
+ExternalCheckCueIssued=True
+ExternalCheckCueElapsedMs=150148
+ExplicitScanInvoked=True
+ExplicitScanElapsedMs=180430
+ExplicitScanResult=0
+ObserverError=
+
+===== ACM EVENT TIMELINE =====
+Event[0].ElapsedMs=23960; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[1].ElapsedMs=29465; Code=21; Name=wlan_notification_acm_disconnected; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; ReasonCode=0; DataSize=572
+Event[2].ElapsedMs=29835; Code=9; Name=wlan_notification_acm_connection_start; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[3].ElapsedMs=29898; Code=8; Name=wlan_notification_acm_scan_fail; Profile=; SSID=; ReasonCode=0; DataSize=4
+Event[4].ElapsedMs=30883; Code=10; Name=wlan_notification_acm_connection_complete; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[5].ElapsedMs=89424; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[6].ElapsedMs=149416; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[7].ElapsedMs=184014; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[8].ElapsedMs=184014; Code=26; Name=wlan_notification_acm_scan_list_refresh; Profile=; SSID=; ReasonCode=0; DataSize=0
+Event[9].ElapsedMs=184029; Code=20; Name=wlan_notification_acm_disconnecting; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[10].ElapsedMs=184557; Code=21; Name=wlan_notification_acm_disconnected; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; ReasonCode=0; DataSize=572
+Event[11].ElapsedMs=184561; Code=9; Name=wlan_notification_acm_connection_start; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; ReasonCode=0; DataSize=572
+Event[12].ElapsedMs=184565; Code=8; Name=wlan_notification_acm_scan_fail; Profile=; SSID=; ReasonCode=0; DataSize=4
+Event[13].ElapsedMs=185049; Code=10; Name=wlan_notification_acm_connection_complete; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; ReasonCode=0; DataSize=572
+Event[14].ElapsedMs=244543; Code=7; Name=wlan_notification_acm_scan_complete; Profile=; SSID=; ReasonCode=0; DataSize=0
+
+===== NATIVE STATE-CHANGE TIMELINE =====
+StateChange.ElapsedMs=0; InterfaceState=CONNECTED[1]; CurrentConnectionResult=0; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; BSSID=<MAC_OR_BSSID_01>; SignalQuality=100
+StateChange.ElapsedMs=29788; InterfaceState=DISCONNECTED[4]; CurrentConnectionResult=0; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; BSSID=<MAC_OR_BSSID_04>; SignalQuality=0
+StateChange.ElapsedMs=30883; InterfaceState=CONNECTED[1]; CurrentConnectionResult=0; Profile=<PRIMARY_INTERNET_SSID>; SSID=<PRIMARY_INTERNET_SSID>; BSSID=<MAC_OR_BSSID_02>; SignalQuality=100
+StateChange.ElapsedMs=184483; InterfaceState=DISCONNECTING[3]; CurrentConnectionResult=5023; Profile=; SSID=; BSSID=; SignalQuality=0
+StateChange.ElapsedMs=185058; InterfaceState=CONNECTED[1]; CurrentConnectionResult=0; Profile=<PRINTER_NETWORK_SSID>; SSID=<PRINTER_NETWORK_SSID>; BSSID=<MAC_OR_BSSID_01>; SignalQuality=100
+
+===== INTERPRETATION =====
+SourceLossObserved=True
+SourceLossElapsedMs=29465
+ExpectedAlternativeBeforeScan=True
+ExpectedAlternativeAfterScan=True
+SourceReturnBeforeScan=False
+SourceReturnAfterScan=True
+OtherNetworkBeforeScan=False
+OtherNetworkAfterScan=False
+
+===== FINAL STATE =====
+NativeFinalState=CONNECTED
+NativeFinalProfile=<PRINTER_NETWORK_SSID>
+NativeFinalSSID=<PRINTER_NETWORK_SSID>
+NativeFinalBSSID=<MAC_OR_BSSID_01>
+NetshSSIDAfter=<PRINTER_NETWORK_SSID>
+FinalSourceConnected=True
+FinalExpectedAlternativeConnected=False
+
+===== LAB RESULT =====
+Result=PASS_SOURCE_RETURNED_AFTER_EXPLICIT_SCAN
+EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB05C-OutageRecoveryExplicitNativeScan-20260915-220247.txt

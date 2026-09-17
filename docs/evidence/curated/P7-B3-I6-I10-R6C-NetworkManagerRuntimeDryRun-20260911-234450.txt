@@ -1,0 +1,89 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-R6C-NetworkManagerRuntimeDryRun-20260911-234450
+OriginalSHA256=A82D7115B5E9A901EA61C173BFF3C455F603E88F71A6E4CFF3E6F3FD24857870
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.4069110-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PrintSwitch-Windows
+P7-B3-I6-I10-R6C - NETWORKMANAGER RUNTIME DRY-RUN CONTRACT
+Fecha: 2026-09-11 23:44:51
+Mode: CONTROLLED RUNTIME / CURRENT-SSID TARGET / NO AUTOEXECUTE
+============================================================
+
+===== SOURCE =====
+NetworkManager SHA256 before = C20570DCA5E17B89AC5FAC178001DF22BA2DA4E53B71928D4CA0C3ABA8E65FBC
+NetworkManager SHA256 after = C20570DCA5E17B89AC5FAC178001DF22BA2DA4E53B71928D4CA0C3ABA8E65FBC
+NetworkManagerParserValid = True
+SourceUnchanged = True
+
+===== SAFETY PRECONDITION =====
+SSID before = <PRIMARY_INTERNET_SSID>
+TargetSSID = <PRIMARY_INTERNET_SSID>
+TargetEqualsCurrentSSID = True
+AutoExecute supplied = FALSE
+Purpose = exercise ALREADY_ON_TARGET_NETWORK branch only
+
+===== RUNTIME RESULT =====
+ResultObjectCount = 1
+Classification = ALREADY_ON_TARGET_NETWORK
+ClassificationType = System.String
+SwitchRequested = False
+SwitchRequestedType = System.Boolean
+SwitchAuthorized = False
+SwitchAuthorizedType = System.Boolean
+SwitchVerified = True
+SwitchVerifiedType = System.Boolean
+FinalSSID = <PRIMARY_INTERNET_SSID>
+FinalSSIDType = System.String
+HasAutoExecuteProperty = True
+AutoExecute = False
+
+===== CONTRACT CHECKS =====
+ClassificationTypeValid = True
+SwitchRequestedTypeValid = True
+SwitchAuthorizedTypeValid = True
+SwitchVerifiedTypeValid = True
+FinalSSIDTypeValid = True
+AutoExecuteTypeValid = True
+AutoExecuteFalse = True
+ExactClassificationValid = True
+SwitchRequestedValid = True
+SwitchAuthorizedValid = True
+SwitchVerifiedValid = True
+FinalSSIDValid = True
+RuntimeContractValid = True
+
+===== POST-CONDITION =====
+SSID after = <PRIMARY_INTERNET_SSID>
+SSIDUnchanged = True
+SourceUnchanged = True
+
+===== SAFETY =====
+ApplicationController invoked = FALSE
+PrintRecoveryOrchestrator invoked = FALSE
+RecoveryRollbackActuator invoked = FALSE
+NetworkManager invoked = TRUE
+NetworkManager -AutoExecute = FALSE
+Read-only netsh inspection invoked by harness = TRUE
+Physical netsh wlan connect authorized by harness = FALSE
+Wi-Fi target different from current = FALSE
+Expected Wi-Fi mutation = FALSE
+Queue mutation = FALSE
+Service mutation = FALSE
+Physical rollback = FALSE
+Commit = FALSE
+
+===== RESULTADO =====
+AuditPassed = True
+RESULTADO: PASS
+NEXT = if PASS, design switch-available dry-run probe with explicit non-authorization before any physical rollback test.
+============================================================

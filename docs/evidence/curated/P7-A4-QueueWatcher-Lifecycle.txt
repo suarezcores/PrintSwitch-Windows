@@ -1,0 +1,561 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-A4-QueueWatcher-Lifecycle
+OriginalSHA256=BE41D614C1D647004C7A006011B957FC52355BB77F7FFF6BB49A57E517957D41
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.2251796-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+============================================================
+PRINTSWITCH - P7-A4 QUEUEWATCHER LIFECYCLE ANALYSIS
+============================================================
+
+Generated : 2026-09-06 20:16:40.565
+HEAD      : 5982171
+Branch    : main
+
+Purpose:
+Analyze QueueWatcher execution model before adding
+start/stop lifecycle to ApplicationController.
+
+No Core files are modified.
+
+============================================================
+1. PARSER
+============================================================
+
+Parser : PASS
+
+============================================================
+2. SCRIPT PARAM BLOCK
+============================================================
+
+EnableRecovery | Type=SwitchParameter | Default=
+PrinterName | Type=String | Default=
+
+============================================================
+3. LOOP CONSTRUCTS
+============================================================
+
+
+LOOP 1
+Type       : WhileStatementAst
+StartLine  : 421
+EndLine    : 612
+Text:
+while ($true) {
+
+    $Jobs = @(
+        Get-PrintJobs `
+            -TargetPrinter $PrinterName
+    )
+
+    foreach ($Job in $Jobs) {
+
+        $JobKey = "$($Job.JobId)-$($Job.Name)"
+
+        if (-not $KnownJobs.ContainsKey($JobKey)) {
+
+            $KnownJobs[$JobKey] = $true
+
+            # =================================================
+            # NUEVO TRABAJO
+            # =================================================
+
+            $Event = [PSCustomObject]@{
+
+                EventType =
+                    "PrintJobDetected"
+
+                Timestamp =
+                    Get-Date
+
+                PrinterName =
+                    $PrinterName
+
+                JobId =
+                    $Job.JobId
+
+                Document =
+                    $Job.Document
+
+                Owner =
+                    $Job.Owner
+
+                Status =
+                    $Job.Status
+
+                JobStatus =
+                    $Job.JobStatus
+
+                TotalPages =
+                    $Job.TotalPages
+
+                PagesPrinted =
+                    $Job.PagesPrinted
+
+                SizeBytes =
+                    $Job.Size
+            }
+
+            Write-PrintSwitchLog `
+                -Component "QueueWatcher" `
+                -Event "PRINT_JOB_DETECTED" `
+                -Level "INFO" `
+                -Data @{
+                    Printer = $Event.PrinterName
+                    JobId   = $Event.JobId
+                } |
+                Out-Null
+
+            Write-Host ""
+            Write-Host "========================================"
+
+            Write-Host `
+                "NUEVO TRABAJO DETECTADO" `
+                -ForegroundColor Green
+
+            Write-Host "========================================"
+
+            Write-Host "Impresora   : $($Event.PrinterName)"
+            Write-Host "JobId       : $($Event.JobId)"
+            Write-Host "Documento   : $($Event.Document)"
+            Write-Host "Propietario : $($Event.Owner)"
+            Write-Host "Estado      : $($Event.JobStatus)"
+            # =================================================
+# NUEVO ORQUESTADOR - DRY RUN
+# =================================================
+
+Write-Host ""
+Write-Host "========================================"
+Write-Host "PRINT RECOVERY ORCHESTRATOR"
+Write-Host "========================================"
+
+try {
+
+   $OrchestratorParameters = @{
+    PrinterName = $PrinterName
+}
+
+if ($EnableRecovery) {
+
+    $OrchestratorParameters.Execute = $true
+}
+
+$OrchestratorResult = & $PrintRecoveryOrchestratorPath `
+    @OrchestratorParameters
+}
+catch {
+
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "RECOVERY_ORCHESTRATOR_ERROR" `
+        -Level "ERROR" `
+        -Data @{
+            Printer = $PrinterName
+            JobId   = $Event.JobId
+            Message = $_.Exception.Message
+        } |
+        Out-Null
+
+    Write-Host ""
+    Write-Host `
+        "ERROR ejecutando PrintRecoveryOrchestrator." `
+        -ForegroundColor Red
+
+    continue
+}
+
+if ($null -eq $OrchestratorResult) {
+
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "RECOVERY_ORCHESTRATOR_NO_RESULT" `
+        -Level "ERROR" `
+        -Data @{
+            Printer = $PrinterName
+            JobId   = $Event.JobId
+        } |
+        Out-Null
+
+    continue
+}
+
+Write-Host ""
+Write-Host "Resultado del orquestador:"
+Write-Host "FinalClassification : $($OrchestratorResult.FinalClassification)"
+Write-Host "SwitchDecision      : $($OrchestratorResult.SwitchDecision)"
+Write-Host "SwitchAuthorized    : $($OrchestratorResult.SwitchAuthorized)"
+Write-Host "SwitchExecuted      : $($OrchestratorResult.SwitchExecuted)"
+
+Write-PrintSwitchLog `
+    -Component "QueueWatcher" `
+    -Event "RECOVERY_ORCHESTRATOR_RESULT" `
+    -Level "INFO" `
+    -Data @{
+        Printer            = $PrinterName
+        JobId              = $Event.JobId
+        FinalClassification =
+            $OrchestratorResult.FinalClassification
+        SwitchDecision =
+            $OrchestratorResult.SwitchDecision
+        SwitchExecuted =
+            $OrchestratorResult.SwitchExecuted
+    } |
+    Out-Null
+
+
+        }
+    }
+
+    # ========================================================
+    # LIMPIAR TRABAJOS DESAPARECIDOS
+    # ========================================================
+
+    $CurrentKeys = @(
+        $Jobs | ForEach-Object {
+            "$($_.JobId)-$($_.Name)"
+        }
+    )
+
+    foreach ($KnownKey in @($KnownJobs.Keys)) {
+
+        if ($KnownKey -notin $CurrentKeys) {
+
+            $KnownJobs.Remove($KnownKey)
+
+            Write-Host ""
+
+            Write-Host `
+                "Trabajo finalizado o eliminado: $KnownKey" `
+                -ForegroundColor DarkGray
+        }
+    }
+
+    Start-Sleep `
+        -Milliseconds $PollingMilliseconds
+}
+
+LOOP 2
+Type       : ForEachStatementAst
+StartLine  : 428
+EndLine    : 584
+Text:
+foreach ($Job in $Jobs) {
+
+        $JobKey = "$($Job.JobId)-$($Job.Name)"
+
+        if (-not $KnownJobs.ContainsKey($JobKey)) {
+
+            $KnownJobs[$JobKey] = $true
+
+            # =================================================
+            # NUEVO TRABAJO
+            # =================================================
+
+            $Event = [PSCustomObject]@{
+
+                EventType =
+                    "PrintJobDetected"
+
+                Timestamp =
+                    Get-Date
+
+                PrinterName =
+                    $PrinterName
+
+                JobId =
+                    $Job.JobId
+
+                Document =
+                    $Job.Document
+
+                Owner =
+                    $Job.Owner
+
+                Status =
+                    $Job.Status
+
+                JobStatus =
+                    $Job.JobStatus
+
+                TotalPages =
+                    $Job.TotalPages
+
+                PagesPrinted =
+                    $Job.PagesPrinted
+
+                SizeBytes =
+                    $Job.Size
+            }
+
+            Write-PrintSwitchLog `
+                -Component "QueueWatcher" `
+                -Event "PRINT_JOB_DETECTED" `
+                -Level "INFO" `
+                -Data @{
+                    Printer = $Event.PrinterName
+                    JobId   = $Event.JobId
+                } |
+                Out-Null
+
+            Write-Host ""
+            Write-Host "========================================"
+
+            Write-Host `
+                "NUEVO TRABAJO DETECTADO" `
+                -ForegroundColor Green
+
+            Write-Host "========================================"
+
+            Write-Host "Impresora   : $($Event.PrinterName)"
+            Write-Host "JobId       : $($Event.JobId)"
+            Write-Host "Documento   : $($Event.Document)"
+            Write-Host "Propietario : $($Event.Owner)"
+            Write-Host "Estado      : $($Event.JobStatus)"
+            # =================================================
+# NUEVO ORQUESTADOR - DRY RUN
+# =================================================
+
+Write-Host ""
+Write-Host "========================================"
+Write-Host "PRINT RECOVERY ORCHESTRATOR"
+Write-Host "========================================"
+
+try {
+
+   $OrchestratorParameters = @{
+    PrinterName = $PrinterName
+}
+
+if ($EnableRecovery) {
+
+    $OrchestratorParameters.Execute = $true
+}
+
+$OrchestratorResult = & $PrintRecoveryOrchestratorPath `
+    @OrchestratorParameters
+}
+catch {
+
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "RECOVERY_ORCHESTRATOR_ERROR" `
+        -Level "ERROR" `
+        -Data @{
+            Printer = $PrinterName
+            JobId   = $Event.JobId
+            Message = $_.Exception.Message
+        } |
+        Out-Null
+
+    Write-Host ""
+    Write-Host `
+        "ERROR ejecutando PrintRecoveryOrchestrator." `
+        -ForegroundColor Red
+
+    continue
+}
+
+if ($null -eq $OrchestratorResult) {
+
+    Write-PrintSwitchLog `
+        -Component "QueueWatcher" `
+        -Event "RECOVERY_ORCHESTRATOR_NO_RESULT" `
+        -Level "ERROR" `
+        -Data @{
+            Printer = $PrinterName
+            JobId   = $Event.JobId
+        } |
+        Out-Null
+
+    continue
+}
+
+Write-Host ""
+Write-Host "Resultado del orquestador:"
+Write-Host "FinalClassification : $($OrchestratorResult.FinalClassification)"
+Write-Host "SwitchDecision      : $($OrchestratorResult.SwitchDecision)"
+Write-Host "SwitchAuthorized    : $($OrchestratorResult.SwitchAuthorized)"
+Write-Host "SwitchExecuted      : $($OrchestratorResult.SwitchExecuted)"
+
+Write-PrintSwitchLog `
+    -Component "QueueWatcher" `
+    -Event "RECOVERY_ORCHESTRATOR_RESULT" `
+    -Level "INFO" `
+    -Data @{
+        Printer            = $PrinterName
+        JobId              = $Event.JobId
+        FinalClassification =
+            $OrchestratorResult.FinalClassification
+        SwitchDecision =
+            $OrchestratorResult.SwitchDecision
+        SwitchExecuted =
+            $OrchestratorResult.SwitchExecuted
+    } |
+    Out-Null
+
+
+        }
+    }
+
+LOOP 3
+Type       : ForEachStatementAst
+StartLine  : 596
+EndLine    : 608
+Text:
+foreach ($KnownKey in @($KnownJobs.Keys)) {
+
+        if ($KnownKey -notin $CurrentKeys) {
+
+            $KnownJobs.Remove($KnownKey)
+
+            Write-Host ""
+
+            Write-Host `
+                "Trabajo finalizado o eliminado: $KnownKey" `
+                -ForegroundColor DarkGray
+        }
+    }
+
+============================================================
+4. TIMING / SLEEP
+============================================================
+
+Line 610: Start-Sleep `
+        -Milliseconds $PollingMilliseconds
+
+============================================================
+5. CONTROL FLOW ESCAPES
+============================================================
+
+Break count    : 0
+Continue count : 2
+Return count   : 8
+Exit count     : 0
+
+============================================================
+6. VARIABLES RELATED TO WATCHING / JOB STATE
+============================================================
+
+$CurrentKeys
+$EnableRecovery
+$Job
+$JobKey
+$Jobs
+$KnownJobs
+$PrinterDiscoveryPath
+$PrinterName
+$PrintRecoveryOrchestratorPath
+$TargetPrinter
+
+============================================================
+7. CORE INVOCATIONS
+============================================================
+
+ForEach-Object
+Get-CimInstance
+Get-Date
+Get-PrintJobs
+Join-Path
+Out-Null
+Select-Object
+Start-Sleep
+Test-Path
+Where-Object
+Write-Host
+Write-PrintSwitchLog
+
+Referenced PS1:
+Logger.ps1
+PrinterDiscovery.ps1
+PrintRecoveryOrchestrator.ps1
+
+============================================================
+8. JOB DETECTION REFERENCES
+============================================================
+
+Line 365: function Get-PrintJobs {
+Line 371: Get-CimInstance Win32_PrintJob `
+Line 424: Get-PrintJobs `
+Line 430: $JobKey = "$($Job.JobId)-$($Job.Name)"
+Line 443: "PrintJobDetected"
+Line 451: JobId =
+Line 452: $Job.JobId
+Line 482: JobId   = $Event.JobId
+Line 496: Write-Host "JobId       : $($Event.JobId)"
+Line 531: JobId   = $Event.JobId
+Line 552: JobId   = $Event.JobId
+Line 572: JobId              = $Event.JobId
+Line 592: "$($_.JobId)-$($_.Name)"
+
+============================================================
+9. RECOVERY INVOCATION
+============================================================
+
+Line 2: [switch]$EnableRecovery,
+Line 37: $PrintRecoveryOrchestratorPath = Join-Path `
+Line 39: "PrintRecoveryOrchestrator.ps1"
+Line 89: RecoveryEnabled = [bool]$EnableRecovery
+Line 317: if ($EnableRecovery) {
+Line 320: "Modo: RECOVERY AUTOMATICO HABILITADO" `
+Line 352: RecoveryEnabled = [bool]$EnableRecovery
+Line 391: # VALIDAR PRINT RECOVERY ORCHESTRATOR
+Line 394: if (-not (Test-Path $PrintRecoveryOrchestratorPath)) {
+Line 398: "ERROR: PrintRecoveryOrchestrator no encontrado." `
+Line 402: "Ruta esperada: $PrintRecoveryOrchestratorPath"
+Line 406: -Event "RECOVERY_ORCHESTRATOR_NOT_FOUND" `
+Line 409: Path = $PrintRecoveryOrchestratorPath
+Line 506: Write-Host "PRINT RECOVERY ORCHESTRATOR"
+Line 515: if ($EnableRecovery) {
+Line 520: $OrchestratorResult = & $PrintRecoveryOrchestratorPath `
+Line 527: -Event "RECOVERY_ORCHESTRATOR_ERROR" `
+Line 538: "ERROR ejecutando PrintRecoveryOrchestrator." `
+Line 548: -Event "RECOVERY_ORCHESTRATOR_NO_RESULT" `
+Line 568: -Event "RECOVERY_ORCHESTRATOR_RESULT" `
+
+============================================================
+10. OUTPUT BEHAVIOR
+============================================================
+
+Write-Host count : 89
+Out-Host count   : 0
+
+============================================================
+11. APPLICATIONCONTROLLER CURRENT STUB
+============================================================
+
+Line 885: function Start-PrintSwitchMonitoring {
+Line 895: -Classification "MONITORING_NOT_IMPLEMENTED_P7_A3" `
+Line 908: function Stop-PrintSwitchMonitoring {
+Line 916: -Classification "MONITORING_NOT_IMPLEMENTED_P7_A3" `
+
+============================================================
+12. P7-A4 DESIGN QUESTIONS
+============================================================
+
+Q1. Is QueueWatcher an infinite foreground loop?
+Q2. Does it have a native stop condition?
+Q3. Can it be wrapped safely in a background runspace/job?
+Q4. What state must ApplicationController retain?
+Q5. Can StopMonitoring be graceful without killing PowerShell?
+Q6. Can events/results be returned without parsing Write-Host?
+Q7. Is recovery invocation synchronous?
+Q8. Can the same watcher code remain CLI-compatible?
+
+============================================================
+13. GIT STATE
+============================================================
+
+?? docs/evidence/
+?? src/ConnectivityAnalyzer.ps1.bak
+
+============================================================
+END P7-A4 QUEUEWATCHER LIFECYCLE ANALYSIS
+============================================================

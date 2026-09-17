@@ -1,0 +1,92 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-LAB01-LAB02-NativeWiFiBaselineScan-20260912-212725
+OriginalSHA256=339DD1A227453E9B71F9EC71F88FF0C736C3EAEABC59D73BED4B2C1A0FCF9101
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.4384193-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+===== PRINTSWITCH NATIVE WI-FI LAB — LAB-01 / LAB-02 =====
+Purpose=Behavioral research only; not production logic
+StartedAt=2026-09-12T21:27:26.0344241-03:00
+FinishedAt=2026-09-12T21:27:30.0666323-03:00
+SourceSSID=<PRIMARY_INTERNET_SSID>
+TargetSSID=<PRINTER_NETWORK_SSID>
+ScanTimeoutMs=8000
+
+===== SAFETY / SCOPE =====
+WlanScanInvoked=True
+WlanConnectInvoked=False
+NetshWlanConnectInvoked=False
+WiFiConnectionMutation=False
+QueueMutation=False
+ServiceMutation=False
+ProductionSourceMutation=False
+ExpectedEffect=Active radio scan may briefly increase Wi-Fi latency
+
+===== BASELINE =====
+CurrentSSIDBefore=<ALTERNATE_INTERNET_SSID>
+PreNetshSSIDCount=1
+PreNetshSSIDs=<ALTERNATE_INTERNET_SSID>
+PreNetshTargetVisible=False
+
+===== NATIVE API / INTERFACE =====
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+InterfaceCount=1
+InterfaceGuid=<INTERFACE_GUID_01>
+InterfaceDescription=R
+InterfaceState=0
+
+===== PRE-SCAN NATIVE SNAPSHOT =====
+PreListResult=0
+PreRawNetworkCount=2
+PreNativeSSIDCount=1
+PreNativeSSIDs=<ALTERNATE_INTERNET_SSID>
+PreNativeTargetVisible=False
+
+===== ACTIVE SCAN LIFECYCLE =====
+RegisterNotificationResult=0
+PreviousNotificationSource=0
+WlanScanResult=0
+ScanNotificationReceived=True
+ScanNotificationSource=8
+ScanNotificationCode=7
+ScanNotificationName=wlan_notification_acm_scan_complete
+ScanCompleted=True
+ScanFailed=False
+ScanTimedOut=False
+ScanElapsedMs=3380
+ScanFailureReasonCode=0
+NativeError=
+
+===== POST-SCAN NATIVE SNAPSHOT =====
+PostListResult=0
+PostRawNetworkCount=13
+PostNativeSSIDCount=8
+PostNativeSSIDs=Claro-Fibra-2.4G-0226 | <PRIMARY_INTERNET_SSID> | MovistarFibra-5GHz-415DF0 | Personal-1F9-2.4GHz | Personal-1F9-5GHz | <ALTERNATE_INTERNET_SSID> | <PRINTER_NETWORK_SSID> | <PRINTER_NETWORK_5G_SSID>
+PostNativeTargetVisible=True
+NativeTargetChanged=True
+
+===== POST-SCAN NETSH OBSERVATION =====
+PostNetshSSIDCount=8
+PostNetshSSIDs=Personal-1F9-2.4GHz | <PRIMARY_INTERNET_SSID> | <PRINTER_NETWORK_SSID> | Claro-Fibra-2.4G-0226 | <ALTERNATE_INTERNET_SSID> | Personal-1F9-5GHz | MovistarFibra-5GHz-415DF0 | <PRINTER_NETWORK_5G_SSID>
+PostNetshTargetVisible=True
+CurrentSSIDAfter=<ALTERNATE_INTERNET_SSID>
+CurrentSSIDChanged=False
+
+===== INTERPRETATION =====
+FreshnessOutcome=TARGET_DISCOVERED_AFTER_EXPLICIT_SCAN
+StrongNotVisibleEligible=False
+PostNativeVsNetsh=MATCH_VISIBLE
+
+===== LAB RESULT =====
+ConnectionPreserved=True
+EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB01-LAB02-NativeWiFiBaselineScan-20260912-212725.txt

@@ -1,4 +1,4 @@
-﻿# PrintSwitch — Roadmap de desarrollo
+# PrintSwitch — Roadmap de desarrollo
 
 **Documento:** RDM-001
 **Versión:** 0.1
@@ -172,10 +172,10 @@ Ejemplo del entorno experimental:
 
 ```text
 WindowsPrinter = L365 Series(Red)
-RequiredSSID   = suarezcores
-MAC            = 64:EB:8C:E2:EB:06
+RequiredSSID   = PRINTER_NETWORK_SSID
+MAC            = MAC_ADDRESS_1
 Hostname       = EPSONE2EB06
-LastKnownIP    = 192.168.1.108
+LastKnownIP    = PRIVATE_IPV4_2
 IPMode         = dynamic
 ```
 
@@ -371,7 +371,7 @@ Periodo de seguridad
 
 La red original deberá detectarse dinámicamente.
 
-No deberá codificarse `Claro640` como requisito del programa.
+No deberá codificarse `PRIMARY_INTERNET_SSID` como requisito del programa.
 
 PrintSwitch deberá poder regresar a cualquier red desde la que haya iniciado el proceso.
 
@@ -434,9 +434,9 @@ La versión madura deberá registrar eventos como:
 ```text
 17:32:04 Trabajo detectado
 17:32:04 Impresora: L365 Series(Red)
-17:32:04 SSID actual: Claro640
+17:32:04 SSID actual: PRIMARY_INTERNET_SSID
 17:32:05 Impresora no accesible
-17:32:05 Red requerida: suarezcores
+17:32:05 Red requerida: PRINTER_NETWORK_SSID
 17:32:06 Cambio solicitado
 17:32:10 Wi-Fi conectado
 17:32:11 Impresora accesible
@@ -960,7 +960,7 @@ ALCANZADO EN ALPHA
 Se validó un escenario donde Ethernet y Wi-Fi pertenecían simultáneamente a:
 
 ```text
-192.168.1.0/24
+PRIVATE_IPV4_1/24
 ```
 
 y ambas interfaces podían alcanzar la Epson L365.
@@ -1101,17 +1101,17 @@ Se validó el flujo completo con:
 ```text
 Epson encendida
 Ethernet desconectado
-Wi-Fi inicial = Claro640
-SSID objetivo = suarezcores
+Wi-Fi inicial = PRIMARY_INTERNET_SSID
+SSID objetivo = PRINTER_NETWORK_SSID
 ```
 
 Resultado:
 
 ```text
-Claro640
+PRIMARY_INTERNET_SSID
    |
    v
-suarezcores
+PRINTER_NETWORK_SSID
    |
    v
 NETWORK_SWITCH_VERIFIED
@@ -1158,7 +1158,7 @@ Caso representativo:
 ```text
 Jabber activo
 Ethernet disponible
-Wi-Fi = Claro640
+Wi-Fi = PRIMARY_INTERNET_SSID
 Epson apagada
 RecoveryEnabled = True
 ```
@@ -1185,7 +1185,7 @@ Se validó el escenario donde:
 ```text
 Epson encendida
 Ethernet desconectado
-Wi-Fi = suarezcores
+Wi-Fi = PRINTER_NETWORK_SSID
 RecoveryEnabled = True
 ```
 
@@ -1559,7 +1559,7 @@ MEDIA
 El Alpha puede cambiar:
 
 ```text
-Claro640 -> suarezcores
+PRIMARY_INTERNET_SSID -> PRINTER_NETWORK_SSID
 ```
 
 pero todavía no implementa un retorno automático general.
@@ -1896,7 +1896,7 @@ fue resuelta como:
 ```text
 Transport    = NETWORK
 Protocol     = LPR
-Destination  = 192.168.1.108
+Destination  = PRIVATE_IPV4_2
 TcpPort      = 515
 QueueName    = ENPQueue
 Strategy     = LPR_TCP
@@ -1905,16 +1905,16 @@ Strategy     = LPR_TCP
 Posteriormente se ejecutó una recuperación física completa:
 
 ```text
-Claro640
+PRIMARY_INTERNET_SSID
    |
    v
-suarezcores
+PRINTER_NETWORK_SSID
 ```
 
 utilizando como objetivo operacional:
 
 ```text
-192.168.1.108:515
+PRIVATE_IPV4_2:515
 ```
 
 Resultado:
@@ -2220,7 +2220,7 @@ BRWC48E8F7B140F
 En el entorno donde puede resolverse se observó:
 
 ```text
-192.168.100.12
+PRIVATE_IPV4_6
 ```
 
 La validación formal debe comprobar:
@@ -2687,7 +2687,7 @@ ReachabilityStrategy  = LPR_TCP
 En el contexto de red correspondiente el hostname resolvió a:
 
 ```text
-192.168.100.12
+PRIVATE_IPV4_6
 ```
 
 y el endpoint respondió correctamente.
@@ -2945,11 +2945,11 @@ FEAT: integra QueueWatcher con discovery y recovery operacional
 Se validó físicamente:
 
 ```text
-Wi-Fi inicial = Claro640
+Wi-Fi inicial = PRIMARY_INTERNET_SSID
 Ethernet      = desconectado
 Epson         = encendida
-SSID objetivo = suarezcores
-Endpoint      = 192.168.1.108:515
+SSID objetivo = PRINTER_NETWORK_SSID
+Endpoint      = PRIVATE_IPV4_2:515
 Recovery      = habilitado
 ```
 
@@ -2960,10 +2960,10 @@ El sistema determinó que no existía un camino funcional hacia el endpoint.
 La secuencia ejecutada fue:
 
 ```text
-Claro640
+PRIMARY_INTERNET_SSID
    |
    v
-suarezcores
+PRINTER_NETWORK_SSID
 ```
 
 seguida por validación del endpoint operacional.
@@ -2985,10 +2985,10 @@ FinalClassification         = CONTEXTUAL_RECOVERY_SUCCESS
 También se validó:
 
 ```text
-Wi-Fi inicial = suarezcores
+Wi-Fi inicial = PRINTER_NETWORK_SSID
 Ethernet      = desconectado
 Epson         = encendida
-Endpoint      = 192.168.1.108:515
+Endpoint      = PRIVATE_IPV4_2:515
 Recovery      = habilitado
 ```
 
@@ -3106,7 +3106,7 @@ fabricantes.
 ### 71.1. Epson L365
 
 ```text
-TargetIP = 192.168.1.108
+TargetIP = PRIVATE_IPV4_2
 TcpPort  = 515
 
 OperationalTcpSucceeded = True
@@ -3117,7 +3117,7 @@ Classification          = PRINTER_REACHABLE
 
 ```text
 ConfiguredDestination = BRWC48E8F7B140F
-ResolvedDestination   = 192.168.100.12
+ResolvedDestination   = PRIVATE_IPV4_6
 TcpPort               = 515
 
 OperationalTcpSucceeded = True
@@ -3309,8 +3309,8 @@ No se deberá reconstruir esta información posteriormente de memoria.
 El laboratorio actual dispone de varias redes controlables:
 
 ```text
-Claro640
-suarezcores
+PRIMARY_INTERNET_SSID
+PRINTER_NETWORK_SSID
 Suarez
 ```
 
@@ -3683,7 +3683,7 @@ Brother USB conectado
 
 Brother USB desconectado
 
-recovery Claro640 -> suarezcores
+recovery PRIMARY_INTERNET_SSID -> PRINTER_NETWORK_SSID
 
 no intervención cuando existe camino funcional
 ```
@@ -4601,13 +4601,13 @@ beta capaz de:
 Además deberá ejecutarse al menos una regresión física equivalente a:
 
 ```text
-Claro640
+PRIMARY_INTERNET_SSID
     |
     v
 trabajo Epson
     |
     v
-suarezcores
+PRINTER_NETWORK_SSID
     |
     v
 impresión
@@ -4684,7 +4684,7 @@ Ethernet + Wi-Fi simultáneos
 
 fault injection
 
-red Suarez
+red ALTERNATE_INTERNET_SSID
 
 topologías controladas
 ```
@@ -4834,3 +4834,344 @@ APLICACIÓN / UI
 y debe comenzar preservando una regla fundamental:
 
 > **La interfaz debe exponer el Core validado, no reemplazarlo.**
+
+---
+
+## 108. Actualización 2026-09-16 — Cierre del laboratorio Native Wi‑Fi y reanudación del Punto 7
+
+### 108.1. Motivo de esta actualización
+
+Esta sección se agrega después del cierre de la serie experimental LAB‑01–LAB‑05D.
+
+No reemplaza el roadmap histórico ni modifica retroactivamente el estado con el que se iniciaron los laboratorios.
+
+Durante el desarrollo del Punto 7, las integraciones productivas fueron congeladas temporalmente para estudiar el comportamiento real de Windows y Native Wi‑Fi antes de incorporar automatización adicional.
+
+La pausa permitió responder con evidencia controlada preguntas que afectaban directamente a:
+
+- discovery de redes;
+- actualización de disponibilidad;
+- conexión mediante perfiles existentes;
+- atribución de transiciones;
+- recuperación automática de Windows;
+- efectos indirectos de `WlanScan`;
+- rollback explícito;
+- coexistencia entre decisiones de Windows, del usuario y de PrintSwitch.
+
+El contrato resultante se encuentra documentado en:
+
+[Contrato de comportamiento Native Wi‑Fi para Beta 1](Native_WiFi_Beta1_Contract.md)
+
+---
+
+### 108.2. Estado de la serie experimental
+
+La serie necesaria para definir la arquitectura de Beta 1 queda cerrada:
+
+| Laboratorio | Estado | Aporte principal |
+| --- | --- | --- |
+| LAB‑01/LAB‑02 | `PASS` | Enumeración Native Wi‑Fi, snapshot pasivo y escaneo explícito. |
+| LAB‑02B | `PASS` | Corrección y validación del marshalling y tratamiento de texto Unicode. |
+| LAB‑03A/LAB‑03B | `PASS` | Conexión controlada con `WlanConnect`, eventos ACM y verificación final. |
+| LAB‑04B | `PASS` | Failover autónomo de Windows desde `PRINTER_NETWORK_SSID` hacia `PRIMARY_INTERNET_SSID`. |
+| LAB‑05A | `PASS` | La apertura aislada del flyout no produjo una transición. |
+| LAB‑05B | `PASS` | Un refresco posterior a una caída fue seguido por la restauración automática de `PRINTER_NETWORK_SSID`. |
+| LAB‑05C | `PASS` | Un `WlanScan` explícito posterior al failover fue seguido por la restauración automática de `PRINTER_NETWORK_SSID`. |
+| LAB‑05D | `PASS` | Después de una conexión explícita a `PRIMARY_INTERNET_SSID`, el escaneo preservó esa conexión. |
+
+Resultado consolidado:
+
+```text
+NATIVE_WIFI_LAB_SERIES=CLOSED
+NATIVE_WIFI_BETA1=APPROVED
+INTEGRATION_FREEZE=RELEASED_GRADUALLY
+```
+
+---
+
+### 108.3. Decisión arquitectónica vigente
+
+Native Wi‑Fi queda aprobado para Beta 1 como mecanismo productivo de:
+
+- enumeración;
+- observación;
+- notificaciones;
+- discovery;
+- escaneo;
+- conexión explícita;
+- verificación de transiciones.
+
+`netsh wlan` queda reservado para:
+
+- diagnóstico;
+- contraste de evidencia;
+- soporte;
+- laboratorios;
+- inspección manual.
+
+No será el actuador principal del flujo productivo.
+
+La aprobación de Native Wi‑Fi no implica descongelar todas las integraciones simultáneamente.
+
+El descongelamiento se realizará por capas y con pruebas deterministas entre cada una.
+
+---
+
+### 108.4. Corrección de la interpretación sobre `WlanScan`
+
+Las primeras pruebas mostraron que un escaneo podía completar discovery sin modificar la conexión activa.
+
+Esa evidencia continúa siendo válida para los casos observados, pero LAB‑05B y LAB‑05C demostraron que no puede convertirse en una regla universal.
+
+La interpretación vigente es:
+
+> `WlanScan` actualiza información que Windows AutoConfig puede utilizar para iniciar una transición. Su efecto depende del contexto causal de la conexión actual.
+
+LAB‑05D confirmó la diferencia entre dos contextos:
+
+| Origen de la conexión actual | Comportamiento observado después de `WlanScan` |
+| --- | --- |
+| Failover autónomo de Windows después de perder `PRINTER_NETWORK_SSID` | Windows pudo restaurar automáticamente `PRINTER_NETWORK_SSID`. |
+| Conexión explícita y verificada hacia `PRIMARY_INTERNET_SSID` | Windows preservó `PRIMARY_INTERNET_SSID`. |
+
+Por lo tanto, discovery debe incorporar:
+
+- estado previo;
+- origen causal;
+- escaneo explícito;
+- nueva consulta de conexión;
+- observación de eventos posteriores;
+- reevaluación antes de actuar.
+
+---
+
+### 108.5. Nuevo modelo requerido
+
+La siguiente etapa debe incorporar un origen causal mínimo para la conexión:
+
+```text
+USER_EXPLICIT
+PRINTSWITCH_EXPLICIT
+WINDOWS_FAILOVER
+WINDOWS_AUTORESTORE
+UNKNOWN
+```
+
+Este modelo permitirá:
+
+- diferenciar acciones propias de PrintSwitch;
+- reconocer cambios iniciados por Windows;
+- respetar decisiones explícitas del usuario;
+- evitar conexiones redundantes;
+- impedir rollback de acciones ajenas;
+- conservar estados grises cuando la atribución no sea segura.
+
+`ConnectionOrigin` no será tratado como una propiedad entregada directamente por Windows.
+
+Será una inferencia construida a partir de:
+
+- estado previo;
+- operación activa;
+- destino solicitado;
+- marcas temporales;
+- notificaciones ACM;
+- consultas posteriores;
+- resultado final verificado.
+
+---
+
+### 108.6. Reanudación gradual del Punto 7
+
+El Punto 7 continúa siendo la etapa vigente.
+
+Sin embargo, su siguiente incremento no será todavía la interfaz gráfica ni la integración completa con QueueWatcher.
+
+La reanudación comenzará por la infraestructura Native Wi‑Fi aislada.
+
+Orden actualizado:
+
+1. definir el contrato público de `NativeWifiAdapter`;
+2. encapsular apertura y cierre del cliente Native Wi‑Fi;
+3. enumerar interfaces;
+4. consultar el estado de conexión;
+5. enumerar perfiles;
+6. registrar y liberar notificaciones ACM;
+7. ejecutar `WlanScan`;
+8. esperar resultado terminal del escaneo;
+9. reconsultar el estado después del escaneo;
+10. ejecutar `WlanConnect`;
+11. correlacionar eventos con la operación activa;
+12. verificar SSID y perfil finales;
+13. incorporar `ConnectionOrigin`;
+14. ejecutar pruebas aisladas;
+15. integrar gradualmente con `NetworkManager`;
+16. integrar el orquestador de transición;
+17. conectar posteriormente Controller y QueueWatcher;
+18. validar impresión y rollback en el flujo completo.
+
+---
+
+### 108.7. Próximo incremento activo
+
+El próximo incremento queda definido como:
+
+```text
+PUNTO_7_STATUS=IN_PROGRESS
+NEXT_COMPONENT=NativeWifiAdapter
+INTEGRATION_MODE=ISOLATED
+QUEUEWATCHER_INTEGRATION=NOT_YET
+CONTROLLER_INTEGRATION=NOT_YET
+REAL_PRINT_FLOW=NOT_YET
+```
+
+Objetivo:
+
+> Construir una frontera Native Wi‑Fi aislada, verificable y sin decisiones de negocio, capaz de producir evidencia estructurada para las capas superiores.
+
+`NativeWifiAdapter` no debe decidir:
+
+- si corresponde cambiar de red;
+- qué impresora utilizar;
+- si existe autorización para conmutar;
+- si corresponde rollback;
+- qué hacer con la cola;
+- si un endpoint está disponible;
+- si el trabajo debe imprimirse.
+
+Esas decisiones pertenecen a las capas de contexto, política y orquestación.
+
+---
+
+### 108.8. Dependencias de implementación
+
+La secuencia vigente queda organizada de la siguiente manera:
+
+```text
+Contrato Native Wi‑Fi
+    ↓
+NativeWifiAdapter
+    ↓
+Evidence & Context Model
+    ↓
+Discovery contextual
+    ↓
+NetworkManager
+    ↓
+Transition Orchestrator
+    ↓
+Integración aislada
+    ↓
+Controller + QueueWatcher
+    ↓
+Endpoint + impresión + rollback
+```
+
+Cada capa deberá estabilizarse antes de incorporar la siguiente.
+
+No se habilitará una integración superior si la capa inferior:
+
+- oculta estados indeterminados;
+- confunde solicitud aceptada con operación completada;
+- no permite correlacionar eventos;
+- no verifica el estado final;
+- no libera correctamente recursos Native;
+- no produce evidencia diagnóstica suficiente.
+
+---
+
+### 108.9. Criterios de cierre de `NativeWifiAdapter`
+
+`NativeWifiAdapter` podrá considerarse cerrado cuando demuestre, de forma aislada:
+
+- apertura y cierre correcto del handle Native Wi‑Fi;
+- selección inequívoca de la interfaz;
+- enumeración de perfiles;
+- lectura del estado actual;
+- lectura de SSID y perfil;
+- registro y liberación de callbacks;
+- escaneo con resultado terminal o timeout;
+- consulta posterior obligatoria después del escaneo;
+- conexión con resultado terminal o timeout;
+- verificación de SSID y perfil después de la conexión;
+- preservación de errores Native y códigos de razón;
+- liberación de memoria y recursos;
+- producción de una línea temporal estructurada;
+- ausencia de dependencias con QueueWatcher, Controller o la impresora real.
+
+El adaptador no se considerará completo únicamente porque una conexión haya funcionado una vez.
+
+Debe demostrar también comportamiento determinista ante:
+
+- éxito;
+- timeout;
+- destino no visible;
+- perfil inexistente;
+- fallo terminal;
+- transición iniciada por Windows;
+- estado final diferente del solicitado.
+
+---
+
+### 108.10. Relación con D0, D2 y R7
+
+La secuencia conceptual definida anteriormente se mantiene, con una aclaración de responsabilidades:
+
+| Identificador | Responsabilidad vigente |
+| --- | --- |
+| D0 | Evidence & Context Model: observaciones, estados grises, marcas temporales y atribución causal. |
+| D2 | Discovery contextual: visibilidad, antigüedad de evidencia, escaneo autorizado y reevaluación posterior. |
+| `NativeWifiAdapter` | Frontera técnica con Native Wi‑Fi, sin política de negocio. |
+| `NetworkManager` | Servicio de red construido sobre el adaptador y el modelo de contexto. |
+| R7 | Integración del flujo completo con Controller, QueueWatcher, impresión y recovery. |
+
+El adaptador es una dependencia técnica de D0/D2 y de `NetworkManager`, pero no debe absorber sus decisiones.
+
+---
+
+### 108.11. Elementos que permanecen diferidos
+
+Continúan fuera del incremento inmediato:
+
+- interfaz gráfica definitiva;
+- empaquetado e instalador;
+- administración automática de credenciales;
+- creación o modificación de perfiles;
+- reordenamiento de preferencias de Windows;
+- soporte completo para múltiples interfaces;
+- políticas corporativas o de dominio;
+- soporte multiimpresora;
+- generalización a otros fabricantes;
+- hardening correspondiente a Beta 2.
+
+Estos elementos no bloquean la implementación aislada de `NativeWifiAdapter`.
+
+---
+
+### 108.12. Estado general vigente
+
+```text
+PUNTOS_1_A_6=COMPLETADOS
+PUNTO_6_REGRESSION=CLOSED
+PUNTO_7=IN_PROGRESS
+NATIVE_WIFI_LABS=CLOSED
+NATIVE_WIFI_BETA1=APPROVED
+CURRENT_TASK=DESIGN_NATIVE_WIFI_ADAPTER
+PRODUCTIVE_INTEGRATIONS=GRADUAL_UNFREEZE
+NEXT_VALIDATION=ISOLATED_ADAPTER_TESTS
+BETA2_HARDENING=DEFERRED
+POINT_8_MULTI_PRINTER=DEFERRED
+```
+
+La historia anterior del roadmap permanece vigente como registro del proceso.
+
+Esta actualización establece el nuevo estado operativo después del cierre de LAB‑05D y define el punto exacto desde el cual continúa el desarrollo.
+---
+
+<!-- P7-DOC-PRECOMMIT-R9-PRIVACY-NORMALIZATION -->
+
+**Aclaración editorial de privacidad — 2026-09-16.**
+Los nombres reales de redes locales, las direcciones IPv4 privadas y las
+direcciones MAC/BSSID presentes en esta documentación fueron sustituidos por
+identificadores semánticos o seudónimos estables. Esta normalización no cambia
+la cronología, los resultados experimentales, las decisiones arquitectónicas
+ni las conclusiones históricas del proyecto.

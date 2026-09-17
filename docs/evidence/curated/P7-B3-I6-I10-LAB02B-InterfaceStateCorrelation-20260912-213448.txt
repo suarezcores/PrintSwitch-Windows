@@ -1,0 +1,83 @@
+﻿===== PRINTSWITCH SANITIZED PUBLIC EVIDENCE =====
+PublicEvidenceId=P7-B3-I6-I10-LAB02B-InterfaceStateCorrelation-20260912-213448
+OriginalSHA256=447FC4A967FCCF0764D552C634091354A56A1DFA57EAF663A62833DC28A72CF7
+SanitizationPolicy=SEMANTIC_ROLES_V1
+OriginalEvidencePreserved=True
+CredentialsPublished=False
+WindowsUserPathsPublished=False
+RawMacOrBssidPublished=False
+RawInterfaceGuidPublished=False
+RawIPv4Published=False
+RawPrivateSsidPublished=False
+GeneratedAt=2026-09-16T20:01:24.4606201-03:00
+
+===== SANITIZED EVIDENCE CONTENT =====
+===== PRINTSWITCH NATIVE WI-FI LAB — LAB-02B =====
+Purpose=Verify interface-state marshalling and correlate independent Native WLAN queries with netsh
+StartedAt=2026-09-12T21:34:48.2660435-03:00
+FinishedAt=2026-09-12T21:34:48.4185670-03:00
+ExpectedSSID=<PRINTER_NETWORK_SSID>
+
+===== SAFETY / SCOPE =====
+WlanScanInvoked=False
+WlanConnectInvoked=False
+WlanDisconnectInvoked=False
+NetshWlanConnectInvoked=False
+WiFiConnectionMutation=False
+ProfileMutation=False
+CredentialReadAttempt=False
+QueueMutation=False
+ServiceMutation=False
+ProductionSourceMutation=False
+
+===== NATIVE HANDLE / STRUCTURES =====
+OpenHandleResult=0
+NegotiatedVersion=2
+EnumInterfacesResult=0
+InterfaceCount=1
+InterfaceInfoMarshalSize=532
+ConnectionAttributesMarshalSize=604
+NativeError=
+
+===== NATIVE INTERFACES =====
+Interface[0].Guid=<INTERFACE_GUID_01>
+Interface[0].Description=Realtek 8852BE Wireless LAN WiFi 6 PCI-E NIC
+Interface[0].EnumStateRaw=1
+Interface[0].EnumStateName=CONNECTED
+Interface[0].QueryStateResult=0
+Interface[0].QueryStateDataSize=4
+Interface[0].QueryStateRaw=1
+Interface[0].QueryStateName=CONNECTED
+Interface[0].CurrentConnectionResult=0
+Interface[0].CurrentConnectionDataSize=604
+Interface[0].ConnectionStateRaw=1
+Interface[0].ConnectionStateName=CONNECTED
+Interface[0].ConnectionModeRaw=0
+Interface[0].ProfileName=<PRINTER_NETWORK_SSID>
+Interface[0].SSID=<PRINTER_NETWORK_SSID>
+Interface[0].BSSID=<MAC_OR_BSSID_01>
+Interface[0].SignalQuality=100
+Interface[0].RxRate=144400
+Interface[0].TxRate=144400
+Interface[0].SecurityEnabled=True
+Interface[0].OneXEnabled=False
+Interface[0].AuthAlgorithmRaw=7
+Interface[0].CipherAlgorithmRaw=4
+
+===== NETSH CORRELATION =====
+NetshState=conectado
+NetshDescription=Realtek 8852BE Wireless LAN WiFi 6 PCI-E NIC
+NetshSSID=<PRINTER_NETWORK_SSID>
+NetshBSSID=<MAC_OR_BSSID_01>
+NetshProfile=<PRINTER_NETWORK_SSID>
+NetshSignal=100%
+
+===== INTERPRETATION =====
+EnumVsQueryState=MATCH
+QueryVsConnectionState=MATCH
+NativeVsNetshSSID=MATCH
+ExpectedSSIDMatch=MATCH
+
+===== LAB RESULT =====
+Result=PASS
+EvidencePath=C:\Users\<USER>\Documents\PrintSwitch-Windows\docs\evidence\P7-B3-I6-I10-LAB02B-InterfaceStateCorrelation-20260912-213448.txt
