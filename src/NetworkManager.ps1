@@ -2,8 +2,59 @@ param (
     [Parameter(Mandatory = $true)]
     [string]$TargetSSID,
 
-    [switch]$AutoExecute
+    [switch]$AutoExecute,
+    [switch]$UseNativeDiscovery,
+    [switch]$AllowNativeScan,
+    [string]$NativeInterfaceGuid = ""
 )
+# R34: opt-in Native Wi-Fi preflight. Legacy execution remains below.
+if ($UseNativeDiscovery) {
+    if ($AutoExecute) { throw 'Native preflight cannot be combined with AutoExecute.' }
+    foreach ($Dependency in @('NativeWifiAdapter.ps1','NativeWifiScanner.ps1','NativeWifiDiscovery.ps1')) {
+        . (Join-Path $PSScriptRoot $Dependency)
+    }
+    $InterfacesResult = Get-PrintSwitchNativeWifiInterfaces
+    if (-not $InterfacesResult.Success) { throw 'Native interface enumeration failed.' }
+    $Candidates = @($InterfacesResult.Data)
+    if (-not [string]::IsNullOrWhiteSpace($NativeInterfaceGuid)) {
+        $RequestedGuid = [guid]$NativeInterfaceGuid
+        $Candidates = @($Candidates | Where-Object { [guid]$_.InterfaceGuid -eq $RequestedGuid })
+    }
+    if ($Candidates.Count -ne 1) { throw 'Specify NativeInterfaceGuid to select exactly one Wi-Fi interface.' }
+    $SelectedGuid = [guid]$Candidates[0].InterfaceGuid
+    $Before = Get-PrintSwitchNativeWifiConnection -InterfaceGuid $SelectedGuid.ToString()
+    $Discovery = Invoke-PrintSwitchNativeWifiDiscovery -TargetSsid $TargetSSID -InterfaceGuid $SelectedGuid -AllowScan:$AllowNativeScan
+    $After = Get-PrintSwitchNativeWifiConnection -InterfaceGuid $SelectedGuid.ToString()
+    $Observation = 'UNKNOWN'
+    if ($Before.Success -and $After.Success) {
+        $Same = ($Before.Data.Ssid -ceq $After.Data.Ssid -and $Before.Data.ProfileName -ceq $After.Data.ProfileName -and $Before.Data.Bssid -ceq $After.Data.Bssid -and $Before.Data.InterfaceState -ceq $After.Data.InterfaceState)
+        $Observation = 'DIFFERENCE_OBSERVED'
+        if ($Same) { $Observation = 'NO_DIFFERENCE_BETWEEN_SNAPSHOTS' }
+    }
+    # This preflight is intentionally not the legacy actuation result contract.
+    [pscustomobject]@{
+        Component = 'NetworkManagerNativePreflight'
+        Version = '0.1.0'
+        Mode = 'NATIVE_DISCOVERY_ONLY'
+        Success = $Discovery.Success
+        TargetSSID = $TargetSSID
+        InterfaceGuid = $SelectedGuid
+        Discovery = $Discovery
+        ConnectionBefore = $Before
+        ConnectionAfter = $After
+        ConnectionObservation = $Observation
+        ConnectionOrigin = 'UNKNOWN'
+        ProfileValidationPerformed = $false
+        SwitchAuthorized = $false
+        ConnectionRequested = $false
+        ExecutionResult = 'PREFLIGHT_ONLY'
+    }
+    return
+}
+if ($AllowNativeScan -or -not [string]::IsNullOrWhiteSpace($NativeInterfaceGuid)) {
+    throw 'Native options require UseNativeDiscovery.'
+}
+
 $ErrorActionPreference = "Continue"
 
 # ============================================================
